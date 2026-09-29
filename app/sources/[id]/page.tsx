@@ -3,12 +3,33 @@
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { getResearchRecord, type ResearchRecord } from '@/lib/researchData';
-import { getSource } from '@/lib/api';
+import { getSource, type ApiClaim } from '@/lib/api';
 import { ResearchDetail } from '@/components/research/workspace-ui';
+
+const sourceTrustValues: ResearchRecord['sourceTrust'][] = [
+  'official', 'primary', 'reputable', 'expert', 'community', 'unverified',
+];
+
+function mapClaim(claim: ApiClaim): ResearchRecord['source']['claims'][number] {
+  const verification =
+    claim.verification_state === 'needs_verification' ? 'pending' : claim.verification_state;
+  const confidence =
+    claim.confidence === 'high' ? 95 :
+    claim.confidence === 'medium' ? 75 :
+    claim.confidence === 'low' ? 45 : 20;
+  return {
+    id: claim.id,
+    text: claim.text,
+    excerpt: claim.excerpt ?? '',
+    location: claim.location ?? '',
+    verification: verification as 'verified' | 'pending' | 'unsupported' | 'conflicted',
+    confidence,
+  };
+}
 
 export default function SourceDetailPage({ params }: { params: { id: string } }) {
   const fallback = getResearchRecord(params.id);
-  const [record, setRecord] = useState<ResearchRecord | null>(fallback);
+  const [record, setRecord] = useState<ResearchRecord | null>(fallback ?? null);
   const [loading, setLoading] = useState(Boolean(fallback));
 
   useEffect(() => {
@@ -16,11 +37,14 @@ export default function SourceDetailPage({ params }: { params: { id: string } })
     getSource(params.id)
       .then((live) => {
         if (!active || !fallback) return;
-        const liveClaims = live.claims ?? fallback.source.claims;
+        const sourceTrust = sourceTrustValues.includes(live.source_trust as ResearchRecord['sourceTrust'])
+          ? live.source_trust as ResearchRecord['sourceTrust']
+          : fallback.sourceTrust;
+        const liveClaims = live.claims?.map(mapClaim) ?? fallback.source.claims;
         setRecord({
           ...fallback,
           processingStage: live.processing_stage as ResearchRecord['processingStage'],
-          sourceTrust: live.source_trust ?? fallback.sourceTrust,
+          sourceTrust,
           originalText: live.original_text ?? fallback.originalText,
           originalSummary: live.ai_summary ?? fallback.originalSummary,
           myanmarTranslation: live.myanmar_translation ?? fallback.myanmarTranslation,
@@ -29,15 +53,8 @@ export default function SourceDetailPage({ params }: { params: { id: string } })
           source: {
             ...fallback.source,
             status: live.status as ResearchRecord['source']['status'],
-            claims: liveClaims.map((claim) => ({
-              ...claim,
-              excerpt: claim.excerpt ?? '',
-              location: claim.location ?? '',
-              verification: claim.verification_state as 'verified' | 'needs_verification' | 'unsupported' | 'conflicted',
-              confidence: claim.confidence === 'high' ? 95 : claim.confidence === 'medium' ? 75 : claim.confidence === 'low' ? 45 : 20,
-            })),
+            claims: liveClaims,
           },
-          claimFlags: fallback.claimFlags,
         });
       })
       .catch(() => undefined)
