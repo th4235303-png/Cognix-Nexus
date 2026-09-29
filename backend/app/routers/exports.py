@@ -55,8 +55,9 @@ def retry_export(export_id: str) -> dict:
         raise HTTPException(status_code=404, detail="Export not found")
     if job["status"] not in {"failed", "retry_pending"}:
         raise HTTPException(status_code=409, detail=f"Export cannot retry from {job['status']}")
+    previous = job["status"]
     job["status"] = "queued"
-    store.add_activity("drive_export_retry_queued", job["source_id"], "retry_pending", "queued")
+    store.add_activity("drive_export_retry_queued", job["source_id"], previous, "queued")
     return job
 
 
