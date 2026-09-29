@@ -26,6 +26,10 @@ class SourceTrustUpdate(BaseModel):
     source_trust: str = Field(pattern="^(official|primary|reputable|expert|community|unverified)$")
 
 
+class TranslationUpdate(BaseModel):
+    human_edited_myanmar: str = Field(min_length=1)
+
+
 @router.post("", status_code=201)
 def create_source(payload: SourceCreate) -> dict:
     normalized_url = str(payload.url).rstrip("/")
@@ -95,6 +99,18 @@ def add_claim(source_id: str, payload: ClaimCreate) -> dict:
             source["critical_warnings"].append(warning)
     store.add_activity("claim_added", source_id, "claims_updated", "claims_updated")
     return claim
+
+
+@router.patch("/{source_id}/translation")
+def update_translation(source_id: str, payload: TranslationUpdate) -> dict:
+    source = store.sources.get(source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+    previous = source.get("human_edited_myanmar")
+    source["human_edited_myanmar"] = payload.human_edited_myanmar
+    source["updated_at"] = now_iso()
+    store.add_activity("translation_edited", source_id, previous or "empty", "human_edited")
+    return source
 
 
 @router.get("/{source_id}/trust-score")
