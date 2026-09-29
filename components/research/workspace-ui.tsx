@@ -2,9 +2,9 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, CircleHelp, ExternalLink, FileCheck2, Flag, HardDrive, Languages, Loader2, Save, ShieldCheck } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, ExternalLink, FileCheck2, Flag, HardDrive, Loader2, Save, ShieldCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { SectionCard, GlowButton, PageHeader } from '@/components/shared/cognix-primitives';
+import { SectionCard, PageHeader } from '@/components/shared/cognix-primitives';
 import type { ClaimState, ExportStatus, ResearchRecord } from '@/lib/researchData';
 import { stageLabels } from '@/lib/researchData';
 import { approveSource, exportToGoogleDrive, requestSourceRevision, ApiError } from '@/lib/api';
