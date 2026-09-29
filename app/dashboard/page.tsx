@@ -37,10 +37,13 @@ const stages = [
   { label: 'Queued', key: 'queued' },
   { label: 'Extracting', key: 'extracting' },
   { label: 'Cleaning', key: 'cleaning' },
+  { label: 'Translating', key: 'translating' },
   { label: 'Summarizing', key: 'summarizing' },
-  { label: 'Classifying', key: 'classifying' },
+  { label: 'Key Points', key: 'key_points' },
+  { label: 'Fact-check', key: 'fact_check' },
+  { label: 'Trust Score', key: 'trust_scoring' },
   { label: 'Needs Review', key: 'needs_review' },
-  { label: 'Completed', key: 'completed' },
+  { label: 'Approved', key: 'approved' },
 ];
 
 export default function DashboardPage() {
@@ -113,7 +116,7 @@ export default function DashboardPage() {
         <div className="lg:col-span-2">
           <SectionCard
             title="Processing Pipeline"
-            description="Live status of active extraction and summarization tasks"
+            description="Live status of extraction, Myanmar translation, review, and approval tasks"
             action={
               <Link
                 href="/processing"
