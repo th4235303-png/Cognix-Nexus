@@ -1,0 +1,202 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Cognix Core — Cinematic Premium */
+    --background: 222 47% 4%;
+    --background-surface: 222 40% 6%;
+    --background-elevated: 222 35% 9%;
+    --foreground: 210 40% 96%;
+
+    --card: 222 38% 8%;
+    --card-foreground: 210 40% 96%;
+
+    --popover: 222 40% 7%;
+    --popover-foreground: 210 40% 96%;
+
+    --primary: 189 85% 55%;
+    --primary-foreground: 222 47% 6%;
+    --primary-glow: 189 85% 55%;
+
+    --secondary: 222 25% 16%;
+    --secondary-foreground: 210 30% 88%;
+
+    --muted: 222 25% 14%;
+    --muted-foreground: 215 20% 60%;
+
+    --accent: 189 60% 40%;
+    --accent-foreground: 210 40% 96%;
+
+    --destructive: 0 72% 56%;
+    --destructive-foreground: 210 40% 98%;
+
+    --success: 152 60% 50%;
+    --success-foreground: 222 47% 6%;
+
+    --warning: 38 92% 58%;
+    --warning-foreground: 222 47% 6%;
+
+    --border: 222 25% 16%;
+    --input: 222 25% 18%;
+    --ring: 189 85% 55%;
+
+    --chart-1: 189 85% 55%;
+    --chart-2: 152 60% 50%;
+    --chart-3: 38 92% 58%;
+    --chart-4: 260 70% 65%;
+    --chart-5: 0 72% 56%;
+
+    --radius: 0.625rem;
+
+    --glow-cyan: 0 0 24px hsl(189 85% 55% / 0.25);
+    --glow-success: 0 0 20px hsl(152 60% 50% / 0.2);
+    --glow-warning: 0 0 20px hsl(38 92% 58% / 0.2);
+    --glow-danger: 0 0 20px hsl(0 72% 56% / 0.2);
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+@layer components {
+  /* Depth layers */
+  .surface {
+    @apply bg-card border border-border/60;
+    background-image: linear-gradient(
+      to bottom,
+      hsl(222 35% 10% / 0.4),
+      hsl(222 38% 8% / 0.2)
+    );
+  }
+  .surface-elevated {
+    @apply bg-background-elevated border border-border/70;
+    box-shadow:
+      0 1px 0 0 hsl(210 40% 96% / 0.04) inset,
+      0 8px 24px -12px hsl(222 60% 2% / 0.6);
+  }
+  .glass-panel {
+    background: hsl(222 38% 9% / 0.7);
+    backdrop-filter: blur(12px) saturate(120%);
+    -webkit-backdrop-filter: blur(12px) saturate(120%);
+    @apply border border-white/[0.06];
+  }
+
+  /* Primary glow button */
+  .btn-glow {
+    box-shadow: 0 0 0 1px hsl(189 85% 55% / 0.3), 0 0 20px -2px hsl(189 85% 55% / 0.35);
+  transition: box-shadow 0.25s ease, transform 0.2s ease;
+  }
+  .btn-glow:hover {
+    box-shadow: 0 0 0 1px hsl(189 85% 55% / 0.5), 0 0 28px -2px hsl(189 85% 55% / 0.5);
+  }
+
+  /* Status dot */
+  .status-dot {
+    @apply inline-block h-2 w-2 rounded-full;
+  }
+
+  /* Subtle inner glow for focus */
+  .focus-glow:focus-visible {
+    box-shadow: 0 0 0 1px hsl(189 85% 55% / 0.4), 0 0 16px -4px hsl(189 85% 55% / 0.3);
+  }
+
+  /* Monospaced utility */
+  .font-mono-tight {
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: cognix-fade-in 0.5s ease-out both;
+  }
+  .animate-fade-in-up {
+    animation: cognix-fade-in-up 0.5s ease-out both;
+  }
+  .animate-slide-in-right {
+    animation: cognix-slide-in-right 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+  }
+  .animate-pulse-soft {
+    animation: cognix-pulse-soft 2.4s ease-in-out infinite;
+  }
+  .animate-shimmer {
+    background: linear-gradient(
+      90deg,
+      hsl(222 25% 14%) 0%,
+      hsl(222 25% 18%) 50%,
+      hsl(222 25% 14%) 100%
+    );
+    background-size: 200% 100%;
+    animation: cognix-shimmer 1.6s linear infinite;
+  }
+  .glow-cyan {
+    box-shadow: var(--glow-cyan);
+  }
+  .glow-success {
+    box-shadow: var(--glow-success);
+  }
+  .glow-warning {
+    box-shadow: var(--glow-warning);
+  }
+  .glow-danger {
+    box-shadow: var(--glow-danger);
+  }
+  .text-glow-cyan {
+    text-shadow: 0 0 12px hsl(189 85% 55% / 0.4);
+  }
+  .scrollbar-cognix::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  .scrollbar-cognix::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .scrollbar-cognix::-webkit-scrollbar-thumb {
+    background: hsl(222 25% 22%);
+    border-radius: 9999px;
+  }
+  .scrollbar-cognix::-webkit-scrollbar-thumb:hover {
+    background: hsl(222 25% 28%);
+  }
+}
+
+@keyframes cognix-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes cognix-fade-in-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes cognix-slide-in-right {
+  from { opacity: 0; transform: translateX(24px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes cognix-pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+@keyframes cognix-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
