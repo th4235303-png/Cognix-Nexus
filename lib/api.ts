@@ -16,6 +16,12 @@ export function getApiBaseUrl() { return API_BASE_URL; }
 export function listSources() { return request<{ total: number; items: ApiSource[] }>('/sources'); }
 export function getSource(sourceId: string) { return request<ApiSource>(`/sources/${sourceId}`); }
 export function createSource(url: string, note?: string) { return request<{ status: string; source: ApiSource }>('/sources', { method: 'POST', body: JSON.stringify({ url, note: note || null }) }); }
+export function updateSourceTranslation(sourceId: string, humanEditedMyanmar: string) {
+  return request<ApiSource>(`/sources/${sourceId}/translation`, {
+    method: 'PATCH',
+    body: JSON.stringify({ human_edited_myanmar: humanEditedMyanmar }),
+  });
+}
 export function listProcessing() { return request<{ total: number; items: ApiProcessingTask[] }>('/processing'); }
 export function getProcessingTask(taskId: string) { return request<ApiProcessingTask>(`/processing/${taskId}`); }
 export function createProcessingTask(sourceId: string) { return request<ApiProcessingTask>('/processing', { method: 'POST', body: JSON.stringify({ source_id: sourceId }) }); }
