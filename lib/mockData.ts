@@ -31,6 +31,10 @@ export interface Source {
   version: string;
   contentHash: string;
   summary: string;
+  originalText?: string;
+  myanmarTranslation?: string;
+  humanEditedMyanmar?: string;
+  approvedMyanmar?: string;
   keyPoints: string[];
   tags: string[];
   claims: Claim[];
@@ -58,8 +62,13 @@ export interface ProcessingTask {
     | 'extracting'
     | 'cleaning'
     | 'summarizing'
+    | 'translating'
+    | 'key_points'
+    | 'fact_check'
+    | 'trust_scoring'
     | 'classifying'
     | 'needs_review'
+    | 'approved'
     | 'completed'
     | 'failed';
   progress: number;
@@ -150,6 +159,10 @@ export const sources: Source[] = [
     addedDate: '2026-08-28',
     version: 'v2.1',
     contentHash: '0x7a3f9c2e8b1d4f6a',
+    originalText: 'Source text is retained separately from derived summaries for review and auditability.',
+    myanmarTranslation: 'မူရင်းအကြောင်းအရာကို မြန်မာဘာသာဖြင့် ဘာသာပြန်ထားသော draft ဖြစ်သည်။',
+    humanEditedMyanmar: 'လူက ပြန်လည်စစ်ဆေးပြီး ပြင်ဆင်နိုင်သော မြန်မာဘာသာ version ဖြစ်သည်။',
+    approvedMyanmar: '',
     summary:
       'A comprehensive re-examination of attention mechanisms in transformer architectures, proposing a sparse-attention variant that reduces computational complexity from O(n²) to O(n log n) while preserving model performance on benchmark tasks.',
     keyPoints: [
@@ -448,7 +461,7 @@ export const processingTasks: ProcessingTask[] = [
     sourceTitle: 'Efficient Inference for Large Language Models: A Survey',
     sourceType: 'report',
     taskType: 'full',
-    stage: 'summarizing',
+    stage: 'translating',
     progress: 64,
     startedTime: '12m ago',
     duration: '12m 14s',
