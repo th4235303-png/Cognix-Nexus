@@ -34,6 +34,12 @@ def export_to_google_drive(payload: DriveExportRequest) -> dict:
     return job
 
 
+@router.get("")
+def list_exports() -> dict:
+    items = list(store.exports.values())
+    return {"items": items, "total": len(items)}
+
+
 @router.get("/{export_id}")
 def get_export(export_id: str) -> dict:
     job = store.exports.get(export_id)
