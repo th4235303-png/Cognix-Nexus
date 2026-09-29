@@ -30,6 +30,7 @@ export function retryProcessingTask(taskId: string) { return request<ApiProcessi
 export function approveSource(sourceId: string, note?: string) { return request<{ source_id: string; status: string; note?: string | null }>(`/reviews/${sourceId}/approve`, { method: 'POST', body: JSON.stringify({ note: note || null }) }); }
 export function requestSourceRevision(sourceId: string, note?: string) { return request<{ source_id: string; status: string; note?: string | null }>(`/reviews/${sourceId}/revision`, { method: 'POST', body: JSON.stringify({ note: note || null }) }); }
 export function exportToGoogleDrive(sourceId: string, idempotencyKey: string) { return request<ApiExportJob>('/exports/google-drive', { method: 'POST', body: JSON.stringify({ source_id: sourceId, idempotency_key: idempotencyKey }) }); }
+export function listExports() { return request<{ total: number; items: ApiExportJob[] }>('/exports'); }
 export function getExport(exportId: string) { return request<ApiExportJob>(`/exports/${exportId}`); }
 export function advanceExport(exportId: string) { return request<ApiExportJob>(`/exports/${exportId}/advance`, { method: 'POST' }); }
 export function getActivity() { return request<{ total: number; items: Record<string, unknown>[] }>('/activity'); }
