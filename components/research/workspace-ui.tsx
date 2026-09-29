@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils';
 import { SectionCard, GlowButton, PageHeader } from '@/components/shared/cognix-primitives';
 import type { ClaimState, ExportStatus, ResearchRecord } from '@/lib/researchData';
 import { stageLabels } from '@/lib/researchData';
+import { approveSource, exportToGoogleDrive, requestSourceRevision, ApiError } from '@/lib/api';
 
 export function StageBadge({ stage }: { stage: keyof typeof stageLabels }) {
   const tone = ['approved','exported'].includes(stage) ? 'success' : ['failed'].includes(stage) ? 'danger' : ['needs_review','fact_check'].includes(stage) ? 'warning' : 'primary';
@@ -75,26 +76,29 @@ export function ClaimsPanel({ record }: { record: ResearchRecord }) {
 
 export function ReviewGate({ record }: { record: ResearchRecord }) {
   const critical = record.claimFlags.filter((f) => f.severity === 'critical');
-  const [approved, setApproved] = useState(false);
+  const [state, setState] = useState<'needs_review' | 'approved' | 'revision'>('needs_review');
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  async function approve() { setBusy(true); setMessage(null); try { await approveSource(record.source.id); setState('approved'); setMessage('Approved by backend.'); } catch (e) { setMessage(e instanceof ApiError && e.status === 409 ? 'Approval blocked by critical warnings.' : 'Approval failed.'); } finally { setBusy(false); } }
+  async function revise() { setBusy(true); setMessage(null); try { await requestSourceRevision(record.source.id, 'Human review requested revision.'); setState('revision'); setMessage('Revision requested.'); } catch { setMessage('Revision request failed.'); } finally { setBusy(false); } }
   return <SectionCard title="Approval Gate" description="Critical warnings must be resolved before a record can be approved.">
-    {critical.length > 0 && <div className="mb-4 rounded-lg border border-destructive/25 bg-destructive/5 p-4">
-      <div className="flex items-center gap-2 text-sm font-medium text-destructive"><AlertTriangle className="h-4 w-4" /> Critical warnings</div>
-      <ul className="mt-2 space-y-1 text-xs text-muted-foreground">{critical.map((f) => <li key={f.id}>• {f.label}: {f.note}</li>)}</ul>
-    </div>}
-    <div className="flex flex-wrap items-center justify-between gap-3">
-      <div><p className="text-sm font-medium text-foreground">Review state</p><p className="text-xs text-muted-foreground">{approved ? 'Approved in prototype state.' : 'Needs human review before export.'}</p></div>
-      <button disabled={critical.length > 0 || approved} onClick={() => setApproved(true)} className="inline-flex items-center gap-2 rounded-md bg-success px-4 py-2 text-xs font-medium text-success-foreground disabled:cursor-not-allowed disabled:opacity-40"><ShieldCheck className="h-4 w-4" /> Approve knowledge</button>
-    </div>
+    {critical.length > 0 && <div className="mb-4 rounded-lg border border-destructive/25 bg-destructive/5 p-4"><div className="flex items-center gap-2 text-sm font-medium text-destructive"><AlertTriangle className="h-4 w-4" /> Critical warnings</div><ul className="mt-2 space-y-1 text-xs text-muted-foreground">{critical.map((f) => <li key={f.id}>• {f.label}: {f.note}</li>)}</ul></div>}
+    <div className="flex flex-wrap items-center justify-between gap-3"><div><p className="text-sm font-medium text-foreground">Review state</p><p className="text-xs text-muted-foreground">{state === 'approved' ? 'Approved by backend.' : state === 'revision' ? 'Revision requested.' : 'Needs human review before export.'}</p></div>
+      <div className="flex gap-2"><button disabled={busy || state === 'approved'} onClick={revise} className="rounded-md border border-border/50 px-3 py-2 text-xs font-medium disabled:opacity-40">{busy ? 'Working…' : 'Request revision'}</button><button disabled={critical.length > 0 || busy || state === 'approved'} onClick={approve} className="inline-flex items-center gap-2 rounded-md bg-success px-4 py-2 text-xs font-medium text-success-foreground disabled:cursor-not-allowed disabled:opacity-40"><ShieldCheck className="h-4 w-4" /> {busy ? 'Approving…' : 'Approve knowledge'}</button></div>
+    </div>{message && <p className="mt-3 text-xs text-muted-foreground">{message}</p>}
   </SectionCard>;
 }
 
-export function ExportButton({ status, disabled = false }: { status: ExportStatus; disabled?: boolean }) {
+export function ExportButton({ status, sourceId, disabled = false }: { status: ExportStatus; sourceId: string; disabled?: boolean }) {
   const [state, setState] = useState(status);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  async function exportNow() { setBusy(true); setMessage(null); try { const job = await exportToGoogleDrive(sourceId, `cognix-${sourceId}-${Date.now()}`); setState(job.status as ExportStatus); setMessage('Export queued. Mock Drive mode is active.'); } catch { setMessage('Export failed or source is not approved.'); } finally { setBusy(false); } }
   const canExport = state === 'ready';
-  return <button disabled={!canExport || disabled} onClick={() => setState('queued')} className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary disabled:cursor-not-allowed disabled:opacity-40">
-    {state === 'queued' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <HardDrive className="h-3.5 w-3.5" />}
-    {state === 'ready' ? 'Export to Google Drive' : state === 'queued' ? 'Queued for export' : state === 'exported' ? 'Exported' : 'Not ready'}
-  </button>;
+  return <div><button disabled={!canExport || disabled || busy} onClick={exportNow} className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary disabled:cursor-not-allowed disabled:opacity-40">
+    {busy || state === 'queued' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <HardDrive className="h-3.5 w-3.5" />}
+    {busy ? 'Queueing…' : state === 'ready' ? 'Export to Google Drive' : state === 'queued' ? 'Queued for export' : state === 'exported' ? 'Exported' : 'Not ready'}
+  </button>{message && <p className="mt-2 text-[11px] text-muted-foreground">{message}</p>}</div>;
 }
 
 export function ResearchDetail({ record }: { record: ResearchRecord }) {
@@ -113,7 +117,7 @@ export function ResearchDetail({ record }: { record: ResearchRecord }) {
     {tab === 'overview' && <div className="grid gap-6 lg:grid-cols-2"><SectionCard title="Original / AI Summary"><TextBlock title="Original" value={record.originalText} /><div className="mt-4"><TextBlock title="AI Summary" value={record.originalSummary || 'Pending'} /></div></SectionCard><SectionCard title="Key Points"><ul className="space-y-3">{record.source.keyPoints.map((p) => <li key={p} className="flex gap-2 text-sm text-foreground"><CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />{p}</li>)}</ul></SectionCard></div>}
     {tab === 'translation' && <TranslationPanel record={record} />}
     {tab === 'claims' && <ClaimsPanel record={record} />}
-    {tab === 'export' && <div className="grid gap-6 lg:grid-cols-2"><SectionCard title="Export status"><div className="flex items-center gap-3"><FileCheck2 className="h-5 w-5 text-primary" /><div><p className="text-sm font-medium">{record.exportStatus}</p><p className="text-xs text-muted-foreground">Approved records only. Prototype uses a mock Drive state.</p></div></div><div className="mt-5"><ExportButton status={record.exportStatus} /></div></SectionCard><SectionCard title="Safe reference"><p className="text-xs text-muted-foreground">The UI never exposes OAuth tokens or private credentials.</p><p className="mt-3 rounded-md bg-background-surface p-3 font-mono-tight text-xs text-foreground">{record.driveReference || 'No Drive reference yet.'}</p></SectionCard></div>}
+    {tab === 'export' && <div className="grid gap-6 lg:grid-cols-2"><SectionCard title="Export status"><div className="flex items-center gap-3"><FileCheck2 className="h-5 w-5 text-primary" /><div><p className="text-sm font-medium">{record.exportStatus}</p><p className="text-xs text-muted-foreground">Approved records only. Prototype uses a mock Drive state.</p></div></div><div className="mt-5"><ExportButton status={record.exportStatus} sourceId={record.source.id} /></div></SectionCard><SectionCard title="Safe reference"><p className="text-xs text-muted-foreground">The UI never exposes OAuth tokens or private credentials.</p><p className="mt-3 rounded-md bg-background-surface p-3 font-mono-tight text-xs text-foreground">{record.driveReference || 'No Drive reference yet.'}</p></SectionCard></div>}
   </div>;
 }
 
