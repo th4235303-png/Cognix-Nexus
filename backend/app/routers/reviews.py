@@ -21,14 +21,9 @@ def approve_review(source_id: str, action: ReviewAction) -> dict:
     source = store.sources.get(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
-
     critical = source.get("critical_warnings", [])
     if critical:
-        raise HTTPException(
-            status_code=409,
-            detail={"code": "CRITICAL_WARNINGS", "warnings": critical},
-        )
-
+        raise HTTPException(status_code=409, detail={"code": "CRITICAL_WARNINGS", "warnings": critical})
     review = {"source_id": source_id, "status": "approved", "note": action.note}
     store.reviews[source_id] = review
     previous = source.get("status", "needs_review")
@@ -43,7 +38,6 @@ def request_revision(source_id: str, action: ReviewAction) -> dict:
     source = store.sources.get(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
-
     review = {"source_id": source_id, "status": "revision_requested", "note": action.note}
     store.reviews[source_id] = review
     previous = source.get("status", "needs_review")
