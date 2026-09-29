@@ -118,6 +118,18 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(updated.json()["source_trust"], "official")
         self.assertEqual(updated.json()["claim_confidence"], "low")
 
+    def test_processing_retry_resets_source_state(self):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/retry-state"}
+        ).json()["source"]
+        task = self.client.post("/processing", json={"source_id": source["id"]}).json()
+        self.client.post(f"/processing/{task['id']}/advance")
+        retried = self.client.post(f"/processing/{task['id']}/retry")
+        self.assertEqual(retried.status_code, 200)
+        refreshed = self.client.get(f"/sources/{source['id']}")
+        self.assertEqual(refreshed.json()["status"], "processing")
+        self.assertEqual(refreshed.json()["processing_stage"], "queued")
+
     def test_export_retry_requeues_retryable_job(self):
         source = self.client.post(
             "/sources", json={"url": "https://example.com/export-retry"}
