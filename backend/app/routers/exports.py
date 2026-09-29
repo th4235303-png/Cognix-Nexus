@@ -40,3 +40,21 @@ def get_export(export_id: str) -> dict:
     if not job:
         raise HTTPException(status_code=404, detail="Export not found")
     return job
+
+
+@router.post("/{export_id}/advance")
+def advance_export(export_id: str) -> dict:
+    job = store.exports.get(export_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Export not found")
+    if job["status"] == "queued":
+        job["status"] = "uploading"
+    elif job["status"] == "uploading":
+        job["status"] = "exported"
+        job["drive_reference"] = f"mock-drive://cognix-core/{job['source_id']}"
+    elif job["status"] == "exported":
+        return job
+    else:
+        raise HTTPException(status_code=409, detail=f"Export cannot advance from {job['status']}")
+    store.add_activity("drive_export_state_changed", job["source_id"], job["status"], job["id"])
+    return job
