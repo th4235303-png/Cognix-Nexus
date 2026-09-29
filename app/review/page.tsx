@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { FileText } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
-import { researchRecords } from '@/lib/researchData';
+import { researchRecords, type ResearchRecord } from '@/lib/researchData';
 import { listSources } from '@/lib/api';
 import { FlagBadge, ReviewGate, StageBadge } from '@/components/research/workspace-ui';
 
@@ -23,9 +23,9 @@ export default function ReviewPage() {
     .map((record) => {
       const liveStatus = liveStatuses[record.source.id];
       const warnings = liveWarnings[record.source.id];
-      const liveFlags = warnings?.length ? warnings.map((warning, index) => ({
+      const liveFlags: ResearchRecord['claimFlags'] = warnings?.length ? warnings.map((warning, index) => ({
         id: `live-${index}`,
-        type: warning.toLowerCase().includes('unsupported') ? 'unsupported_claim' : warning.toLowerCase().includes('conflict') ? 'conflicting_evidence' : 'missing_citation',
+        type: (warning.toLowerCase().includes('unsupported') ? 'unsupported_claim' : warning.toLowerCase().includes('conflict') ? 'conflicting_evidence' : 'missing_citation') as ResearchRecord['claimFlags'][number]['type'],
         label: warning,
         note: warning,
         severity: 'critical' as const,
