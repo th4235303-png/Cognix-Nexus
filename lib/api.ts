@@ -33,5 +33,6 @@ export function exportToGoogleDrive(sourceId: string, idempotencyKey: string) { 
 export function listExports() { return request<{ total: number; items: ApiExportJob[] }>('/exports'); }
 export function getExport(exportId: string) { return request<ApiExportJob>(`/exports/${exportId}`); }
 export function advanceExport(exportId: string) { return request<ApiExportJob>(`/exports/${exportId}/advance`, { method: 'POST' }); }
+export function retryExport(exportId: string) { return request<ApiExportJob>(`/exports/${exportId}/retry`, { method: 'POST' }); }
 export function getActivity() { return request<{ total: number; items: Record<string, unknown>[] }>('/activity'); }
 export function getUsage() { return request<Record<string, unknown>>('/usage'); }
