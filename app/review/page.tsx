@@ -11,16 +11,26 @@ import { FlagBadge, ReviewGate, StageBadge } from '@/components/research/workspa
 
 export default function ReviewPage() {
   const [liveStatuses, setLiveStatuses] = useState<Record<string, string>>({});
+  const [liveWarnings, setLiveWarnings] = useState<Record<string, string[]>>({});
   useEffect(() => {
     listSources().then(({ items }) => {
       setLiveStatuses(Object.fromEntries(items.map((item) => [item.id, item.status])));
+      setLiveWarnings(Object.fromEntries(items.map((item) => [item.id, item.critical_warnings])));
     }).catch(() => undefined);
   }, []);
 
   const rows = useMemo(() => researchRecords
     .map((record) => {
       const liveStatus = liveStatuses[record.source.id];
-      return liveStatus ? { ...record, source: { ...record.source, status: liveStatus as typeof record.source.status } } : record;
+      const warnings = liveWarnings[record.source.id];
+      const liveFlags = warnings?.length ? warnings.map((warning, index) => ({
+        id: `live-${index}`,
+        type: warning.toLowerCase().includes('unsupported') ? 'unsupported_claim' : warning.toLowerCase().includes('conflict') ? 'conflicting_evidence' : 'missing_citation',
+        label: warning,
+        note: warning,
+        severity: 'critical' as const,
+      })) : record.claimFlags;
+      return liveStatus ? { ...record, source: { ...record.source, status: liveStatus as typeof record.source.status }, claimFlags: liveFlags } : record;
     })
     .filter((r) => r.source.status === 'needs_review' || r.claimFlags.some((f) => f.severity === 'critical')), [liveStatuses]);
 
