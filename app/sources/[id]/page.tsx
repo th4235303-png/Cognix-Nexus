@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { notFound } from 'next/navigation';
 import { AppShell } from '@/components/layout/app-shell';
 import { getResearchRecord, type ResearchRecord } from '@/lib/researchData';
 import { getSource } from '@/lib/api';
@@ -48,7 +47,7 @@ export default function SourceDetailPage({ params }: { params: { id: string } })
     return () => { active = false; };
   }, [params.id, fallback]);
 
-  if (!fallback) notFound();
+  if (!fallback) return <AppShell><div className="p-6 text-sm text-muted-foreground">Source not found.</div></AppShell>;
   return <AppShell>
     {loading && <div className="mb-4 rounded-lg border border-border/40 bg-background-surface/40 p-3 text-xs text-muted-foreground">Loading live source state…</div>}
     {record && <ResearchDetail record={record} />}
