@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { SectionCard, PageHeader } from '@/components/shared/cognix-primitives';
 import type { ClaimState, ExportStatus, ResearchRecord } from '@/lib/researchData';
 import { stageLabels } from '@/lib/researchData';
-import { approveSource, exportToGoogleDrive, requestSourceRevision, ApiError } from '@/lib/api';
+import { approveSource, exportToGoogleDrive, requestSourceRevision, updateSourceTranslation, ApiError } from '@/lib/api';
 
 export function StageBadge({ stage }: { stage: keyof typeof stageLabels }) {
   const tone = ['approved','exported'].includes(stage) ? 'success' : ['failed'].includes(stage) ? 'danger' : ['needs_review','fact_check'].includes(stage) ? 'warning' : 'primary';
@@ -31,17 +31,33 @@ export function FlagBadge({ state, label }: { state: ClaimState | string; label:
 export function TranslationPanel({ record }: { record: ResearchRecord }) {
   const [edited, setEdited] = useState(record.humanEditedMyanmar);
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  async function saveEdit() {
+    if (!edited.trim()) return;
+    setSaving(true);
+    setSaved(false);
+    setError(null);
+    try {
+      await updateSourceTranslation(record.source.id, edited.trim());
+      setSaved(true);
+    } catch {
+      setError('Could not save the human-edited translation.');
+    } finally {
+      setSaving(false);
+    }
+  }
   return <SectionCard title="Translation Workflow" description="Keep original, machine translation, human editing, and approved content separate.">
     <div className="grid gap-4 lg:grid-cols-2">
       <TextBlock title="Original source text" value={record.originalText} />
       <TextBlock title="Original-language summary" value={record.originalSummary || 'No summary yet.'} />
       <TextBlock title="Myanmar Translation" value={record.myanmarTranslation || 'Translation pending.'} />
       <div className="rounded-lg border border-border/40 bg-background-surface/40 p-4">
-        <div className="mb-2 flex items-center justify-between"><p className="text-xs font-medium text-foreground">Human Edited</p><span className="text-[10px] text-muted-foreground">Editable mock state</span></div>
+        <div className="mb-2 flex items-center justify-between"><p className="text-xs font-medium text-foreground">Human Edited</p><span className="text-[10px] text-muted-foreground">Backend-persisted edit</span></div>
         <textarea value={edited} onChange={(e) => { setEdited(e.target.value); setSaved(false); }} className="min-h-36 w-full rounded-md border border-border/50 bg-background-elevated p-3 text-sm leading-6 text-foreground focus-glow focus:outline-none" />
         <div className="mt-3 flex items-center justify-between">
-          <span className="text-[11px] text-muted-foreground">{saved ? 'Saved locally for prototype.' : 'Changes are not sent to a backend yet.'}</span>
-          <button onClick={() => setSaved(true)} className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-3 py-2 text-xs font-medium hover:border-primary/30 hover:text-primary"><Save className="h-3.5 w-3.5" /> Save edit</button>
+          <span className="text-[11px] text-muted-foreground">{error || (saved ? 'Saved to backend.' : 'Edit the translation and save when ready.')}</span>
+          <button disabled={saving || !edited.trim()} onClick={saveEdit} className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-3 py-2 text-xs font-medium hover:border-primary/30 hover:text-primary disabled:cursor-not-allowed disabled:opacity-50"><Save className="h-3.5 w-3.5" /> {saving ? 'Saving…' : 'Save edit'}</button>
         </div>
       </div>
     </div>
