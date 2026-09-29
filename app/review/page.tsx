@@ -1,12 +1,29 @@
+'use client';
+
+import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { AlertTriangle, CheckCircle2, FileText, ShieldAlert } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
-import { PageHeader, SectionCard, GlowButton } from '@/components/shared/cognix-primitives';
+import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
 import { researchRecords } from '@/lib/researchData';
+import { listSources } from '@/lib/api';
 import { FlagBadge, ReviewGate, StageBadge } from '@/components/research/workspace-ui';
 
 export default function ReviewPage() {
-  const rows = researchRecords.filter(r => r.source.status === 'needs_review' || r.claimFlags.some(f => f.severity === 'critical'));
+  const [liveStatuses, setLiveStatuses] = useState<Record<string, string>>({});
+  useEffect(() => {
+    listSources().then(({ items }) => {
+      setLiveStatuses(Object.fromEntries(items.map((item) => [item.id, item.status])));
+    }).catch(() => undefined);
+  }, []);
+
+  const rows = useMemo(() => researchRecords
+    .map((record) => {
+      const liveStatus = liveStatuses[record.source.id];
+      return liveStatus ? { ...record, source: { ...record.source, status: liveStatus as typeof record.source.status } } : record;
+    })
+    .filter((r) => r.source.status === 'needs_review' || r.claimFlags.some((f) => f.severity === 'critical')), [liveStatuses]);
+
   return <AppShell><PageHeader title="Review Center" description="Human review is the gate between processed research and approved knowledge." />
     <div className="mb-5 grid gap-3 sm:grid-cols-3"><Stat label="Needs review" value={rows.length} /><Stat label="Critical flags" value={rows.reduce((n,r)=>n+r.claimFlags.filter(f=>f.severity==='critical').length,0)} /><Stat label="Ready to approve" value={rows.filter(r=>!r.claimFlags.some(f=>f.severity==='critical')).length} /></div>
     <div className="space-y-5">{rows.map(record => <SectionCard key={record.source.id} title={record.source.title} description={`${record.source.id} · ${record.source.publisher}`} action={<StageBadge stage="needs_review" />}>
