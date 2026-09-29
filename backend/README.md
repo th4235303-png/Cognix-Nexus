@@ -2,19 +2,19 @@
 
 FastAPI boundary for source ingestion, processing, human review, approved knowledge, activity, usage, and Google Drive export.
 
-The current implementation is a safe prototype: endpoints return mock state and the Google Drive service is only an integration boundary.
+The prototype uses an in-memory store so the frontend contract can be exercised end-to-end. Data resets when the process restarts.
 
-Run locally:
+Safeguards include duplicate URL detection, source validation, approval gating, approved-only export, export idempotency, activity events, and safe Drive package metadata.
 
+Run:
 ```bash
 cd backend
 uvicorn app.main:app --reload
 ```
 
-Production requirements:
-- OAuth 2.0 for private Google Drive access.
-- Secrets in environment variables or a secret manager.
-- Idempotency for export requests.
-- Retry/pending states for Drive outages.
-- Persisted audit events.
-- Authentication/authorization before exposing write endpoints.
+Test:
+```bash
+python -m unittest discover -s tests
+```
+
+Production next steps: PostgreSQL, authentication/authorization, background workers, real extraction/translation providers, Google OAuth 2.0, retry scheduling, and durable audit logs.
