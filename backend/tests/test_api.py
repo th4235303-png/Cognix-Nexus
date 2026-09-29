@@ -118,6 +118,20 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(updated.json()["source_trust"], "official")
         self.assertEqual(updated.json()["claim_confidence"], "low")
 
+    def test_translation_edit_persists(self):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/translation"}
+        ).json()["source"]
+        response = self.client.patch(
+            f"/sources/{source['id']}/translation",
+            json={"human_edited_myanmar": "လူက ပြင်ဆင်ထားသော ဘာသာပြန်"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["human_edited_myanmar"], "လူက ပြင်ဆင်ထားသော ဘာသာပြန်")
+        fetched = self.client.get(f"/sources/{source['id']}")
+        self.assertEqual(fetched.status_code, 200)
+        self.assertEqual(fetched.json()["human_edited_myanmar"], "လူက ပြင်ဆင်ထားသော ဘာသာပြန်")
+
     def test_activity_records_state_changes(self):
         source = self.client.post(
             "/sources", json={"url": "https://example.com/activity"}
