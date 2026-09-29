@@ -34,7 +34,7 @@ export default function SourceDetailPage({ params }: { params: { id: string } })
               ...claim,
               excerpt: claim.excerpt ?? '',
               location: claim.location ?? '',
-              verification: claim.verification_state === 'needs_verification' ? 'pending' : claim.verification_state,
+              verification: claim.verification_state as 'verified' | 'needs_verification' | 'unsupported' | 'conflicted',
               confidence: claim.confidence === 'high' ? 95 : claim.confidence === 'medium' ? 75 : claim.confidence === 'low' ? 45 : 20,
             })),
           },
