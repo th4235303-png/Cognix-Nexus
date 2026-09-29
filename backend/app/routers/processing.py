@@ -77,5 +77,10 @@ def retry_processing_task(task_id: str) -> dict:
             "updated_at": now_iso(),
         }
     )
+    source = store.sources.get(task["source_id"])
+    if source:
+        source["status"] = "processing"
+        source["processing_stage"] = "queued"
+        source["updated_at"] = now_iso()
     store.add_activity("processing_retry", task["source_id"], previous, "queued")
     return task
