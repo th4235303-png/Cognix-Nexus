@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { getResearchRecord, type ResearchRecord } from '@/lib/researchData';
 import type { Source } from '@/lib/mockData';
-import { getSource, type ApiClaim, type ApiSource } from '@/lib/api';
+import { getSource, listExports, type ApiClaim, type ApiExportJob, type ApiSource } from '@/lib/api';
 import { ResearchDetail } from '@/components/research/workspace-ui';
 
 const sourceTrustValues: ResearchRecord['sourceTrust'][] = [
@@ -28,7 +28,7 @@ function mapClaim(claim: ApiClaim): ResearchRecord['source']['claims'][number] {
   };
 }
 
-function buildLiveRecord(source: ApiSource, fallback: ResearchRecord | undefined): ResearchRecord {
+function buildLiveRecord(source: ApiSource, fallback: ResearchRecord | undefined, exportJob?: ApiExportJob): ResearchRecord {
   const sourceTrust = sourceTrustValues.includes(source.source_trust as ResearchRecord['sourceTrust'])
     ? source.source_trust as ResearchRecord['sourceTrust']
     : fallback?.sourceTrust ?? 'unverified';
@@ -102,8 +102,8 @@ function buildLiveRecord(source: ApiSource, fallback: ResearchRecord | undefined
     })),
     sourceTrust,
     claimConfidence: critical ? 'conflicted' : claims.some((claim) => claim.verification === 'pending') ? 'medium' : claims.length ? 'high' : 'medium',
-    exportStatus: source.status === 'approved' || source.status === 'delivered' ? 'ready' : 'not_ready',
-    driveReference: null,
+    exportStatus: exportJob?.status === 'exported' ? 'exported' : source.status === 'approved' || source.status === 'delivered' ? 'ready' : 'not_ready',
+    driveReference: exportJob?.drive_reference ?? null,
     logixaStatus: 'not_sent',
     processingVersion: fallback?.processingVersion ?? 'live',
   };
@@ -117,10 +117,11 @@ export default function SourceDetailPage({ params }: { params: { id: string } })
 
   useEffect(() => {
     let active = true;
-    getSource(params.id)
-      .then((live) => {
+    Promise.all([getSource(params.id), listExports()])
+      .then(([live, exportsResponse]) => {
         if (!active) return;
-        setRecord(buildLiveRecord(live, fallback));
+        const exportJob = exportsResponse.items.find(item => item.source_id === live.id);
+        setRecord(buildLiveRecord(live, fallback, exportJob));
         setNotFound(false);
       })
       .catch(() => {
