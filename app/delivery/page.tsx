@@ -1,4 +1,4 @@
-import { CheckCircle2, GitBranch, HardDrive, RotateCcw, XCircle } from 'lucide-react';
+import { HardDrive } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
 import { deliveryEvents } from '@/lib/researchData';
