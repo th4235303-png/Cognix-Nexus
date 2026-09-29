@@ -6,20 +6,36 @@ import { CheckCircle2, HardDrive, ExternalLink } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
 import { researchRecords, type ResearchRecord } from '@/lib/researchData';
-import { listSources, type ApiSource } from '@/lib/api';
+import { listExports, listSources, type ApiExportJob, type ApiSource } from '@/lib/api';
 import { ExportButton, StageBadge } from '@/components/research/workspace-ui';
 
 export default function ApprovedPage() {
   const [records, setRecords] = useState<ResearchRecord[]>(researchRecords);
   useEffect(() => {
-    listSources().then(({ items }) => {
-      if (!items.length) return;
-      const liveById = new Map(items.map(source => [source.id, source]));
+    Promise.all([listSources(), listExports()]).then(([sourceResponse, exportResponse]) => {
+      if (!sourceResponse.items.length) return;
+      const liveById = new Map(sourceResponse.items.map(source => [source.id, source]));
+      const exportsBySource = new Map(exportResponse.items.map(job => [job.source_id, job]));
+      const toExportStatus = (status: string): ResearchRecord['exportStatus'] => {
+        const allowed: ResearchRecord['exportStatus'][] = [
+          'not_ready', 'ready', 'queued', 'uploading', 'exported', 'retry_pending', 'failed', 'duplicate_ignored',
+        ];
+        return allowed.includes(status as ResearchRecord['exportStatus'])
+          ? status as ResearchRecord['exportStatus']
+          : 'not_ready';
+      };
       setRecords(researchRecords
         .filter(record => liveById.get(record.source.id)?.status === 'approved' || liveById.get(record.source.id)?.status === 'delivered')
         .map(record => {
           const live = liveById.get(record.source.id) as ApiSource;
-          return { ...record, source: { ...record.source, status: live.status as ResearchRecord['source']['status'] } };
+          const exportJob = exportsBySource.get(record.source.id) as ApiExportJob | undefined;
+          const exportStatus = exportJob ? toExportStatus(exportJob.status) : record.exportStatus;
+          return {
+            ...record,
+            source: { ...record.source, status: live.status as ResearchRecord['source']['status'] },
+            exportStatus,
+            driveReference: exportJob?.drive_reference ?? record.driveReference,
+          };
         }));
     }).catch(() => undefined);
   }, []);
@@ -29,7 +45,7 @@ export default function ApprovedPage() {
     <div className="grid gap-4 lg:grid-cols-2">{approved.map(record => <SectionCard key={record.source.id} title={record.source.title} description={`${record.source.id} · ${record.source.publisher}`} action={<StageBadge stage="approved" />}>
       <p className="text-sm leading-6 text-muted-foreground">{record.source.summary}</p>
       <div className="mt-4 flex flex-wrap gap-2">{record.source.tags.map(t => <span key={t} className="rounded-full bg-muted px-2.5 py-1 text-[10px] text-muted-foreground">#{t}</span>)}</div>
-      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/30 pt-4"><div className="flex items-center gap-2 text-xs text-muted-foreground"><HardDrive className="h-4 w-4" /> Drive: {record.driveReference || 'Ready to export'}</div><div className="flex gap-2"><Link href={`/sources/${record.source.id}`} className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-3 py-2 text-xs hover:border-primary/30"><ExternalLink className="h-3.5 w-3.5" /> Details</Link><ExportButton sourceId={record.source.id} status={record.exportStatus === 'exported' ? 'exported' : 'ready'} /></div></div>
+      <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-border/30 pt-4"><div className="flex items-center gap-2 text-xs text-muted-foreground"><HardDrive className="h-4 w-4" /> Drive: {record.driveReference || (record.exportStatus === 'queued' ? 'Queued' : record.exportStatus === 'uploading' ? 'Uploading' : record.exportStatus === 'failed' || record.exportStatus === 'retry_pending' ? 'Retry required' : 'Ready to export')}</div><div className="flex gap-2"><Link href={`/sources/${record.source.id}`} className="inline-flex items-center gap-1.5 rounded-md border border-border/50 px-3 py-2 text-xs hover:border-primary/30"><ExternalLink className="h-3.5 w-3.5" /> Details</Link><ExportButton sourceId={record.source.id} status={record.exportStatus === 'exported' ? 'exported' : 'ready'} /></div></div>
     </SectionCard>)}</div>
   </AppShell>;
 }
