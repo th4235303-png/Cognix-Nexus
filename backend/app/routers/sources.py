@@ -31,6 +31,15 @@ def create_source(payload: SourceCreate) -> dict:
         "status": "new",
         "processing_stage": "queued",
         "created_at": now_iso(),
+        "updated_at": now_iso(),
+        "original_text": None,
+        "ai_summary": None,
+        "myanmar_translation": None,
+        "human_edited_myanmar": None,
+        "approved_myanmar": None,
+        "source_trust": "unverified",
+        "claims": [],
+        "critical_warnings": [],
     }
     store.sources[source_id] = source
     store.add_activity("source_added", source_id, "—", "new")
