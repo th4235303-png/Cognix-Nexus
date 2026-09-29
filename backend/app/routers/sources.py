@@ -1,8 +1,9 @@
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl
 
+from app.services.trust import calculate_trust
 from app.store import now_iso, store
 
 router = APIRouter()
@@ -11,6 +12,18 @@ router = APIRouter()
 class SourceCreate(BaseModel):
     url: HttpUrl
     note: str | None = None
+
+
+class ClaimCreate(BaseModel):
+    text: str = Field(min_length=1)
+    excerpt: str | None = None
+    location: str | None = None
+    confidence: str = Field(default="medium", pattern="^(high|medium|low|conflicted|unsupported)$")
+    verification_state: str = Field(default="needs_verification", pattern="^(verified|needs_verification|unsupported|conflicted)$")
+
+
+class SourceTrustUpdate(BaseModel):
+    source_trust: str = Field(pattern="^(official|primary|reputable|expert|community|unverified)$")
 
 
 @router.post("", status_code=201)
@@ -58,3 +71,47 @@ def get_source(source_id: str) -> dict:
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
     return source
+
+
+@router.post("/{source_id}/claims", status_code=201)
+def add_claim(source_id: str, payload: ClaimCreate) -> dict:
+    source = store.sources.get(source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+    claim = {
+        "id": f"CLM-{uuid4().hex[:8].upper()}",
+        "text": payload.text,
+        "excerpt": payload.excerpt,
+        "location": payload.location,
+        "confidence": payload.confidence,
+        "verification_state": payload.verification_state,
+        "created_at": now_iso(),
+    }
+    source["claims"].append(claim)
+    source["updated_at"] = now_iso()
+    if payload.verification_state in {"unsupported", "conflicted"} and payload.confidence in {"low", "unsupported", "conflicted"}:
+        warning = f"Claim {claim['id']} requires resolution before approval."
+        if warning not in source["critical_warnings"]:
+            source["critical_warnings"].append(warning)
+    store.add_activity("claim_added", source_id, "claims_updated", "claims_updated")
+    return claim
+
+
+@router.get("/{source_id}/trust-score")
+def get_trust_score(source_id: str) -> dict:
+    source = store.sources.get(source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+    return calculate_trust(source)
+
+
+@router.patch("/{source_id}/trust")
+def update_source_trust(source_id: str, payload: SourceTrustUpdate) -> dict:
+    source = store.sources.get(source_id)
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+    previous = source.get("source_trust", "unverified")
+    source["source_trust"] = payload.source_trust
+    source["updated_at"] = now_iso()
+    store.add_activity("source_trust_updated", source_id, previous, payload.source_trust)
+    return calculate_trust(source)
