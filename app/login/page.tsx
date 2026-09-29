@@ -7,8 +7,8 @@ import { Brain, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState('elena.vasquez@logixa.io');
-  const [password, setPassword] = useState('••••••••••');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -111,13 +111,13 @@ export default function LoginPage() {
           <div className="mt-6 flex items-center gap-2 rounded-lg border border-border/40 bg-background-surface/50 px-3.5 py-3">
             <ShieldCheck className="h-4 w-4 shrink-0 text-success/70" />
             <p className="text-[11px] text-muted-foreground">
-              Protected workspace. Access is restricted to authorized Logixa Ecosystem members.
+              Prototype sign-in only. Authentication will be handled by the backend before production use.
             </p>
           </div>
         </div>
 
         <p className="mt-6 text-center text-[11px] text-muted-foreground/60">
-          Cognix Core v2.4.1 — Logixa Ecosystem
+          Cognix Core — Prototype
         </p>
       </div>
     </div>
