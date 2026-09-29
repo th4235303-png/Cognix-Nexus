@@ -83,6 +83,35 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(blocked.json()["detail"]["code"], "CRITICAL_WARNINGS")
         self.assertEqual(store.sources[source["id"]]["status"], "new")
 
+    def test_claims_and_trust_score_are_separate(self):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/claims"}
+        ).json()["source"]
+        claim = self.client.post(
+            f"/sources/{source['id']}/claims",
+            json={
+                "text": "A claim needing review",
+                "excerpt": "Supporting excerpt",
+                "location": "Section 2",
+                "confidence": "low",
+                "verification_state": "unsupported",
+            },
+        )
+        self.assertEqual(claim.status_code, 201)
+        score = self.client.get(f"/sources/{source['id']}/trust-score")
+        self.assertEqual(score.status_code, 200)
+        self.assertEqual(score.json()["source_trust"], "unverified")
+        self.assertEqual(score.json()["claim_confidence"], "low")
+        self.assertGreaterEqual(len(store.sources[source["id"]]["critical_warnings"]), 1)
+
+        updated = self.client.patch(
+            f"/sources/{source['id']}/trust",
+            json={"source_trust": "official"},
+        )
+        self.assertEqual(updated.status_code, 200)
+        self.assertEqual(updated.json()["source_trust"], "official")
+        self.assertEqual(updated.json()["claim_confidence"], "low")
+
     def test_activity_records_state_changes(self):
         source = self.client.post(
             "/sources", json={"url": "https://example.com/activity"}
