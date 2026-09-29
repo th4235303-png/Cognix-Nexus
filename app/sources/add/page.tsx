@@ -5,7 +5,8 @@ import { AlertTriangle, CheckCircle2, Save, Loader2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard, GlowButton } from '@/components/shared/cognix-primitives';
 import { sources } from '@/lib/mockData';
-import { createProcessingTask, createSource } from '@/lib/api';
+import { useEffect } from 'react';
+import { createProcessingTask, createSource, listSources, type ApiSource } from '@/lib/api';
 
 export default function AddSourcePage() {
   const [url, setUrl] = useState('');
@@ -13,7 +14,10 @@ export default function AddSourcePage() {
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-  const duplicate = sources.find((s) => url.trim() && s.url.toLowerCase().replace(/\/$/, '') === url.trim().toLowerCase().replace(/\/$/, ''));
+  const [liveSources, setLiveSources] = useState<ApiSource[]>([]);
+  useEffect(() => { listSources().then(({ items }) => setLiveSources(items)).catch(() => undefined); }, []);
+  const normalizedUrl = url.trim().toLowerCase().replace(/\/$/, '');
+  const duplicate = liveSources.find((s) => normalizedUrl && s.url.toLowerCase().replace(/\/$/, '') === normalizedUrl) || sources.find((s) => normalizedUrl && s.url.toLowerCase().replace(/\/$/, '') === normalizedUrl);
 
   async function queueSource() {
     setError('');
