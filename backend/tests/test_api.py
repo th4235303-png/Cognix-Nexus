@@ -70,7 +70,13 @@ class CognixApiTests(unittest.TestCase):
             json={"source_id": source["id"], "idempotency_key": "key-1"},
         )
         self.assertEqual(exported.status_code, 202)
-        self.assertEqual(replay.json()["id"], exported.json()["id"])\n        advanced = self.client.post(f"/exports/{exported.json()['id']}/advance")\n        self.assertEqual(advanced.status_code, 200)\n        self.assertEqual(advanced.json()["status"], "uploading")\n        completed = self.client.post(f"/exports/{exported.json()['id']}/advance")\n        self.assertEqual(completed.json()["status"], "exported")\n        self.assertTrue(completed.json()["drive_reference"].startswith("mock-drive://"))
+        self.assertEqual(replay.json()["id"], exported.json()["id"])
+        advanced = self.client.post(f"/exports/{exported.json()['id']}/advance")
+        self.assertEqual(advanced.status_code, 200)
+        self.assertEqual(advanced.json()["status"], "uploading")
+        completed = self.client.post(f"/exports/{exported.json()['id']}/advance")
+        self.assertEqual(completed.json()["status"], "exported")
+        self.assertTrue(completed.json()["drive_reference"].startswith("mock-drive://"))
 
     def test_critical_warning_blocks_approval(self):
         source = self.client.post(
