@@ -16,6 +16,9 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(duplicate.json()["status"], "duplicate_ignored")
         task = self.client.post("/processing", json={"source_id":source["id"]})
         self.assertEqual(task.status_code, 202)
+        advanced = self.client.post(f"/processing/{task.json()['id']}/advance")
+        self.assertEqual(advanced.status_code, 200)
+        self.assertEqual(advanced.json()['stage'], 'extracting')
 
     def test_approved_only_export_and_idempotency(self):
         source = self.client.post("/sources", json={"url":"https://example.com/approved"}).json()["source"]
