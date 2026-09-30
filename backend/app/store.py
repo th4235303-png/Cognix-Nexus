@@ -34,6 +34,17 @@ class Store:
         self.activity = state["activity"]
         self.export_keys = state["export_keys"]
 
+    def refresh(self) -> None:
+        if self.database is None:
+            return
+        state = self.database.load_state()
+        self.sources = state["sources"]
+        self.tasks = state["tasks"]
+        self.reviews = state["reviews"]
+        self.exports = state["exports"]
+        self.activity = state["activity"]
+        self.export_keys = state["export_keys"]
+
     @property
     def persistence_mode(self) -> str:
         return "postgresql" if self.database else "memory-prototype"
