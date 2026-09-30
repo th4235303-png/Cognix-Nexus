@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 from uuid import uuid4
-import math
+import json
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -24,7 +24,7 @@ class SummaryCreate(BaseModel):
     title: str | None = None
     content: str = Field(min_length=1)
     model: str | None = None
-    source_ids: list[str] = []
+    source_ids: list[str] = Field(default_factory=list)
 
 
 @router.post("/summaries", status_code=201)
@@ -156,7 +156,7 @@ def create_synthesis(payload: SynthesisCreate) -> dict:
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO synthesis_runs(id,title,query,source_ids,status) VALUES(%s,%s,%s,%s::jsonb,%s) RETURNING *",
-                (run_id, payload.title, payload.query, str(payload.source_ids).replace("'", '"'), "evidence_only"),
+                (run_id, payload.title, payload.query, str(json.dumps(payload.source_ids), "evidence_only"),
             )
             row = cur.fetchone()
         conn.commit()
