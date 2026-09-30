@@ -16,6 +16,16 @@ class Database:
     def connect(self):
         return psycopg.connect(self.dsn, row_factory=dict_row)
 
+    def ping(self) -> bool:
+        try:
+            with self.connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT 1")
+                    cur.fetchone()
+            return True
+        except Exception:
+            return False
+
     def ensure_schema(self) -> None:
         migrations_dir = Path(__file__).resolve().parents[1] / "migrations"
         with self.connect() as conn:
