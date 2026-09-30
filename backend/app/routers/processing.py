@@ -36,6 +36,8 @@ def create_processing_task(payload: ProcessingCreate) -> dict:
     previous = source.get("status", "new")
     source["status"] = "processing"
     source["processing_stage"] = "queued"
+    source["updated_at"] = now_iso()
+    store.save_source(source)
     store.add_activity("processing_started", payload.source_id, previous, "processing")
     return task
 
