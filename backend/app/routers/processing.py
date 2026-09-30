@@ -44,12 +44,14 @@ def create_processing_task(payload: ProcessingCreate) -> dict:
 
 @router.get("")
 def list_processing_tasks() -> dict:
+    store.refresh()
     items = list(store.tasks.values())
     return {"items": items, "total": len(items)}
 
 
 @router.get("/{task_id}")
 def get_processing_task(task_id: str) -> dict:
+    store.refresh()
     task = store.tasks.get(task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Processing task not found")
@@ -85,6 +87,7 @@ def retry_processing_task(task_id: str) -> dict:
         source["status"] = "processing"
         source["processing_stage"] = "queued"
         source["updated_at"] = now_iso()
+        store.save_source(source)
     store.save_task(task)
     store.add_activity("processing_retry", task["source_id"], previous, "queued")
     return task
