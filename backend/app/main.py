@@ -1,6 +1,7 @@
 import os
+from uuid import uuid4
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import activity, exports, processing, reviews, sources, usage
@@ -21,6 +22,16 @@ app = FastAPI(
     description="Research processing, review, and approved knowledge export API.",
 )
 
+
+@app.middleware("http")
+async def request_context(request: Request, call_next):
+    request_id = request.headers.get("x-request-id") or str(uuid4())
+    request.state.request_id = request_id
+    response = await call_next(request)
+    response.headers["x-request-id"] = request_id
+    return response
+
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins(),
@@ -28,6 +39,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 app.include_router(sources.router, prefix="/sources", tags=["sources"])
 app.include_router(processing.router, prefix="/processing", tags=["processing"])
@@ -49,3 +61,15 @@ def root() -> dict[str, str]:
 @app.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "service": "cognix-core-api", "version": API_VERSION}
+
+
+@app.get("/ready")
+def readiness() -> dict[str, object]:
+    database_configured = bool(os.getenv("DATABASE_URL"))
+    return {
+        "status": "ready" if database_configured else "degraded",
+        "service": "cognix-core-api",
+        "version": API_VERSION,
+        "database_configured": database_configured,
+        "persistence_mode": "postgres-ready" if database_configured else "memory-prototype",
+    }
