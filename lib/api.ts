@@ -67,6 +67,7 @@ export function advanceExport(exportId: string) { return request<ApiExportJob>(`
 export function retryExport(exportId: string) { return request<ApiExportJob>(`/exports/${exportId}/retry`, { method: 'POST' }); }
 export function getActivity() { return request<{ total: number; items: Record<string, unknown>[] }>('/activity'); }
 export function getUsage() { return request<ApiUsage>('/usage'); }
+export function deliverToLogixaFlow(sourceId: string) { return request<{ status: string; http_status: number }>('/delivery/logixa-flow', { method: 'POST', body: JSON.stringify({ source_id: sourceId }) }); }
 
 const sourceStatuses = new Set<SourceStatus>(['new', 'processing', 'needs_review', 'approved', 'delivered', 'failed', 'outdated']);
 const trustLevels = new Set<TrustLevel>(['verified', 'high', 'medium', 'low', 'unverified']);
