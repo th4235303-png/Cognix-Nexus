@@ -29,6 +29,7 @@ def export_to_google_drive(payload: DriveExportRequest) -> dict:
     package = build_export_package(payload.source_id, date.today().isoformat())
     job = {"id": export_id, "source_id": payload.source_id, "status": "queued", "idempotency_key": payload.idempotency_key, "drive_reference": None, "files": list(package.files)}
     store.exports[export_id] = job
+    store.save_export(job)
     store.export_keys[payload.idempotency_key] = export_id
     store.add_activity("drive_export_queued", payload.source_id, "approved", "export_queued")
     return job
@@ -57,6 +58,7 @@ def retry_export(export_id: str) -> dict:
         raise HTTPException(status_code=409, detail=f"Export cannot retry from {job['status']}")
     previous = job["status"]
     job["status"] = "queued"
+    store.save_export(job)
     store.add_activity("drive_export_retry_queued", job["source_id"], previous, "queued")
     return job
 
@@ -75,5 +77,6 @@ def advance_export(export_id: str) -> dict:
         return job
     else:
         raise HTTPException(status_code=409, detail=f"Export cannot advance from {job['status']}")
+    store.save_export(job)
     store.add_activity("drive_export_state_changed", job["source_id"], job["status"], job["id"])
     return job
