@@ -1,6 +1,6 @@
 -- Production persistence hardening.
 
-CREATE UNIQUE INDEX IF NOT EXISTS uq_sources_normalized_url
+CREATE INDEX IF NOT EXISTS idx_sources_normalized_url
   ON sources (rtrim(url, '/'));
 
 CREATE INDEX IF NOT EXISTS idx_sources_processing_stage
