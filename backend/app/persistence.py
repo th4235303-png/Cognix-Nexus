@@ -169,6 +169,40 @@ class Database:
                 )
             conn.commit()
 
+    def create_export_if_absent(self, job: dict[str, Any]) -> dict[str, Any]:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO export_jobs (
+                        id, source_id, destination, status, idempotency_key,
+                        safe_reference, files, drive_reference, created_at, updated_at
+                    ) VALUES (
+                        %s, %s, %s, %s, %s, %s, %s, %s,
+                        COALESCE(%s, now()), COALESCE(%s, now())
+                    )
+                    ON CONFLICT (idempotency_key) DO NOTHING
+                    RETURNING *
+                    """,
+                    (
+                        job["id"], job["source_id"], "google_drive", job["status"],
+                        job["idempotency_key"], job.get("drive_reference"),
+                        Jsonb(job.get("files", [])), job.get("drive_reference"),
+                        job.get("created_at"), job.get("updated_at"),
+                    ),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    cur.execute(
+                        "SELECT * FROM export_jobs WHERE idempotency_key = %s",
+                        (job["idempotency_key"],),
+                    )
+                    row = cur.fetchone()
+            conn.commit()
+        if row is None:
+            raise RuntimeError("Export idempotency lookup failed")
+        return self._export_row(row)
+
     def save_export(self, job: dict[str, Any]) -> None:
         with self.connect() as conn:
             with conn.cursor() as cur:
