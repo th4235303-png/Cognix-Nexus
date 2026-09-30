@@ -1,12 +1,36 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Sidebar, MobileNav } from '@/components/layout/sidebar';
 import { Header } from '@/components/layout/header';
 import { cn } from '@/lib/utils';
+import { supabase, supabaseConfigured } from '@/lib/supabase';
+import { useRouter, usePathname } from 'next/navigation';
 
 export function AppShell({ children }: { children: ReactNode }) {
+  const router = useRouter();
+  const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [authChecking, setAuthChecking] = useState(supabaseConfigured);
+
+  useEffect(() => {
+    if (!supabaseConfigured || !supabase) {
+      setAuthChecking(false);
+      return;
+    }
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      if (!data.session) router.replace('/login');
+      setAuthChecking(false);
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session && pathname !== '/login') router.replace('/login');
+    });
+    return () => { active = false; listener.subscription.unsubscribe(); };
+  }, [pathname, router]);
+
+  if (authChecking) return <div className="min-h-screen bg-background" />;
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
