@@ -12,8 +12,7 @@ Cognix Core is runnable locally before provider accounts are connected. The back
 | Render (or equivalent) | FastAPI backend | localhost:8000 | deploy `backend/`, set CORS, and configure `DATABASE_URL` |
 | Supabase | PostgreSQL/auth/storage option | not required | provision PostgreSQL and provide its connection string as `DATABASE_URL`; auth/storage can be added later |
 | Sentry | error monitoring | not required | add DSNs/SDKs after production runtime exists |
-| Google Cloud/Drive | approved knowledge export | mock boundary | OAuth 2.0 + Drive API, backend-only secrets |
-| Google Drive | approved knowledge delivery | mock boundary | OAuth 2.0 + Drive API, backend-only secrets |
+| Google Drive | approved knowledge export + delivery | mock boundary | OAuth 2.0 + Drive API, backend-only secrets |
 
 ## Environment variables
 
