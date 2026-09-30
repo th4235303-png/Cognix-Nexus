@@ -78,6 +78,8 @@ class CognixApiTests(unittest.TestCase):
         )
         self.assertEqual(blocked.status_code, 409)
 
+        self.client.patch(f"/sources/{source['id']}/translation", json={"human_edited_myanmar": "Approved test translation"})
+        self.client.patch(f"/sources/{source['id']}/translation", json={"human_edited_myanmar": "Approved test translation"})
         self.client.post(f"/reviews/{source['id']}/approve", json={})
         exported = self.client.post(
             "/exports/google-drive",
