@@ -1,51 +1,44 @@
 # Cognix Core
 
-Cognix Core is a private research intelligence workspace in the Logixa Ecosystem.
+Cognix Core is a research intelligence workspace for source ingestion, processing, human review, trust scoring, and approved Google Drive export.
 
-## Architecture
+## Platform architecture
 
-- **Frontend:** Next.js + React + TypeScript + Tailwind CSS
-- **Backend:** FastAPI + Python
-- **Database:** PostgreSQL / Supabase
-- **Authentication:** Supabase Auth + backend JWT verification
-- **Processing:** Python worker and research-processing services
-- **Delivery:** Google Drive only
-- **Hosting:** Netlify (frontend) + Render (API/worker)
+- Frontend: Next.js + React + TypeScript + Tailwind CSS
+- Backend: FastAPI + Python processing worker
+- Persistence: PostgreSQL / Supabase
+- Authentication: Supabase Auth with backend JWT verification
+- Delivery: Google Drive only
+- Hosting: Netlify (frontend) + Render (API/worker)
 
-Python is intentionally kept in `backend/` for the API, processing pipeline, background worker, persistence, and Google Drive integration. It is not a second frontend.
-
-## Research flow
-
-Research source → extraction → cleaning → Myanmar translation → summary → key points → fact-check flags → trust scoring → human review → approval → Google Drive export.
+Next.js and Python are intentionally separate applications under the web-platform directory.
 
 ## Repository structure
 
-```
-app/                 Next.js routes and pages
-components/          Shared UI and research workspace components
-lib/                 Frontend API client, auth, types, and UI data
-backend/             FastAPI API, worker, persistence, processing, Drive integration
-backend/migrations/  PostgreSQL schema migrations
-backend/tests/       Backend tests
-docs/                Production integration documentation
-.github/             CI workflow
-```
+web-platform/
+├── frontend/   Next.js application
+├── backend/    FastAPI API, worker, migrations, tests
+└── docs/       Architecture, deployment and operations docs
 
-## Production delivery
+.github/        CI
+README.md       Project overview
+SECURITY.md     Security policy
 
-Approved research is packaged and uploaded to Google Drive as:
+## Research lifecycle
 
-```
-/cognix-core/
-  /YYYY-MM-DD/
-    /research-id/
-      source.json
-      original-reference.txt
-      summary.md
-      myanmar-summary.md
-      claims.json
-      review.json
-```
+New → Queued → Extracting → Cleaning → Translating → Summarizing → Key Points → Fact-check Flagging → Trust Scoring → Needs Review → Approved → Drive Exported
+
+Human-edited Myanmar translation and critical fact-check warnings are preserved separately from AI-derived content. Approval blocks when critical warnings remain unresolved or when an approved Myanmar translation is missing.
+
+## Google Drive output
+
+/cognix-core/YYYY-MM-DD/research-id/
+├── source.json
+├── original-reference.txt
+├── summary.md
+├── myanmar-summary.md
+├── claims.json
+└── review.json
 
 No Logixa Flow webhook is used.
 
@@ -53,31 +46,27 @@ No Logixa Flow webhook is used.
 
 Frontend:
 
-```bash
-npm ci
-npm run dev
-```
+    cd web-platform/frontend
+    npm ci
+    npm run dev
 
 Backend:
 
-```bash
-cd backend
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn app.main:app --reload --port 8000
-```
+    cd web-platform/backend
+    python -m venv .venv
+    source .venv/bin/activate
+    pip install -r requirements.txt
+    uvicorn app.main:app --reload --port 8000
 
 ## Verification
 
-```bash
-npm run typecheck
-npm run lint
-npm run build
+    cd web-platform/frontend
+    npm run typecheck
+    npm run lint
+    npm run build
 
-cd backend
-python -m compileall app
-python -m unittest discover -s tests -v
-```
+    cd ../backend
+    python -m compileall app
+    python -m unittest discover -s tests -v
 
 Never commit API keys, OAuth refresh tokens, database passwords, or other provider secrets.
