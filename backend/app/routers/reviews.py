@@ -19,6 +19,7 @@ def list_reviews() -> dict:
 
 @router.post("/{source_id}/approve")
 def approve_review(source_id: str, action: ReviewAction) -> dict:
+    store.refresh()
     source = store.sources.get(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
@@ -39,6 +40,7 @@ def approve_review(source_id: str, action: ReviewAction) -> dict:
 
 @router.post("/{source_id}/revision")
 def request_revision(source_id: str, action: ReviewAction) -> dict:
+    store.refresh()
     source = store.sources.get(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
