@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.store import store
+from app.worker import run_once
 
 
 class CognixApiTests(unittest.TestCase):
@@ -174,6 +175,20 @@ class CognixApiTests(unittest.TestCase):
         activity = self.client.get("/activity")
         self.assertEqual(activity.status_code, 200)
         self.assertGreaterEqual(activity.json()["total"], 3)
+
+
+    def test_worker_advances_queued_processing(self):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/worker"}
+        ).json()["source"]
+        task = self.client.post("/processing", json={"source_id": source["id"]}).json()
+
+        processed = run_once()
+
+        self.assertEqual(processed, 1)
+        refreshed = self.client.get(f"/processing/{task['id']}")
+        self.assertEqual(refreshed.json()["stage"], "extracting")
+        self.assertEqual(refreshed.json()["status"], "running")
 
 
 if __name__ == "__main__":
