@@ -67,9 +67,14 @@ class Database:
                 if not exists:
                     cur.execute((migrations_dir / "001_initial.sql").read_text())
                 cur.execute((migrations_dir / "002_api_contract_alignment.sql").read_text())
-                migration_003 = migrations_dir / "003_persistence_hardening.sql"
-                if migration_003.exists():
-                    cur.execute(migration_003.read_text())
+                for migration_name in (
+                    "003_persistence_hardening.sql",
+                    "004_brain_vault_foundation.sql",
+                    "005_brain_vault_search.sql",
+                ):
+                    migration = migrations_dir / migration_name
+                    if migration.exists():
+                        cur.execute(migration.read_text())
             conn.commit()
 
     def load_state(self) -> dict[str, Any]:
@@ -99,6 +104,42 @@ class Database:
                 cur.execute("SELECT * FROM activity_events ORDER BY created_at DESC")
                 activity = [self._activity_row(row) for row in cur.fetchall()]
 
+                cur.execute("SELECT * FROM books ORDER BY created_at")
+                books = {row["id"]: self._book_row(row) for row in cur.fetchall()}
+                cur.execute("SELECT * FROM chapters ORDER BY book_id, chapter_number")
+                for row in cur.fetchall():
+                    book = books.get(row["book_id"])
+                    if book is not None:
+                        book["chapters"].append(self._chapter_row(row))
+                cur.execute("SELECT * FROM chunks ORDER BY chapter_id, sequence")
+                chapter_index = {
+                    chapter["id"]: (book, chapter)
+                    for book in books.values()
+                    for chapter in book["chapters"]
+                }
+                for row in cur.fetchall():
+                    target = chapter_index.get(row["chapter_id"])
+                    if target is not None:
+                        book, chapter = target
+                        chapter["chunks"].append(self._chunk_row(row))
+                        book["chunk_count"] += 1
+
+                cur.execute("SELECT * FROM notes ORDER BY updated_at DESC")
+                notes = {row["id"]: self._note_row(row) for row in cur.fetchall()}
+                cur.execute("SELECT * FROM note_sources ORDER BY created_at")
+                for row in cur.fetchall():
+                    note = notes.get(row["note_id"])
+                    if note is not None:
+                        note["sources"].append({
+                            "source_type": row["source_type"],
+                            "source_id": row["source_id"],
+                        })
+
+                cur.execute("SELECT * FROM concepts ORDER BY name")
+                concepts = {row["id"]: self._concept_row(row) for row in cur.fetchall()}
+                cur.execute("SELECT * FROM concept_links ORDER BY created_at")
+                concept_links = {row["id"]: self._concept_link_row(row) for row in cur.fetchall()}
+
         return {
             "sources": sources,
             "tasks": tasks,
@@ -106,6 +147,10 @@ class Database:
             "exports": exports,
             "activity": activity,
             "export_keys": export_keys,
+            "brain_books": books,
+            "brain_notes": notes,
+            "brain_concepts": concepts,
+            "brain_concept_links": concept_links,
         }
 
     def save_source(self, source: dict[str, Any]) -> None:
@@ -280,6 +325,131 @@ class Database:
                     ),
                 )
             conn.commit()
+
+    def save_brain_book(self, book: dict[str, Any]) -> None:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO books (
+                        id, title, author, language, file_type, source_kind,
+                        source_url, status, description, content_hash, created_at, updated_at
+                    ) VALUES (%(id)s, %(title)s, %(author)s, %(language)s, %(file_type)s,
+                              %(source_kind)s, %(source_url)s, %(status)s, %(description)s,
+                              %(content_hash)s, %(created_at)s, %(updated_at)s)
+                    ON CONFLICT (id) DO UPDATE SET
+                        title=EXCLUDED.title, author=EXCLUDED.author, language=EXCLUDED.language,
+                        file_type=EXCLUDED.file_type, source_url=EXCLUDED.source_url,
+                        status=EXCLUDED.status, description=EXCLUDED.description,
+                        content_hash=EXCLUDED.content_hash, updated_at=EXCLUDED.updated_at""",
+                    book,
+                )
+                cur.execute("DELETE FROM chunks WHERE chapter_id IN (SELECT id FROM chapters WHERE book_id = %s)", (book["id"],))
+                cur.execute("DELETE FROM chapters WHERE book_id = %s", (book["id"],))
+                for chapter in book.get("chapters", []):
+                    cur.execute(
+                        "INSERT INTO chapters (id, book_id, chapter_number, title, created_at) VALUES (%s, %s, %s, %s, %s)",
+                        (chapter["id"], book["id"], chapter["chapter_number"], chapter["title"], chapter["created_at"]),
+                    )
+                    for chunk in chapter.get("chunks", []):
+                        cur.execute(
+                            """INSERT INTO chunks (
+                                id, chapter_id, sequence, content, page_number,
+                                start_offset, end_offset, token_count, created_at
+                            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+                            (
+                                chunk["id"], chapter["id"], chunk["sequence"], chunk["content"],
+                                chunk.get("page_number"), chunk.get("start_offset"),
+                                chunk.get("end_offset"), chunk.get("token_count"),
+                                chunk["created_at"],
+                            ),
+                        )
+            conn.commit()
+
+    def save_brain_note(self, note: dict[str, Any]) -> None:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO notes (id, title, content, note_type, status, created_at, updated_at)
+                       VALUES (%(id)s, %(title)s, %(content)s, %(note_type)s, %(status)s, %(created_at)s, %(updated_at)s)
+                       ON CONFLICT (id) DO UPDATE SET
+                         title=EXCLUDED.title, content=EXCLUDED.content, note_type=EXCLUDED.note_type,
+                         status=EXCLUDED.status, updated_at=EXCLUDED.updated_at""",
+                    note,
+                )
+                cur.execute("DELETE FROM note_sources WHERE note_id = %s", (note["id"],))
+                if note.get("source_type") and note.get("source_id"):
+                    cur.execute(
+                        "INSERT INTO note_sources (note_id, source_type, source_id) VALUES (%s, %s, %s) ON CONFLICT DO NOTHING",
+                        (note["id"], note["source_type"], note["source_id"]),
+                    )
+            conn.commit()
+
+    def save_brain_concept(self, concept: dict[str, Any]) -> None:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO concepts (id, name, description, created_at, updated_at)
+                       VALUES (%(id)s, %(name)s, %(description)s, %(created_at)s, %(updated_at)s)
+                       ON CONFLICT (id) DO UPDATE SET
+                         name=EXCLUDED.name, description=EXCLUDED.description, updated_at=EXCLUDED.updated_at""",
+                    concept,
+                )
+            conn.commit()
+
+    @staticmethod
+    def _book_row(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": row["id"], "title": row["title"], "author": row.get("author"),
+            "language": row["language"], "file_type": row["file_type"],
+            "source_kind": row["source_kind"], "source_url": row.get("source_url"),
+            "status": row["status"], "description": row.get("description"),
+            "content_hash": row.get("content_hash"),
+            "created_at": row["created_at"].isoformat(),
+            "updated_at": row["updated_at"].isoformat(),
+            "chapters": [], "chunk_count": 0,
+        }
+
+    @staticmethod
+    def _chapter_row(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": row["id"], "book_id": row["book_id"],
+            "chapter_number": row["chapter_number"], "title": row["title"],
+            "created_at": row["created_at"].isoformat(), "chunks": [],
+        }
+
+    @staticmethod
+    def _chunk_row(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": row["id"], "chapter_id": row["chapter_id"],
+            "sequence": row["sequence"], "content": row["content"],
+            "page_number": row.get("page_number"), "start_offset": row.get("start_offset"),
+            "end_offset": row.get("end_offset"), "token_count": row.get("token_count"),
+            "created_at": row["created_at"].isoformat(),
+        }
+
+    @staticmethod
+    def _note_row(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": row["id"], "title": row["title"], "content": row["content"],
+            "note_type": row["note_type"], "status": row["status"],
+            "created_at": row["created_at"].isoformat(), "updated_at": row["updated_at"].isoformat(),
+            "sources": [],
+        }
+
+    @staticmethod
+    def _concept_row(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": row["id"], "name": row["name"], "description": row.get("description"),
+            "created_at": row["created_at"].isoformat(), "updated_at": row["updated_at"].isoformat(),
+        }
+
+    @staticmethod
+    def _concept_link_row(row: dict[str, Any]) -> dict[str, Any]:
+        return {
+            "id": row["id"], "from_concept_id": row["from_concept_id"],
+            "to_concept_id": row["to_concept_id"], "relation": row["relation"],
+            "weight": float(row["weight"]), "created_at": row["created_at"].isoformat(),
+        }
 
     def add_activity(self, event: dict[str, Any]) -> None:
         with self.connect() as conn:
