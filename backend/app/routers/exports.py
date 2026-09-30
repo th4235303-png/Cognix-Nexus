@@ -35,6 +35,7 @@ def export_to_google_drive(payload: DriveExportRequest) -> dict:
         "idempotency_key": payload.idempotency_key,
         "drive_reference": None,
         "files": list(package.files),
+        "error": None,
     }
     saved = store.create_export_if_absent(job)
     if saved["id"] != export_id:
