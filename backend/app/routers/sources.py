@@ -66,12 +66,14 @@ def create_source(payload: SourceCreate) -> dict:
 
 @router.get("")
 def list_sources() -> dict:
+    store.refresh()
     items = list(store.sources.values())
     return {"items": items, "total": len(items)}
 
 
 @router.get("/{source_id}")
 def get_source(source_id: str) -> dict:
+    store.refresh()
     source = store.sources.get(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
