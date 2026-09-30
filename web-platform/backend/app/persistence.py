@@ -71,6 +71,7 @@ class Database:
                     "003_persistence_hardening.sql",
                     "004_brain_vault_foundation.sql",
                     "005_brain_vault_search.sql",
+                    "006_brain_vault_advanced.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
