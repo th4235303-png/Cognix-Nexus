@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { RotateCcw, Play, Languages, AlertTriangle, Loader2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard, FilterChip } from '@/components/shared/cognix-primitives';
-import { stageLabels, type ProcessingStage } from '@/lib/researchData';
+type ProcessingStage = 'queued'|'extracting'|'cleaning'|'translating'|'summarizing'|'key_points'|'fact_check'|'trust_scoring'|'needs_review'|'approved'|'failed';
+const stageLabels: Record<ProcessingStage,string> = { queued:'Queued', extracting:'Extracting', cleaning:'Cleaning', translating:'Translating', summarizing:'Summarizing', key_points:'Key Points', fact_check:'Fact-check Flagging', trust_scoring:'Trust Scoring', needs_review:'Needs Review', approved:'Approved', failed:'Failed' };
 import { StageBadge } from '@/components/research/workspace-ui';
 import { listProcessing, advanceProcessingTask, retryProcessingTask, type ApiProcessingTask } from '@/lib/api';
 

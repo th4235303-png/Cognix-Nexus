@@ -2,7 +2,7 @@ import { supabase } from '@/lib/supabase';
 
 const API_BASE_URL = (process.env.NEXT_PUBLIC_COGNIX_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 
-import type { Source, SourceStatus, SourceType, TrustLevel } from '@/lib/mockData';
+import type { Source, SourceStatus, SourceType, TrustLevel } from '@/lib/types/source';
 
 export interface ApiClaim { id: string; text: string; excerpt?: string | null; location?: string | null; confidence: string; verification_state: string; created_at: string; }
 export interface ApiSource { id: string; url: string; note?: string | null; status: string; processing_stage: string; created_at: string; updated_at: string; critical_warnings: string[]; claims?: ApiClaim[]; source_trust?: string; original_text?: string | null; ai_summary?: string | null; myanmar_translation?: string | null; human_edited_myanmar?: string | null; approved_myanmar?: string | null; key_points?: string[]; }
@@ -67,6 +67,7 @@ export function advanceExport(exportId: string) { return request<ApiExportJob>(`
 export function retryExport(exportId: string) { return request<ApiExportJob>(`/exports/${exportId}/retry`, { method: 'POST' }); }
 export function getActivity() { return request<{ total: number; items: Record<string, unknown>[] }>('/activity'); }
 export function getUsage() { return request<ApiUsage>('/usage'); }
+export function getReady() { return request<{ status: string; persistence_mode: string; database_configured: boolean; database_reachable: boolean }>('/ready'); }
 
 const sourceStatuses = new Set<SourceStatus>(['new', 'processing', 'needs_review', 'approved', 'delivered', 'failed', 'outdated']);
 const trustLevels = new Set<TrustLevel>(['verified', 'high', 'medium', 'low', 'unverified']);
