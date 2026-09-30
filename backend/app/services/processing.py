@@ -18,6 +18,19 @@ def _apply_result(source: dict, result: ProcessingResult) -> None:
         source["myanmar_translation"] = result.translation
     if result.key_points is not None:
         source["key_points"] = result.key_points
+        if not source.get("claims"):
+            source["claims"] = [
+                {
+                    "id": f"CLM-AUTO-{index + 1:02d}",
+                    "text": point,
+                    "excerpt": point,
+                    "location": "AI key point",
+                    "confidence": "medium",
+                    "verification_state": "needs_verification",
+                    "created_at": now_iso(),
+                }
+                for index, point in enumerate(result.key_points)
+            ]
 
 
 def _fact_check(source: dict) -> None:
@@ -26,6 +39,11 @@ def _fact_check(source: dict) -> None:
         warning = "No claims have been extracted for verification."
         if warning not in warnings:
             warnings.append(warning)
+    for claim in source.get("claims", []):
+        if claim.get("verification_state") in {"unsupported", "conflicted"}:
+            warning = f"Claim {claim.get('id', 'unknown')} requires resolution before approval."
+            if warning not in warnings:
+                warnings.append(warning)
     if source.get("ai_summary") and not source.get("original_text"):
         warning = "Summary exists without retained source text."
         if warning not in warnings:
