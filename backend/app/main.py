@@ -5,6 +5,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+try:
+    import sentry_sdk
+except ImportError:
+    sentry_sdk = None
+
 from app.auth import authenticate_request
 from app.routers import activity, exports, processing, reviews, sources, usage
 from app.store import store
@@ -18,6 +23,13 @@ def _cors_origins() -> list[str]:
     configured = [origin.strip() for origin in raw.split(",") if origin.strip()]
     return configured or list(DEFAULT_CORS_ORIGINS)
 
+
+if sentry_sdk and os.getenv("SENTRY_DSN", "").strip():
+    sentry_sdk.init(
+        dsn=os.environ["SENTRY_DSN"],
+        environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
+    )
 
 app = FastAPI(
     title="Cognix Core API",
