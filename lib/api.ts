@@ -10,13 +10,39 @@ export interface ApiProcessingTask { id: string; source_id: string; stage: strin
 export interface ApiExportJob { id: string; source_id: string; status: string; idempotency_key: string; drive_reference: string | null; files: string[]; }
 export interface ApiUsage { ai_requests_today: number; processing_jobs: number; translation_requests: number; drive_exports: number; }
 
-export class ApiError extends Error { status: number; detail: unknown; constructor(status: number, detail: unknown) { super(typeof detail === 'string' ? detail : 'Cognix API request failed'); this.status = status; this.detail = detail; } }
+export class ApiError extends Error {
+  status: number;
+  detail: unknown;
+  constructor(status: number, detail: unknown) {
+    super(typeof detail === 'string' ? detail : 'Cognix API request failed');
+    this.status = status;
+    this.detail = detail;
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers: { 'Content-Type': 'application/json', ...(init?.headers || {}) }, cache: 'no-store' });
+  const authHeaders: Record<string, string> = {};
+  if (supabase) {
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token;
+    if (token) authHeaders.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_BASE_URL}${path}`, {
+    ...init,
+    headers: {
+      'Content-Type': 'application/json',
+      ...authHeaders,
+      ...(init?.headers || {}),
+    },
+    cache: 'no-store',
+  });
+
   const body = await response.json().catch(() => null);
   if (!response.ok) throw new ApiError(response.status, body?.detail ?? body ?? response.statusText);
   return body as T;
 }
+
 export function getApiBaseUrl() { return API_BASE_URL; }
 export function listSources() { return request<{ total: number; items: ApiSource[] }>('/sources'); }
 export function getSource(sourceId: string) { return request<ApiSource>(`/sources/${sourceId}`); }
@@ -94,7 +120,6 @@ export function apiSourceToSource(source: ApiSource): Source {
     relatedSourceIds: [],
   };
 }
-
 
 export function mergeSources(live: ApiSource[], fallback: Source[]): Source[] {
   const liveSources = live.map(apiSourceToSource);
