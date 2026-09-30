@@ -11,3 +11,15 @@ services:
         sync: false
       - key: DATABASE_URL
         sync: false
+
+  - type: worker
+    name: cognix-core-worker
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python -m app.worker
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: COGNIX_WORKER_POLL_SECONDS
+        value: "2"
