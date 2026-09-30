@@ -28,12 +28,19 @@ def export_to_google_drive(payload: DriveExportRequest) -> dict:
         return store.exports[existing_id]
     export_id = f"EXP-{uuid4().hex[:8].upper()}"
     package = build_export_package(payload.source_id, date.today().isoformat())
-    job = {"id": export_id, "source_id": payload.source_id, "status": "queued", "idempotency_key": payload.idempotency_key, "drive_reference": None, "files": list(package.files)}
-    store.exports[export_id] = job
-    store.save_export(job)
-    store.export_keys[payload.idempotency_key] = export_id
+    job = {
+        "id": export_id,
+        "source_id": payload.source_id,
+        "status": "queued",
+        "idempotency_key": payload.idempotency_key,
+        "drive_reference": None,
+        "files": list(package.files),
+    }
+    saved = store.create_export_if_absent(job)
+    if saved["id"] != export_id:
+        return saved
     store.add_activity("drive_export_queued", payload.source_id, "approved", "export_queued")
-    return job
+    return saved
 
 
 @router.get("")
