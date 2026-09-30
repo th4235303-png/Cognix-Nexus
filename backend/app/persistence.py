@@ -77,7 +77,7 @@ class Database:
                         id, url, status, processing_stage, source_trust,
                         original_text, ai_summary, myanmar_translation,
                         human_edited_myanmar, approved_myanmar, note,
-                        critical_warnings, created_at, updated_at
+                        critical_warnings, key_points, created_at, updated_at
                     ) VALUES (
                         %(id)s, %(url)s, %(status)s, %(processing_stage)s,
                         %(source_trust)s, %(original_text)s, %(ai_summary)s,
@@ -97,9 +97,10 @@ class Database:
                         approved_myanmar=EXCLUDED.approved_myanmar,
                         note=EXCLUDED.note,
                         critical_warnings=EXCLUDED.critical_warnings,
+                        key_points=EXCLUDED.key_points,
                         updated_at=EXCLUDED.updated_at
                     """,
-                    {**source, "critical_warnings": Jsonb(source.get("critical_warnings", []))},
+                    {**source, "critical_warnings": Jsonb(source.get("critical_warnings", [])), "key_points": Jsonb(source.get("key_points", []))},
                 )
                 cur.execute("DELETE FROM claims WHERE source_id = %s", (source["id"],))
                 for claim in source.get("claims", []):
@@ -276,6 +277,7 @@ class Database:
             "source_trust": row.get("source_trust") or "unverified",
             "claims": [],
             "critical_warnings": row.get("critical_warnings") or [],
+            "key_points": row.get("key_points") or [],
         }
 
     @staticmethod
