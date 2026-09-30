@@ -9,6 +9,10 @@ services:
     envVars:
       - key: COGNIX_CORS_ORIGINS
         sync: false
+      - key: COGNIX_ALLOWED_HOSTS
+        sync: false
+      - key: COGNIX_RATE_LIMIT_PER_MINUTE
+        value: "120"
       - key: DATABASE_URL
         sync: false
       - key: COGNIX_AUTH_REQUIRED
@@ -57,3 +61,11 @@ services:
         sync: false
       - key: COGNIX_WORKER_POLL_SECONDS
         value: "2"
+      - key: COGNIX_PROCESSING_PROVIDER
+        value: "ai"
+      - key: COGNIX_AI_BASE_URL
+        sync: false
+      - key: COGNIX_AI_API_KEY
+        sync: false
+      - key: COGNIX_AI_MODEL
+        sync: false
