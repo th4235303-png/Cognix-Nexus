@@ -5,6 +5,7 @@ router = APIRouter()
 
 @router.get("")
 def get_usage() -> dict:
+    store.refresh()
     return {
         "ai_requests_today": 0,
         "processing_jobs": len(store.tasks),
