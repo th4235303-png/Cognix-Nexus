@@ -1,37 +1,124 @@
 # Cognix Core
 
-Cognix Core is a research intelligence workspace for source ingestion, processing, human review, trust scoring, and approved Google Drive export.
+Cognix Core is evolving into **Cognix Brain Vault**, a personal knowledge OS built on a research intelligence foundation.
 
-## Platform architecture
+## Product direction
+
+```text
+Research sources
+  → processing
+  → evidence / claims
+  → human review
+  → approved knowledge
+  → Brain Vault
+  → notes / concepts / graph
+  → retrieval / RAG
+  → learning / synthesis
+```
+
+Cognix Core remains the research and evidence foundation. Brain Vault is the primary knowledge layer built on top of it. Vizora Lens is a future media-intelligence layer that will feed images and other media into the same knowledge system.
+
+## Current platform architecture
 
 - Frontend: Next.js + React + TypeScript + Tailwind CSS
 - Backend: FastAPI + Python processing worker
 - Persistence: PostgreSQL / Supabase
 - Authentication: Supabase Auth with backend JWT verification
-- Delivery: Google Drive only
+- Delivery: Google Drive
 - Hosting: Netlify (frontend) + Render (API/worker)
-
-Next.js and Python are intentionally separate applications under the web-platform directory.
 
 ## Repository structure
 
+```text
 web-platform/
 ├── frontend/   Next.js application
 ├── backend/    FastAPI API, worker, migrations, tests
-└── docs/       Architecture, deployment and operations docs
+└── docs/       architecture, deployment, operations, Brain Vault
 
-.github/        CI
-README.md       Project overview
-SECURITY.md     Security policy
+.github/        CI and dependency automation
+README.md       project overview
+SECURITY.md     security policy
+render.yaml     Render services
+netlify.toml    Netlify configuration
+```
 
-## Research lifecycle
+## Research foundation
 
-New → Queued → Extracting → Cleaning → Translating → Summarizing → Key Points → Fact-check Flagging → Trust Scoring → Needs Review → Approved → Drive Exported
+The existing research lifecycle remains:
 
-Human-edited Myanmar translation and critical fact-check warnings are preserved separately from AI-derived content. Approval blocks when critical warnings remain unresolved or when an approved Myanmar translation is missing.
+```text
+New
+→ Queued
+→ Extracting
+→ Cleaning
+→ Translating
+→ Summarizing
+→ Key Points
+→ Fact-check Flagging
+→ Trust Scoring
+→ Needs Review
+→ Approved
+→ Drive Exported
+```
+
+Human-edited Myanmar translation and critical fact-check warnings remain separate from AI-derived content. Approval still blocks unresolved critical warnings and missing approved Myanmar translation.
+
+## Brain Vault foundation
+
+The first Brain Vault layer is now API-backed and durable:
+
+- Book Library
+- Book reader data model
+- Chapters and chunks
+- Evidence-ranked book search
+- Second Brain notes
+- Note-to-source relationships
+- Note backlinks
+- Concepts
+- Concept relationships
+- Knowledge graph API
+- Evidence-first Brain Query
+
+Backend routes are under `/brain`.
+
+Frontend routes are:
+
+- `/books`
+- `/books/[id]`
+- `/notes`
+- `/graph`
+- `/chat`
+
+The current retrieval layer intentionally uses deterministic PostgreSQL text search. It does **not** claim semantic RAG yet. The next retrieval milestone is pgvector embeddings with source/chunk citations.
+
+See `web-platform/docs/brain-vault.md` for the detailed architecture and phase roadmap.
+
+## Brain Vault migration order
+
+1. `001_initial.sql`
+2. `002_api_contract_alignment.sql`
+3. `003_persistence_hardening.sql`
+4. `004_brain_vault_foundation.sql`
+5. `005_brain_vault_search.sql`
+
+The existing database bootstrap applies the Brain Vault migrations after the Cognix Core schema.
+
+## Planned knowledge phases
+
+1. PDF/EPUB ingestion and page-accurate source spans
+2. Semantic embeddings + pgvector
+3. L1–L7 hierarchical book intelligence
+4. Cross-book synthesis + contradiction review
+5. Language Tutor + FSRS
+6. Document Assistant + OCR
+7. Client-side encrypted Secret Vault
+8. Unified export and automation
+9. Expo mobile client
+10. Vizora Lens media intelligence
 
 ## Google Drive output
 
+```text
 /cognix-core/YYYY-MM-DD/research-id/
 ├── source.json
 ├── original-reference.txt
@@ -39,8 +126,9 @@ Human-edited Myanmar translation and critical fact-check warnings are preserved 
 ├── myanmar-summary.md
 ├── claims.json
 └── review.json
+```
 
-No Logixa Flow webhook is used.
+Brain Vault exports will extend this contract rather than replacing the existing research export.
 
 ## Local development
 
@@ -70,3 +158,5 @@ Backend:
     python -m unittest discover -s tests -v
 
 Never commit API keys, OAuth refresh tokens, database passwords, or other provider secrets.
+
+No Logixa Flow webhook is used.
