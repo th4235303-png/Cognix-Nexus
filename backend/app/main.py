@@ -1,9 +1,12 @@
 import os
+import time
+from collections import defaultdict, deque
 from uuid import uuid4
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.trustedhost import TrustedHostMiddleware
 
 try:
     import sentry_sdk
@@ -16,6 +19,8 @@ from app.store import store
 
 API_VERSION = "0.1.0"
 DEFAULT_CORS_ORIGINS = ("http://localhost:3000",)
+RATE_LIMIT = int(os.getenv("COGNIX_RATE_LIMIT_PER_MINUTE", "120"))
+_rate_windows: dict[str, deque[float]] = defaultdict(deque)
 
 
 def _cors_origins() -> list[str]:
@@ -54,6 +59,30 @@ async def request_context(request: Request, call_next):
     response.headers["x-request-id"] = request_id
     return response
 
+
+
+@app.middleware("http")
+async def rate_limit(request: Request, call_next):
+    if RATE_LIMIT > 0 and request.url.path not in {"/", "/health", "/ready"}:
+        identity = request.headers.get("authorization", "")[:80] or (request.client.host if request.client else "unknown")
+        now = time.monotonic()
+        window = _rate_windows[identity]
+        while window and now - window[0] >= 60:
+            window.popleft()
+        if len(window) >= RATE_LIMIT:
+            response = JSONResponse(
+                status_code=429,
+                content={"detail": {"code": "RATE_LIMITED", "message": "Too many requests"}},
+                headers={"Retry-After": "60"},
+            )
+            response.headers["x-request-id"] = getattr(request.state, "request_id", str(uuid4()))
+            return response
+        window.append(now)
+    return await call_next(request)
+
+allowed_hosts = [host.strip() for host in os.getenv("COGNIX_ALLOWED_HOSTS", "").split(",") if host.strip()]
+if allowed_hosts:
+    app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
 app.add_middleware(
     CORSMiddleware,
