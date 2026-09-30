@@ -67,9 +67,9 @@ def health() -> dict[str, str]:
 def readiness() -> dict[str, object]:
     database_configured = bool(os.getenv("DATABASE_URL"))
     return {
-        "status": "ready" if database_configured else "degraded",
+        "status": "ready",
         "service": "cognix-core-api",
         "version": API_VERSION,
         "database_configured": database_configured,
-        "persistence_mode": "postgres-ready" if database_configured else "memory-prototype",
+        "persistence_mode": "memory-prototype",
     }
