@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { notifications } from '@/lib/mockData';
+import { supabase } from '@/lib/supabase';
 
 const navSections = [
   {
@@ -66,6 +67,10 @@ export function Sidebar({
   collapsed: boolean;
   setCollapsed: (v: boolean) => void;
 }) {
+  const signOut = async () => {
+    if (supabase) await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
   const pathname = usePathname();
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -158,13 +163,14 @@ export function Sidebar({
           {!collapsed && <span>Collapse</span>}
         </button>
         {!collapsed && (
-          <Link
-            href="/"
-            className="mt-1 flex items-center gap-3 rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
+          <button
+            type="button"
+            onClick={signOut}
+            className="mt-1 flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign out</span>
-          </Link>
+          </button>
         )}
       </div>
     </aside>
@@ -178,6 +184,10 @@ export function MobileNav({
   open: boolean;
   setOpen: (v: boolean) => void;
 }) {
+  const signOut = async () => {
+    if (supabase) await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
   const pathname = usePathname();
   const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -247,13 +257,14 @@ export function MobileNav({
           ))}
         </nav>
         <div className="border-t border-border/40 p-3">
-          <Link
-            href="/"
-            className="flex items-center gap-3 rounded-md px-2.5 py-2.5 text-sm text-muted-foreground hover:text-destructive transition-colors"
+          <button
+            type="button"
+            onClick={signOut}
+            className="flex w-full items-center gap-3 rounded-md px-2.5 py-2.5 text-sm text-muted-foreground hover:text-destructive transition-colors"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign out</span>
-          </Link>
+          </button>
         </div>
       </aside>
     </>
