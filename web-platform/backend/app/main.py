@@ -14,7 +14,7 @@ except ImportError:
     sentry_sdk = None
 
 from app.auth import authenticate_request
-from app.routers import activity, exports, integrations, processing, reviews, sources, usage
+from app.routers import activity, brain_vault, exports, integrations, processing, reviews, sources, usage
 from app.store import store
 
 API_VERSION = "0.1.0"
@@ -39,7 +39,7 @@ if sentry_sdk and os.getenv("SENTRY_DSN", "").strip():
 app = FastAPI(
     title="Cognix Core API",
     version=API_VERSION,
-    description="Research processing, review, and approved knowledge export API.",
+    description="Research intelligence and personal knowledge OS API.",
 )
 
 
@@ -94,6 +94,7 @@ app.add_middleware(
 
 
 app.include_router(sources.router, prefix="/sources", tags=["sources"])
+app.include_router(brain_vault.router)
 app.include_router(processing.router, prefix="/processing", tags=["processing"])
 app.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
 app.include_router(exports.router, prefix="/exports", tags=["exports"])
