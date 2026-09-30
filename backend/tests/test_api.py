@@ -56,6 +56,8 @@ class CognixApiTests(unittest.TestCase):
         task = self.client.post("/processing", json={"source_id": source["id"]})
         self.assertEqual(task.status_code, 202)
         task_id = task.json()["id"]
+        duplicate_task = self.client.post("/processing", json={"source_id": source["id"]})
+        self.assertEqual(duplicate_task.json()["id"], task_id)
 
         advanced = self.client.post(f"/processing/{task_id}/advance")
         self.assertEqual(advanced.status_code, 200)
