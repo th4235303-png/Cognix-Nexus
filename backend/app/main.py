@@ -11,7 +11,7 @@ except ImportError:
     sentry_sdk = None
 
 from app.auth import authenticate_request
-from app.routers import activity, exports, processing, reviews, sources, usage
+from app.routers import activity, delivery, exports, processing, reviews, sources, usage
 from app.store import store
 
 API_VERSION = "0.1.0"
@@ -70,6 +70,7 @@ app.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
 app.include_router(exports.router, prefix="/exports", tags=["exports"])
 app.include_router(activity.router, prefix="/activity", tags=["activity"])
 app.include_router(usage.router, prefix="/usage", tags=["usage"])
+app.include_router(delivery.router, prefix="/delivery", tags=["delivery"])
 
 
 @app.get("/")
