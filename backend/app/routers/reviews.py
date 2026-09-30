@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.store import store
+from app.store import now_iso, store
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ def approve_review(source_id: str, action: ReviewAction) -> dict:
     if critical:
         raise HTTPException(status_code=409, detail={"code": "CRITICAL_WARNINGS", "warnings": critical})
     review = {"source_id": source_id, "status": "approved", "note": action.note}
-    review["created_at"] = __import__("app.store", fromlist=["now_iso"]).now_iso()
+    review["created_at"] = now_iso()
     store.reviews[source_id] = review
     store.save_review(review)
     previous = source.get("status", "needs_review")
