@@ -41,15 +41,7 @@ export default function DeliveryPage() {
     }
   }
 
-  const driveRows = liveExports.length
-    ? liveExports.map(item => ({
-        id: item.id,
-        sourceId: item.source_id,
-        title: sourceMap[item.source_id]?.url || item.source_id,
-        exportStatus: item.status,
-        driveReference: item.drive_reference,
-      }))
-    : exportRows;
+  const driveRows = liveExports.map(item => ({ id: item.id, sourceId: item.source_id, title: sourceMap[item.source_id]?.url || item.source_id, exportStatus: item.status, driveReference: item.drive_reference, error: item.error }));
 
   return <AppShell>
     <PageHeader title="Google Drive Delivery" description="Approved knowledge is packaged and stored in Google Drive for downstream use." />
