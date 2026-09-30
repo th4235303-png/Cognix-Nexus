@@ -3,9 +3,10 @@ from __future__ import annotations
 from hashlib import sha256
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
+from app.services.book_ingestion import extract_document
 from app.store import now_iso, store
 
 router = APIRouter(prefix="/brain", tags=["brain-vault"])
@@ -309,3 +310,77 @@ def create_concept_link(payload: ConceptLinkCreate) -> dict:
     store.save_brain_concept_link(link)
     store.add_activity("brain_concept_linked", link["id"], "new", "active")
     return link
+
+
+@router.post("/books/upload", status_code=201)
+async def upload_book(file: UploadFile = File(...), language: str = "en", description: str | None = None) -> dict:
+    filename = file.filename or "document"
+    suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if suffix not in {"pdf", "epub"}:
+        raise HTTPException(status_code=400, detail="Only PDF and EPUB uploads are supported")
+    data = await file.read()
+    if not data:
+        raise HTTPException(status_code=400, detail="Uploaded document is empty")
+    if len(data) > 25 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Document exceeds the 25 MB upload limit")
+    try:
+        document = extract_document(data, filename, suffix)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Document extraction failed: {exc}") from exc
+
+    now = now_iso()
+    book_id = f"BOOK-{uuid4().hex[:8].upper()}"
+    chapters = []
+    total_chunks = 0
+    for chapter_number, section in enumerate(document.sections, start=1):
+        section_text = section["text"]
+        chunks = []
+        for index, content in enumerate(_chunk_text(section_text), start=1):
+            chunk = {
+                "id": f"CHK-{uuid4().hex[:8].upper()}",
+                "chapter_id": "",
+                "sequence": index,
+                "content": content,
+                "page_number": section.get("page_number"),
+                "source_section": section.get("title"),
+                "start_offset": None,
+                "end_offset": None,
+                "token_count": max(1, len(content.split())),
+                "created_at": now,
+            }
+            chunks.append(chunk)
+        chapter_id = f"CH-{uuid4().hex[:8].upper()}"
+        for chunk in chunks:
+            chunk["chapter_id"] = chapter_id
+        chapters.append({
+            "id": chapter_id,
+            "book_id": book_id,
+            "chapter_number": chapter_number,
+            "title": section.get("title") or f"Section {chapter_number}",
+            "created_at": now,
+            "chunks": chunks,
+        })
+        total_chunks += len(chunks)
+
+    book = {
+        "id": book_id,
+        "title": document.title,
+        "author": document.author,
+        "language": language,
+        "file_type": document.file_type,
+        "source_kind": "upload",
+        "source_url": None,
+        "status": "ready",
+        "description": description,
+        "content_hash": sha256(data).hexdigest(),
+        "created_at": now,
+        "updated_at": now,
+        "chapters": chapters,
+        "chunk_count": total_chunks,
+        "original_filename": filename,
+        "binary_storage": "external-storage-required",
+    }
+    store.brain_books[book_id] = book
+    store.save_brain_book(book)
+    store.add_activity("brain_book_uploaded", book_id, "new", "ready")
+    return book
