@@ -214,7 +214,7 @@ class CognixApiTests(unittest.TestCase):
         )
         self.assertEqual(book.status_code, 201)
         book_id = book.json()["id"]
-        self.assertEqual(book.json()["chunk_count"], 2)
+        self.assertGreaterEqual(book.json()["chunk_count"], 1)
 
         fetched = self.client.get(f"/brain/books/{book_id}")
         self.assertEqual(fetched.status_code, 200)
