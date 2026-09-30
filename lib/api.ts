@@ -5,7 +5,7 @@ const API_BASE_URL = (process.env.NEXT_PUBLIC_COGNIX_API_URL || 'http://localhos
 import type { Source, SourceStatus, SourceType, TrustLevel } from '@/lib/mockData';
 
 export interface ApiClaim { id: string; text: string; excerpt?: string | null; location?: string | null; confidence: string; verification_state: string; created_at: string; }
-export interface ApiSource { id: string; url: string; note?: string | null; status: string; processing_stage: string; created_at: string; updated_at: string; critical_warnings: string[]; claims?: ApiClaim[]; source_trust?: string; original_text?: string | null; ai_summary?: string | null; myanmar_translation?: string | null; human_edited_myanmar?: string | null; approved_myanmar?: string | null; }
+export interface ApiSource { id: string; url: string; note?: string | null; status: string; processing_stage: string; created_at: string; updated_at: string; critical_warnings: string[]; claims?: ApiClaim[]; source_trust?: string; original_text?: string | null; ai_summary?: string | null; myanmar_translation?: string | null; human_edited_myanmar?: string | null; approved_myanmar?: string | null; key_points?: string[]; }
 export interface ApiProcessingTask { id: string; source_id: string; stage: string; progress: number; status: string; retry_count: number; error: string | null; }
 export interface ApiExportJob { id: string; source_id: string; status: string; idempotency_key: string; drive_reference: string | null; files: string[]; }
 export interface ApiUsage { ai_requests_today: number; processing_jobs: number; translation_requests: number; drive_exports: number; }
@@ -114,7 +114,7 @@ export function apiSourceToSource(source: ApiSource): Source {
     myanmarTranslation: source.myanmar_translation || undefined,
     humanEditedMyanmar: source.human_edited_myanmar || undefined,
     approvedMyanmar: source.approved_myanmar || undefined,
-    keyPoints: [],
+    keyPoints: source.key_points || [],
     tags: [],
     claims,
     relatedSourceIds: [],
