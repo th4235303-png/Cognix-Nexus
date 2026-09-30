@@ -37,12 +37,14 @@ def export_to_google_drive(payload: DriveExportRequest) -> dict:
 
 @router.get("")
 def list_exports() -> dict:
+    store.refresh()
     items = list(store.exports.values())
     return {"items": items, "total": len(items)}
 
 
 @router.get("/{export_id}")
 def get_export(export_id: str) -> dict:
+    store.refresh()
     job = store.exports.get(export_id)
     if not job:
         raise HTTPException(status_code=404, detail="Export not found")
