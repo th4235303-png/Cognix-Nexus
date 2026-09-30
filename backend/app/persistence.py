@@ -83,7 +83,7 @@ class Database:
                         %(source_trust)s, %(original_text)s, %(ai_summary)s,
                         %(myanmar_translation)s, %(human_edited_myanmar)s,
                         %(approved_myanmar)s, %(note)s, %(critical_warnings)s,
-                        %(created_at)s, %(updated_at)s
+                        %(key_points)s, %(created_at)s, %(updated_at)s
                     )
                     ON CONFLICT (id) DO UPDATE SET
                         url=EXCLUDED.url,
