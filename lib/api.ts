@@ -1,3 +1,5 @@
+import { supabase } from '@/lib/supabase';
+
 const API_BASE_URL = (process.env.NEXT_PUBLIC_COGNIX_API_URL || 'http://localhost:8000').replace(/\/$/, '');
 
 import type { Source, SourceStatus, SourceType, TrustLevel } from '@/lib/mockData';
