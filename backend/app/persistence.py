@@ -187,9 +187,9 @@ class Database:
                     """
                     INSERT INTO export_jobs (
                         id, source_id, destination, status, idempotency_key,
-                        safe_reference, files, drive_reference, created_at, updated_at
+                        safe_reference, files, drive_reference, error, created_at, updated_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s,
                         COALESCE(%s, now()), COALESCE(%s, now())
                     )
                     ON CONFLICT (idempotency_key) DO NOTHING
@@ -199,6 +199,7 @@ class Database:
                         job["id"], job["source_id"], "google_drive", job["status"],
                         job["idempotency_key"], job.get("drive_reference"),
                         Jsonb(job.get("files", [])), job.get("drive_reference"),
+                        job.get("error"),
                         job.get("created_at"), job.get("updated_at"),
                     ),
                 )
@@ -231,6 +232,7 @@ class Database:
                         safe_reference=EXCLUDED.safe_reference,
                         files=EXCLUDED.files,
                         drive_reference=EXCLUDED.drive_reference,
+                        error=EXCLUDED.error,
                         updated_at=EXCLUDED.updated_at
                     """,
                     (
@@ -333,6 +335,7 @@ class Database:
             "status": row["status"],
             "idempotency_key": row["idempotency_key"],
             "drive_reference": row.get("drive_reference") or row.get("safe_reference"),
+            "error": row.get("error"),
             "files": row.get("files") or [],
             "created_at": row["created_at"].isoformat(),
             "updated_at": row["updated_at"].isoformat(),
