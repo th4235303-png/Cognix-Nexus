@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { use, useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import type { ResearchRecord } from '@/lib/researchData';
 import type { Source } from '@/lib/types/source';
@@ -109,7 +109,8 @@ function buildLiveRecord(source: ApiSource, fallback: ResearchRecord | undefined
   };
 }
 
-export default function SourceDetailPage({ params }: { params: { id: string } }) {
+export default function SourceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = use(params);
   const fallback: ResearchRecord | undefined = undefined;
   const [record, setRecord] = useState<ResearchRecord | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,7 +118,7 @@ export default function SourceDetailPage({ params }: { params: { id: string } })
 
   useEffect(() => {
     let active = true;
-    Promise.all([getSource(params.id), listExports()])
+    Promise.all([getSource(id), listExports()])
       .then(([live, exportsResponse]) => {
         if (!active) return;
         const exportJob = exportsResponse.items.find(item => item.source_id === live.id);
@@ -132,7 +133,7 @@ export default function SourceDetailPage({ params }: { params: { id: string } })
         if (active) setLoading(false);
       });
     return () => { active = false; };
-  }, [params.id, fallback]);
+  }, [id, fallback]);
 
   if (notFound) return <AppShell><div className="p-6 text-sm text-muted-foreground">Source not found.</div></AppShell>;
   return <AppShell>
