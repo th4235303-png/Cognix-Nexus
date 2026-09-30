@@ -33,7 +33,7 @@ Never commit real values to Git.
 ## Recommended production order
 
 1. Provision PostgreSQL (Supabase is the planned managed option) and set `DATABASE_URL` on the backend.
-2. Deploy FastAPI to Render (or another managed backend host) and set `COGNIX_CORS_ORIGINS`.
+2. Deploy the FastAPI web service and the separate processing worker on Render (or another managed backend host), sharing the same `DATABASE_URL`; set `COGNIX_CORS_ORIGINS` on the API and `COGNIX_WORKER_POLL_SECONDS` on the worker.
 3. Deploy Next.js to Vercel and set `NEXT_PUBLIC_COGNIX_API_URL`. If Vercel access is unavailable, deploy the same frontend to Netlify; no application rewrite is required.
 4. Add Sentry to frontend/backend and verify error events.
 5. Configure Google Cloud OAuth 2.0 and Drive permissions; keep credentials server-side.
