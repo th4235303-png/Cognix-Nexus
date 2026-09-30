@@ -222,9 +222,9 @@ class Database:
                     """
                     INSERT INTO export_jobs (
                         id, source_id, destination, status, idempotency_key,
-                        safe_reference, files, drive_reference, created_at, updated_at
+                        safe_reference, files, drive_reference, error, created_at, updated_at
                     ) VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s,
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s,
                         COALESCE(%s, now()), COALESCE(%s, now())
                     )
                     ON CONFLICT (id) DO UPDATE SET
@@ -244,6 +244,7 @@ class Database:
                         job.get("drive_reference"),
                         Jsonb(job.get("files", [])),
                         job.get("drive_reference"),
+                        job.get("error"),
                         job.get("created_at"),
                         job.get("updated_at"),
                     ),
