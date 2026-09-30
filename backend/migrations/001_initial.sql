@@ -1,4 +1,4 @@
--- Durable production schema draft. Prototype currently uses app.store in memory.
+-- Durable production schema baseline. Applied automatically when DATABASE_URL is configured.
 CREATE TABLE sources (
   id TEXT PRIMARY KEY, url TEXT NOT NULL UNIQUE, title TEXT, status TEXT NOT NULL,
   processing_stage TEXT NOT NULL, source_trust TEXT, original_text TEXT,
