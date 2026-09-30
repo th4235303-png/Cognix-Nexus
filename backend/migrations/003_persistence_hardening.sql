@@ -17,3 +17,5 @@ CREATE INDEX IF NOT EXISTS idx_activity_events_created_at
 
 ALTER TABLE sources ADD COLUMN IF NOT EXISTS key_points JSONB NOT NULL DEFAULT '[]'::jsonb;
 CREATE INDEX IF NOT EXISTS idx_sources_processing_stage_updated_at ON sources(processing_stage, updated_at DESC);
+
+ALTER TABLE export_jobs ADD COLUMN IF NOT EXISTS error TEXT;
