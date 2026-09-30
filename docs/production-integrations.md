@@ -38,6 +38,6 @@ Never commit real values to Git.
 4. Add Sentry to frontend/backend and verify error events.
 5. Configure Google Cloud OAuth 2.0 and Drive permissions; keep credentials server-side.
 6. Connect Logixa Flow after the approved/exported event contract is stable.
-7. Add background workers, rate limits, authentication/authorization, and durable audit logging.
+7. Enable JWT authentication with a trusted issuer/secret; keep `COGNIX_AUTH_REQUIRED=false` only for local prototype use.\n8. Add rate limits, durable audit logging, and the remaining provider integrations.
 
 The repository includes both Vercel and Netlify deployment boundaries. Provider accounts and production secrets are deliberately not created by code.
