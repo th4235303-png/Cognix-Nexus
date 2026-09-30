@@ -14,7 +14,7 @@ except ImportError:
     sentry_sdk = None
 
 from app.auth import authenticate_request
-from app.routers import activity, brain_vault, exports, integrations, processing, reviews, sources, usage
+from app.routers import activity, brain_advanced, brain_vault, exports, integrations, processing, reviews, sources, usage
 from app.store import store
 
 API_VERSION = "0.1.0"
@@ -95,6 +95,7 @@ app.add_middleware(
 
 app.include_router(sources.router, prefix="/sources", tags=["sources"])
 app.include_router(brain_vault.router)
+app.include_router(brain_advanced.router)
 app.include_router(processing.router, prefix="/processing", tags=["processing"])
 app.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
 app.include_router(exports.router, prefix="/exports", tags=["exports"])
