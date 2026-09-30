@@ -59,6 +59,7 @@ def create_source(payload: SourceCreate) -> dict:
         "critical_warnings": [],
     }
     store.sources[source_id] = source
+    store.save_source(source)
     store.add_activity("source_added", source_id, "—", "new")
     return {"status": "queued", "source": source}
 
@@ -93,10 +94,12 @@ def add_claim(source_id: str, payload: ClaimCreate) -> dict:
     }
     source["claims"].append(claim)
     source["updated_at"] = now_iso()
+    store.save_source(source)
     if payload.verification_state in {"unsupported", "conflicted"} and payload.confidence in {"low", "unsupported", "conflicted"}:
         warning = f"Claim {claim['id']} requires resolution before approval."
         if warning not in source["critical_warnings"]:
             source["critical_warnings"].append(warning)
+    store.save_source(source)
     store.add_activity("claim_added", source_id, "claims_updated", "claims_updated")
     return claim
 
@@ -109,6 +112,7 @@ def update_translation(source_id: str, payload: TranslationUpdate) -> dict:
     previous = source.get("human_edited_myanmar")
     source["human_edited_myanmar"] = payload.human_edited_myanmar
     source["updated_at"] = now_iso()
+    store.save_source(source)
     store.add_activity("translation_edited", source_id, previous or "empty", "human_edited")
     return source
 
@@ -129,5 +133,6 @@ def update_source_trust(source_id: str, payload: SourceTrustUpdate) -> dict:
     previous = source.get("source_trust", "unverified")
     source["source_trust"] = payload.source_trust
     source["updated_at"] = now_iso()
+    store.save_source(source)
     store.add_activity("source_trust_updated", source_id, previous, payload.source_trust)
     return calculate_trust(source)
