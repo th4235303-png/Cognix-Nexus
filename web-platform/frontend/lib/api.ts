@@ -237,6 +237,15 @@ export function createBrainConcept(payload: { name: string; description?: string
 export function getBrainGraph() {
   return request<{ nodes: ApiBrainConcept[]; edges: Array<Record<string, unknown>> }>('/brain/graph');
 }
+export function createBrainConceptLink(payload: { from_concept_id: string; to_concept_id: string; relation?: string; weight?: number }) {
+  return request<Record<string, unknown>>('/brain/concept-links', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+export function getNoteBacklinks(noteId: string) {
+  return request<{ items: ApiBrainNote[]; total: number }>('/brain/notes/' + noteId + '/backlinks');
+}
 export function queryBrain(q: string) {
   return request<{ query: string; mode: string; answer: string | null; message: string; total: number; items: ApiBrainSearchResult[] }>(
     `/brain/query?q=${encodeURIComponent(q)}`,
