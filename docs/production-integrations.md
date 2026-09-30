@@ -13,7 +13,7 @@ Cognix Core is runnable locally before provider accounts are connected. The back
 | Supabase | PostgreSQL/auth/storage option | not required | provision PostgreSQL and provide its connection string as `DATABASE_URL`; auth/storage can be added later |
 | Sentry | error monitoring | not required | add DSNs/SDKs after production runtime exists |
 | Google Cloud/Drive | approved knowledge export | mock boundary | OAuth 2.0 + Drive API, backend-only secrets |
-| Logixa Flow | downstream delivery | UI placeholder | connect webhook/API after approval/export contracts stabilize |
+| Google Drive | approved knowledge delivery | mock boundary | OAuth 2.0 + Drive API, backend-only secrets |
 
 ## Environment variables
 
@@ -28,7 +28,6 @@ Cognix Core is runnable locally before provider accounts are connected. The back
 - `COGNIX_AUTH_REQUIRED`, `COGNIX_JWT_SECRET` or `COGNIX_JWT_JWKS_URL`, optional issuer/audience
 - `COGNIX_PROCESSING_PROVIDER`, `COGNIX_AI_BASE_URL`, `COGNIX_AI_API_KEY`, `COGNIX_AI_MODEL`
 - `COGNIX_DRIVE_PROVIDER`, Google OAuth client values, and `GOOGLE_REFRESH_TOKEN`
-- `LOGIXA_FLOW_WEBHOOK_URL`, `LOGIXA_FLOW_WEBHOOK_SECRET`
 - `SENTRY_DSN`, optional `SENTRY_ENVIRONMENT` and `SENTRY_TRACES_SAMPLE_RATE`
 - all provider secrets are backend-only
 
@@ -43,10 +42,9 @@ Never commit real values to Git.
 3. Deploy Next.js to Vercel and set `NEXT_PUBLIC_COGNIX_API_URL`. If Vercel access is unavailable, deploy the same frontend to Netlify; no application rewrite is required.
 4. Add Sentry to frontend/backend and verify error events.
 5. Configure Google Cloud OAuth 2.0 and Drive permissions. The backend exposes `/integrations/google-drive/authorize` and `/integrations/google-drive/callback` for the operator consent flow; store the resulting refresh token only in the backend secret manager.
-6. Connect Logixa Flow using the signed `/delivery/logixa-flow` contract.
-7. Enable JWT authentication with a trusted issuer/secret or JWKS endpoint; keep `COGNIX_AUTH_REQUIRED=false` only for local prototype use. Supabase Auth can provide the browser session and JWKS-backed access tokens.
-8. Set `COGNIX_RATE_LIMIT_PER_MINUTE` and `COGNIX_ALLOWED_HOSTS` for the production API.
+6. Enable JWT authentication with a trusted issuer/secret or JWKS endpoint; keep `COGNIX_AUTH_REQUIRED=false` only for local prototype use. Supabase Auth can provide the browser session and JWKS-backed access tokens.
+7. Set `COGNIX_RATE_LIMIT_PER_MINUTE` and `COGNIX_ALLOWED_HOSTS` for the production API.
 9. Keep `COGNIX_DRIVE_PROVIDER=mock` and `COGNIX_PROCESSING_PROVIDER=mock` only for local development; production should use configured providers.
-10. Add distributed rate limits and durable audit retention if the service scales beyond a single API process.
+9. Add distributed rate limits and durable audit retention if the service scales beyond a single API process.
 
 The repository includes both Vercel and Netlify deployment boundaries. Provider accounts and production secrets are deliberately not created by code.
