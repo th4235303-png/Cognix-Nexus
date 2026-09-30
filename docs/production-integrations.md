@@ -44,7 +44,8 @@ Never commit real values to Git.
 4. Add Sentry to frontend/backend and verify error events.
 5. Configure Google Cloud OAuth 2.0 and Drive permissions. The backend exposes `/integrations/google-drive/authorize` and `/integrations/google-drive/callback` for the operator consent flow; store the resulting refresh token only in the backend secret manager.
 6. Connect Logixa Flow using the signed `/delivery/logixa-flow` contract.
-7. Enable JWT authentication with a trusted issuer/secret or JWKS endpoint; keep `COGNIX_AUTH_REQUIRED=false` only for local prototype use. Supabase Auth can provide the browser session and JWKS-backed access tokens.\n8. Set `COGNIX_RATE_LIMIT_PER_MINUTE` and `COGNIX_ALLOWED_HOSTS` for the production API.
+7. Enable JWT authentication with a trusted issuer/secret or JWKS endpoint; keep `COGNIX_AUTH_REQUIRED=false` only for local prototype use. Supabase Auth can provide the browser session and JWKS-backed access tokens.
+8. Set `COGNIX_RATE_LIMIT_PER_MINUTE` and `COGNIX_ALLOWED_HOSTS` for the production API.
 9. Keep `COGNIX_DRIVE_PROVIDER=mock` and `COGNIX_PROCESSING_PROVIDER=mock` only for local development; production should use configured providers.
 10. Add distributed rate limits and durable audit retention if the service scales beyond a single API process.
 
