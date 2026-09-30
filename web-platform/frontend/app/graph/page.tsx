@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
 import { ApiBrainConcept, createBrainConcept, createBrainConceptLink, getBrainGraph } from '@/lib/api';
@@ -12,14 +12,15 @@ export default function GraphPage() {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
 
-  const load = async () => {
+  const load = useCallback(async () => {
     const graph = await getBrainGraph();
     setConcepts(graph.nodes);
     setEdges(graph.edges);
     if (!from && graph.nodes[0]) setFrom(graph.nodes[0].id);
     if (!to && graph.nodes[1]) setTo(graph.nodes[1].id);
-  };
-  useEffect(() => { load().catch(() => undefined); }, []);
+  }, [from, to]);
+
+  useEffect(() => { load().catch(() => undefined); }, [load]);
 
   const addConcept = async () => {
     if (!name.trim()) return;
