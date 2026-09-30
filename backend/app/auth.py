@@ -5,7 +5,7 @@ from fastapi import HTTPException, Request
 from jwt import PyJWKClient
 
 
-PUBLIC_PATHS = {"/", "/health", "/ready", "/docs", "/openapi.json", "/redoc"}
+PUBLIC_PATHS = {"/", "/health", "/ready", "/docs", "/openapi.json", "/redoc", "/integrations/google-drive/callback"}
 
 
 def auth_required() -> bool:
