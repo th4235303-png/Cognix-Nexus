@@ -19,6 +19,13 @@ def create_processing_task(payload: ProcessingCreate) -> dict:
     source = store.sources.get(payload.source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
+    existing = next(
+        (task for task in store.tasks.values()
+         if task["source_id"] == payload.source_id and task["status"] in {"queued", "running"}),
+        None,
+    )
+    if existing:
+        return existing
 
     task_id = f"TSK-{uuid4().hex[:8].upper()}"
     task = {
