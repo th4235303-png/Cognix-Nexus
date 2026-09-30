@@ -43,10 +43,6 @@ services:
         sync: false
       - key: GOOGLE_DRIVE_ROOT_FOLDER_ID
         sync: false
-      - key: LOGIXA_FLOW_WEBHOOK_URL
-        sync: false
-      - key: LOGIXA_FLOW_WEBHOOK_SECRET
-        sync: false
       - key: SENTRY_DSN
         sync: false
 
