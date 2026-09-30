@@ -20,6 +20,10 @@ class Store:
     exports: dict[str, dict[str, Any]] = field(default_factory=dict)
     activity: list[dict[str, Any]] = field(default_factory=list)
     export_keys: dict[str, str] = field(default_factory=dict)
+    brain_books: dict[str, dict[str, Any]] = field(default_factory=dict)
+    brain_notes: dict[str, dict[str, Any]] = field(default_factory=dict)
+    brain_concepts: dict[str, dict[str, Any]] = field(default_factory=dict)
+    brain_concept_links: dict[str, dict[str, Any]] = field(default_factory=dict)
     database: Database | None = None
 
     def initialize(self) -> None:
@@ -33,6 +37,10 @@ class Store:
         self.exports = state["exports"]
         self.activity = state["activity"]
         self.export_keys = state["export_keys"]
+        self.brain_books = state.get("brain_books", {})
+        self.brain_notes = state.get("brain_notes", {})
+        self.brain_concepts = state.get("brain_concepts", {})
+        self.brain_concept_links = state.get("brain_concept_links", {})
 
     def refresh(self) -> None:
         if self.database is None:
@@ -73,6 +81,18 @@ class Store:
         self.exports[job['id']] = job
         self.export_keys[job['idempotency_key']] = job['id']
         return job
+
+    def save_brain_book(self, book: dict[str, Any]) -> None:
+        if self.database:
+            self.database.save_brain_book(book)
+
+    def save_brain_note(self, note: dict[str, Any]) -> None:
+        if self.database:
+            self.database.save_brain_note(note)
+
+    def save_brain_concept(self, concept: dict[str, Any]) -> None:
+        if self.database:
+            self.database.save_brain_concept(concept)
 
     def add_activity(self, action: str, target: str, previous: str, new: str) -> None:
         event = {
