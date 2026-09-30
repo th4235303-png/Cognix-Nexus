@@ -58,6 +58,7 @@ def create_source(payload: SourceCreate) -> dict:
         "source_trust": "unverified",
         "claims": [],
         "critical_warnings": [],
+        "key_points": [],
     }
     store.sources[source_id] = source
     store.save_source(source)
