@@ -94,6 +94,10 @@ class Store:
         if self.database:
             self.database.save_brain_concept(concept)
 
+    def save_brain_concept_link(self, link: dict[str, Any]) -> None:
+        if self.database:
+            self.database.save_brain_concept_link(link)
+
     def add_activity(self, action: str, target: str, previous: str, new: str) -> None:
         event = {
             "id": f"ACT-{uuid4().hex[:8].upper()}",
