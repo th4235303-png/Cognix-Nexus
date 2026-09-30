@@ -3,13 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Brain, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';
+import { Brain, ArrowRight, Loader2, ShieldCheck } from 'lucide-react';\nimport { supabase, supabaseConfigured } from '@/lib/supabase';
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false);\n  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,7 +59,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {error && (\n            <div className="mb-4 rounded-lg border border-destructive/30 bg-destructive/10 px-3.5 py-3 text-xs text-destructive">\n              {error}\n            </div>\n          )}\n\n          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="mb-1.5 block text-xs font-medium text-muted-foreground">
                 Email
@@ -111,13 +111,13 @@ export default function LoginPage() {
           <div className="mt-6 flex items-center gap-2 rounded-lg border border-border/40 bg-background-surface/50 px-3.5 py-3">
             <ShieldCheck className="h-4 w-4 shrink-0 text-success/70" />
             <p className="text-[11px] text-muted-foreground">
-              Prototype sign-in only. Authentication will be handled by the backend before production use.
+              Sign-in uses Supabase Auth. The API validates the resulting access token before protected actions.
             </p>
           </div>
         </div>
 
         <p className="mt-6 text-center text-[11px] text-muted-foreground/60">
-          Cognix Core — Prototype
+          Cognix Core
         </p>
       </div>
     </div>
