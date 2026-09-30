@@ -16,6 +16,9 @@ import {
   FolderOpen,
   Tags,
   Brain,
+  BookOpen,
+  Network,
+  MessageSquare,
   ChevronLeft,
   LogOut,
 } from 'lucide-react';
@@ -38,6 +41,15 @@ const navSections = [
       { label: 'Processing Queue', href: '/processing', icon: Gauge },
       { label: 'Review Center', href: '/review', icon: ListChecks },
       { label: 'Approved Knowledge', href: '/approved', icon: CheckCircle2 },
+    ],
+  },
+  {
+    label: 'Brain Vault',
+    items: [
+      { label: 'Book Library', href: '/books', icon: BookOpen },
+      { label: 'Second Brain', href: '/notes', icon: Brain },
+      { label: 'Brain Query', href: '/chat', icon: MessageSquare },
+      { label: 'Knowledge Graph', href: '/graph', icon: Network },
     ],
   },
   {
