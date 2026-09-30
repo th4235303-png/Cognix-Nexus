@@ -30,8 +30,9 @@ export function AppShell({ children }: { children: ReactNode }) {
     return () => { active = false; listener.subscription.unsubscribe(); };
   }, [pathname, router]);
 
-  if (authChecking) return <div className="min-h-screen bg-background" />;
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  if (authChecking) return <div className="min-h-screen bg-background" />;
 
   return (
     <div className="min-h-screen bg-background">
