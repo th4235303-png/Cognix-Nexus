@@ -1,7 +1,7 @@
 import os
 from uuid import uuid4
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request\nfrom fastapi.responses import JSONResponse\n\nfrom app.auth import authenticate_request
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.routers import activity, exports, processing, reviews, sources, usage
