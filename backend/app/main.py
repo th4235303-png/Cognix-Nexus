@@ -4,7 +4,7 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import activity, exports, processing, reviews, sources, usage
+from app.routers import activity, exports, processing, reviews, sources, usage\nfrom app.store import store
 
 API_VERSION = "0.1.0"
 DEFAULT_CORS_ORIGINS = ("http://localhost:3000",)
@@ -65,11 +65,11 @@ def health() -> dict[str, str]:
 
 @app.get("/ready")
 def readiness() -> dict[str, object]:
-    database_configured = bool(os.getenv("DATABASE_URL"))
+    database_configured = store.database is not None
     return {
         "status": "ready",
         "service": "cognix-core-api",
         "version": API_VERSION,
         "database_configured": database_configured,
-        "persistence_mode": "memory-prototype",
+        "persistence_mode": store.persistence_mode,
     }
