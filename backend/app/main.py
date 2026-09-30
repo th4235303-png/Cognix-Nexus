@@ -1,9 +1,11 @@
 import os
 from uuid import uuid4
 
-from fastapi import FastAPI, Request\nfrom fastapi.responses import JSONResponse\n\nfrom app.auth import authenticate_request
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.auth import authenticate_request
 from app.routers import activity, exports, processing, reviews, sources, usage
 from app.store import store
 
@@ -28,7 +30,15 @@ app = FastAPI(
 async def request_context(request: Request, call_next):
     request_id = request.headers.get("x-request-id") or str(uuid4())
     request.state.request_id = request_id
-    response = await call_next(request)
+    try:
+        request.state.auth = authenticate_request(request)
+        response = await call_next(request)
+    except Exception as exc:
+        from fastapi import HTTPException
+        if isinstance(exc, HTTPException):
+            response = JSONResponse(status_code=exc.status_code, content={"detail": exc.detail})
+        else:
+            raise
     response.headers["x-request-id"] = request_id
     return response
 
@@ -52,11 +62,7 @@ app.include_router(usage.router, prefix="/usage", tags=["usage"])
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {
-        "service": "cognix-core-api",
-        "version": API_VERSION,
-        "docs": "/docs",
-    }
+    return {"service": "cognix-core-api", "version": API_VERSION, "docs": "/docs"}
 
 
 @app.get("/health")
