@@ -32,6 +32,7 @@ class TranslationUpdate(BaseModel):
 
 @router.post("", status_code=201)
 def create_source(payload: SourceCreate) -> dict:
+    store.refresh()
     normalized_url = str(payload.url).rstrip("/")
     duplicate = next(
         (source for source in store.sources.values() if source["url"].rstrip("/") == normalized_url),
@@ -82,6 +83,7 @@ def get_source(source_id: str) -> dict:
 
 @router.post("/{source_id}/claims", status_code=201)
 def add_claim(source_id: str, payload: ClaimCreate) -> dict:
+    store.refresh()
     source = store.sources.get(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
@@ -108,6 +110,7 @@ def add_claim(source_id: str, payload: ClaimCreate) -> dict:
 
 @router.patch("/{source_id}/translation")
 def update_translation(source_id: str, payload: TranslationUpdate) -> dict:
+    store.refresh()
     source = store.sources.get(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
@@ -129,6 +132,7 @@ def get_trust_score(source_id: str) -> dict:
 
 @router.patch("/{source_id}/trust")
 def update_source_trust(source_id: str, payload: SourceTrustUpdate) -> dict:
+    store.refresh()
     source = store.sources.get(source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
