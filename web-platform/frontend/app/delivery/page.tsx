@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import { HardDrive } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
-import { exportRows } from '@/lib/researchData';
 import { advanceExport, listExports, listSources, retryExport, type ApiExportJob, type ApiSource } from '@/lib/api';
 
 export default function DeliveryPage() {

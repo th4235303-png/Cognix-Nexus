@@ -6,7 +6,7 @@ import { Plus, FileText, FileCheck, Video, Mic, Database, Search, Clock, Loader2
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, GlowButton, FilterChip, EmptyState } from '@/components/shared/cognix-primitives';
 import { StatusBadge, TrustBadge, PriorityFlag } from '@/components/shared/status-badges';
-import { sources as mockSources, type SourceType, type SourceStatus } from '@/lib/mockData';
+import type { SourceType, SourceStatus } from '@/lib/types/source';
 import { listSources, mergeSources } from '@/lib/api';
 
 const typeIcons: Record<SourceType, typeof FileText> = { article: FileText, report: FileCheck, paper: FileText, video: Video, podcast: Mic, dataset: Database };
@@ -20,11 +20,11 @@ const filters: { label: string; status?: SourceStatus; key: string }[] = [
 export default function AllSourcesPage() {
   const [activeFilter, setActiveFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [items, setItems] = useState(mockSources);
+  const [items, setItems] = useState<ReturnType<typeof mergeSources>>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    listSources().then(({ items }) => setItems(mergeSources(items, mockSources))).catch(() => undefined).finally(() => setLoading(false));
+    listSources().then(({ items }) => setItems(mergeSources(items))).catch(() => undefined).finally(() => setLoading(false));
   }, []);
 
   const filtered = useMemo(() => items.filter((s) => {
