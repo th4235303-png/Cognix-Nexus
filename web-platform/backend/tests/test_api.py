@@ -28,6 +28,10 @@ class CognixApiTests(unittest.TestCase):
         store.exports.clear()
         store.activity.clear()
         store.export_keys.clear()
+        store.brain_books.clear()
+        store.brain_notes.clear()
+        store.brain_concepts.clear()
+        store.brain_concept_links.clear()
         self.client = TestClient(app)
 
     def test_health_and_root_metadata(self):
@@ -196,6 +200,49 @@ class CognixApiTests(unittest.TestCase):
 
     def tearDown(self):
         self.processing_patch.stop()
+
+    def test_brain_vault_book_note_concept_and_query(self):
+        book = self.client.post(
+            "/brain/books",
+            json={
+                "title": "Test Brain Book",
+                "author": "Cognix",
+                "language": "en",
+                "file_type": "text",
+                "text": "Habit formation depends on repetition.\n\nSpaced repetition improves recall.",
+            },
+        )
+        self.assertEqual(book.status_code, 201)
+        book_id = book.json()["id"]
+        self.assertEqual(book.json()["chunk_count"], 2)
+
+        fetched = self.client.get(f"/brain/books/{book_id}")
+        self.assertEqual(fetched.status_code, 200)
+        self.assertEqual(fetched.json()["chapters"][0]["chunks"][0]["content"], "Habit formation depends on repetition.")
+
+        search = self.client.get(f"/brain/books/{book_id}/search", params={"q": "repetition"})
+        self.assertEqual(search.status_code, 200)
+        self.assertGreaterEqual(search.json()["total"], 1)
+
+        note = self.client.post(
+            "/brain/notes",
+            json={"title": "Habit Note", "content": "Repetition strengthens recall.", "source_type": "book", "source_id": book_id},
+        )
+        self.assertEqual(note.status_code, 201)
+
+        concept = self.client.post(
+            "/brain/concepts",
+            json={"name": "Spaced Repetition", "description": "A learning method."},
+        )
+        self.assertEqual(concept.status_code, 201)
+        duplicate = self.client.post("/brain/concepts", json={"name": "spaced repetition"})
+        self.assertEqual(duplicate.status_code, 201)
+        self.assertEqual(duplicate.json()["id"], concept.json()["id"])
+
+        query = self.client.get("/brain/query", params={"q": "recall"})
+        self.assertEqual(query.status_code, 200)
+        self.assertGreaterEqual(query.json()["total"], 1)
+        self.assertEqual(query.json()["mode"], "evidence_search")
 
     def test_worker_advances_queued_processing(self):
         source = self.client.post(
