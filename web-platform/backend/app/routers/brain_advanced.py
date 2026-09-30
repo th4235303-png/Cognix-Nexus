@@ -143,7 +143,7 @@ def review_language_card(card_id: str, payload: LanguageReview) -> dict:
 class SynthesisCreate(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     query: str = Field(min_length=1, max_length=2000)
-    source_ids: list[str] = []
+    source_ids: list[str] = Field(default_factory=list)
 
 
 @router.post("/synthesis", status_code=201)
@@ -156,7 +156,7 @@ def create_synthesis(payload: SynthesisCreate) -> dict:
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO synthesis_runs(id,title,query,source_ids,status) VALUES(%s,%s,%s,%s::jsonb,%s) RETURNING *",
-                (run_id, payload.title, payload.query, str(json.dumps(payload.source_ids), "evidence_only"),
+                (run_id, payload.title, payload.query, json.dumps(payload.source_ids), "evidence_only"),
             )
             row = cur.fetchone()
         conn.commit()
