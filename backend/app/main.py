@@ -73,10 +73,13 @@ def health() -> dict[str, str]:
 @app.get("/ready")
 def readiness() -> dict[str, object]:
     database_configured = store.database is not None
+    database_reachable = store.database.ping() if store.database else False
+    ready = not database_configured or database_reachable
     return {
-        "status": "ready",
+        "status": "ready" if ready else "not_ready",
         "service": "cognix-core-api",
         "version": API_VERSION,
         "database_configured": database_configured,
+        "database_reachable": database_reachable,
         "persistence_mode": store.persistence_mode,
     }
