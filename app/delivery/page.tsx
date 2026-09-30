@@ -5,13 +5,14 @@ import { HardDrive } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
 import { deliveryEvents, exportRows } from '@/lib/researchData';
-import { advanceExport, listExports, listSources, retryExport, type ApiExportJob, type ApiSource } from '@/lib/api';
+import { advanceExport, deliverToLogixaFlow, listExports, listSources, retryExport, type ApiExportJob, type ApiSource } from '@/lib/api';
 
 export default function DeliveryPage() {
   const [liveExports, setLiveExports] = useState<ApiExportJob[]>([]);
   const [sourceMap, setSourceMap] = useState<Record<string, ApiSource>>({});
   const [retrying, setRetrying] = useState<string | null>(null);
   const [advancing, setAdvancing] = useState<string | null>(null);
+  const [delivering, setDelivering] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([listExports(), listSources()])
@@ -42,6 +43,11 @@ export default function DeliveryPage() {
     }
   }
 
+  async function deliver(sourceId: string) {
+    setDelivering(sourceId);
+    try { await deliverToLogixaFlow(sourceId); } finally { setDelivering(null); }
+  }
+
   const driveRows = liveExports.length
     ? liveExports.map(item => ({
         id: item.id,
@@ -61,7 +67,7 @@ export default function DeliveryPage() {
       <SectionCard title="Google Drive export" description="Approved knowledge is packaged and uploaded separately.">
         <div className="space-y-3">
           {driveRows.length === 0 && <div className="rounded-lg border border-border/40 p-5 text-sm text-muted-foreground">No export jobs yet.</div>}
-          {driveRows.map(e => <div key={e.id} className="rounded-lg border border-border/40 p-4"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><HardDrive className="h-4 w-4 text-primary" /><p className="text-sm font-medium">{e.title}</p></div><span className="text-[10px] capitalize text-muted-foreground">{e.exportStatus.replace('_',' ')}</span></div><p className="mt-2 font-mono-tight text-[10px] text-muted-foreground">{e.id} · {e.sourceId}</p><div className="mt-3 flex items-center gap-2"><div className="min-w-0 flex-1 rounded-md bg-background-surface p-2 font-mono-tight text-[10px] text-muted-foreground">{e.driveReference || 'No private path exposed'}</div>{['queued','uploading'].includes(e.exportStatus) && <button disabled={advancing === e.id} onClick={() => advance(e.id)} className="rounded-md border border-primary/30 px-2.5 py-2 text-[10px] hover:border-primary/50 disabled:opacity-50">{advancing === e.id ? 'Advancing…' : e.exportStatus === 'queued' ? 'Start upload' : 'Complete upload'}</button>}{['failed','retry_pending'].includes(e.exportStatus) && <button disabled={retrying === e.id} onClick={() => retry(e.id)} className="rounded-md border border-border/50 px-2.5 py-2 text-[10px] hover:border-primary/30 disabled:opacity-50">{retrying === e.id ? 'Retrying…' : 'Retry'}</button>}</div></div>)}
+          {driveRows.map(e => <div key={e.id} className="rounded-lg border border-border/40 p-4"><div className="flex items-center justify-between"><div className="flex items-center gap-2"><HardDrive className="h-4 w-4 text-primary" /><p className="text-sm font-medium">{e.title}</p></div><span className="text-[10px] capitalize text-muted-foreground">{e.exportStatus.replace('_',' ')}</span></div><p className="mt-2 font-mono-tight text-[10px] text-muted-foreground">{e.id} · {e.sourceId}</p><div className="mt-3 flex items-center gap-2"><div className="min-w-0 flex-1 rounded-md bg-background-surface p-2 font-mono-tight text-[10px] text-muted-foreground">{e.driveReference || 'No private path exposed'}</div>{e.exportStatus === 'exported' && <button disabled={delivering === e.sourceId} onClick={() => deliver(e.sourceId)} className="rounded-md border border-primary/30 px-2.5 py-2 text-[10px] hover:border-primary/50 disabled:opacity-50">{delivering === e.sourceId ? 'Delivering…' : 'Send to Flow'}</button>}{['queued','uploading'].includes(e.exportStatus) && <button disabled={advancing === e.id} onClick={() => advance(e.id)} className="rounded-md border border-primary/30 px-2.5 py-2 text-[10px] hover:border-primary/50 disabled:opacity-50">{advancing === e.id ? 'Advancing…' : e.exportStatus === 'queued' ? 'Start upload' : 'Complete upload'}</button>}{['failed','retry_pending'].includes(e.exportStatus) && <button disabled={retrying === e.id} onClick={() => retry(e.id)} className="rounded-md border border-border/50 px-2.5 py-2 text-[10px] hover:border-primary/30 disabled:opacity-50">{retrying === e.id ? 'Retrying…' : 'Retry'}</button>}</div></div>)}
         </div>
       </SectionCard>
     </div>
