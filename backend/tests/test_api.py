@@ -23,6 +23,10 @@ class CognixApiTests(unittest.TestCase):
         root = self.client.get("/")
         self.assertEqual(root.status_code, 200)
         self.assertEqual(root.json()["service"], "cognix-core-api")
+        self.assertIn("x-request-id", health.headers)
+        ready = self.client.get("/ready")
+        self.assertEqual(ready.status_code, 200)
+        self.assertEqual(ready.json()["persistence_mode"], "memory-prototype")
 
     def test_duplicate_and_processing(self):
         first = self.client.post("/sources", json={"url": "https://example.com/research"})
