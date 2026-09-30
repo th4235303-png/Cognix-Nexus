@@ -198,7 +198,7 @@ export function MobileNav({
     window.location.href = '/login';
   };
   const pathname = usePathname();
-  const unreadCount = notifications.filter((n) => !n.read).length;
+  const unreadCount = 0;
 
   return (
     <>
