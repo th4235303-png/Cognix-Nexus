@@ -4,7 +4,7 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.services.google_drive import build_export_package
+from app.services.google_drive import build_export_package, upload_export
 from app.store import store
 
 router = APIRouter()
@@ -85,8 +85,16 @@ def advance_export(export_id: str) -> dict:
         job["status"] = "uploading"
     elif job["status"] == "uploading":
         previous = job["status"]
-        job["status"] = "exported"
-        job["drive_reference"] = f"mock-drive://cognix-core/{job['source_id']}"
+        source = store.sources.get(job["source_id"])
+        if not source:
+            raise HTTPException(status_code=404, detail="Source not found")
+        try:
+            job["drive_reference"] = upload_export(source, build_export_package(source["id"], date.today().isoformat()))
+            job["status"] = "exported"
+            job["error"] = None
+        except Exception as exc:
+            job["status"] = "failed"
+            job["error"] = str(exc)
     elif job["status"] == "exported":
         return job
     else:
