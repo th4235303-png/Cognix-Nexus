@@ -123,3 +123,122 @@ export function apiSourceToSource(source: ApiSource): Source {
 }
 
 export function mergeSources(live: ApiSource[]): Source[] { return live.map(apiSourceToSource); }
+
+
+export interface ApiBrainBook {
+  id: string;
+  title: string;
+  author?: string | null;
+  language: string;
+  file_type: string;
+  source_kind: string;
+  source_url?: string | null;
+  status: string;
+  description?: string | null;
+  content_hash?: string | null;
+  created_at: string;
+  updated_at: string;
+  chunk_count: number;
+  chapters?: ApiBrainChapter[];
+}
+export interface ApiBrainChapter {
+  id: string;
+  book_id: string;
+  chapter_number: number;
+  title: string;
+  created_at: string;
+  chunks?: ApiBrainChunk[];
+}
+export interface ApiBrainChunk {
+  id: string;
+  chapter_id: string;
+  sequence: number;
+  content: string;
+  page_number?: number | null;
+  token_count?: number | null;
+}
+export interface ApiBrainNote {
+  id: string;
+  title: string;
+  content: string;
+  note_type: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  sources?: Array<{ source_type: string; source_id: string }>;
+}
+export interface ApiBrainConcept {
+  id: string;
+  name: string;
+  description?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+export interface ApiBrainSearchResult {
+  book_id?: string;
+  book_title?: string;
+  chapter_id: string;
+  chapter_title: string;
+  chunk_id: string;
+  sequence: number;
+  score: number;
+  content: string;
+}
+
+export function listBrainBooks() {
+  return request<{ total: number; items: ApiBrainBook[] }>('/brain/books');
+}
+export function getBrainBook(bookId: string) {
+  return request<ApiBrainBook>(`/brain/books/${bookId}`);
+}
+export function createBrainBook(payload: {
+  title: string;
+  author?: string;
+  language?: string;
+  file_type?: string;
+  description?: string;
+  text: string;
+}) {
+  return request<ApiBrainBook>('/brain/books', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+export function searchBrainBook(bookId: string, q: string) {
+  return request<{ query: string; total: number; items: ApiBrainSearchResult[] }>(
+    `/brain/books/${bookId}/search?q=${encodeURIComponent(q)}`,
+  );
+}
+export function listBrainNotes() {
+  return request<{ total: number; items: ApiBrainNote[] }>('/brain/notes');
+}
+export function createBrainNote(payload: {
+  title: string;
+  content: string;
+  note_type?: string;
+  status?: string;
+  source_type?: string;
+  source_id?: string;
+}) {
+  return request<ApiBrainNote>('/brain/notes', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+export function listBrainConcepts() {
+  return request<{ total: number; items: ApiBrainConcept[] }>('/brain/concepts');
+}
+export function createBrainConcept(payload: { name: string; description?: string }) {
+  return request<ApiBrainConcept>('/brain/concepts', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+export function getBrainGraph() {
+  return request<{ nodes: ApiBrainConcept[]; edges: Array<Record<string, unknown>> }>('/brain/graph');
+}
+export function queryBrain(q: string) {
+  return request<{ query: string; mode: string; answer: string | null; message: string; total: number; items: ApiBrainSearchResult[] }>(
+    `/brain/query?q=${encodeURIComponent(q)}`,
+  );
+}
