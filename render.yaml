@@ -9,3 +9,5 @@ services:
     envVars:
       - key: COGNIX_CORS_ORIGINS
         sync: false
+      - key: DATABASE_URL
+        sync: false
