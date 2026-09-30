@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
-import { getResearchRecord, type ResearchRecord } from '@/lib/researchData';
-import type { Source } from '@/lib/mockData';
+import type { ResearchRecord } from '@/lib/researchData';
+import type { Source } from '@/lib/types/source';
 import { getSource, listExports, type ApiClaim, type ApiExportJob, type ApiSource } from '@/lib/api';
 import { ResearchDetail } from '@/components/research/workspace-ui';
 
@@ -110,8 +110,8 @@ function buildLiveRecord(source: ApiSource, fallback: ResearchRecord | undefined
 }
 
 export default function SourceDetailPage({ params }: { params: { id: string } }) {
-  const fallback = getResearchRecord(params.id);
-  const [record, setRecord] = useState<ResearchRecord | null>(fallback ?? null);
+  const fallback: ResearchRecord | undefined = undefined;
+  const [record, setRecord] = useState<ResearchRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -126,7 +126,7 @@ export default function SourceDetailPage({ params }: { params: { id: string } })
       })
       .catch(() => {
         if (!active) return;
-        setNotFound(!fallback);
+        setNotFound(true);
       })
       .finally(() => {
         if (active) setLoading(false);
