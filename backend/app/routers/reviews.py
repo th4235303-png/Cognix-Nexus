@@ -12,6 +12,7 @@ class ReviewAction(BaseModel):
 
 @router.get("")
 def list_reviews() -> dict:
+    store.refresh()
     items = list(store.reviews.values())
     return {"items": items, "total": len(items)}
 
