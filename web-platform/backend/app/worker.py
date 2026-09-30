@@ -27,8 +27,14 @@ def run_once() -> int:
     ]
     processed = 0
     for task in sorted(candidates, key=lambda item: item["created_at"]):
-        advance(task["id"])
-        processed += 1
+        if store.database and not store.database.try_claim_task(task["id"]):
+            continue
+        try:
+            advance(task["id"])
+            processed += 1
+        finally:
+            if store.database:
+                store.database.release_task(task["id"])
     return processed
 
 

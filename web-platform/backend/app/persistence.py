@@ -10,6 +10,39 @@ from psycopg.types.json import Jsonb
 
 
 class Database:
+    def __init__(self, dsn: str):
+        self.dsn = dsn
+        self._task_lock_connections: dict[str, Any] = {}
+
+    def try_claim_task(self, task_id: str) -> bool:
+        """Claim a task with a PostgreSQL advisory lock across worker processes."""
+        if task_id in self._task_lock_connections:
+            return True
+        conn = psycopg.connect(self.dsn)
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT pg_try_advisory_lock(hashtext(%s)) AS locked", (task_id,))
+                locked = bool(cur.fetchone()["locked"])
+            if locked:
+                self._task_lock_connections[task_id] = conn
+                return True
+        except Exception:
+            conn.close()
+            raise
+        conn.close()
+        return False
+
+    def release_task(self, task_id: str) -> None:
+        conn = self._task_lock_connections.pop(task_id, None)
+        if conn is None:
+            return
+        try:
+            with conn.cursor() as cur:
+                cur.execute("SELECT pg_advisory_unlock(hashtext(%s))", (task_id,))
+            conn.commit()
+        finally:
+            conn.close()
+
     def __init__(self, dsn: str) -> None:
         self.dsn = dsn
 
