@@ -4,7 +4,8 @@ from uuid import uuid4
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import activity, exports, processing, reviews, sources, usage\nfrom app.store import store
+from app.routers import activity, exports, processing, reviews, sources, usage
+from app.store import store
 
 API_VERSION = "0.1.0"
 DEFAULT_CORS_ORIGINS = ("http://localhost:3000",)
