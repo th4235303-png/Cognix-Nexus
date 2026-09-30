@@ -43,9 +43,6 @@ class Database:
         finally:
             conn.close()
 
-    def __init__(self, dsn: str) -> None:
-        self.dsn = dsn
-
     def connect(self):
         return psycopg.connect(self.dsn, row_factory=dict_row)
 
