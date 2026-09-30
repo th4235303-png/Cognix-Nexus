@@ -32,6 +32,7 @@ def create_processing_task(payload: ProcessingCreate) -> dict:
         "updated_at": now_iso(),
     }
     store.tasks[task_id] = task
+    store.save_task(task)
     previous = source.get("status", "new")
     source["status"] = "processing"
     source["processing_stage"] = "queued"
@@ -82,5 +83,6 @@ def retry_processing_task(task_id: str) -> dict:
         source["status"] = "processing"
         source["processing_stage"] = "queued"
         source["updated_at"] = now_iso()
+    store.save_task(task)
     store.add_activity("processing_retry", task["source_id"], previous, "queued")
     return task
