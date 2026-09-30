@@ -17,6 +17,7 @@ class DriveExportRequest(BaseModel):
 
 @router.post("/google-drive", status_code=202)
 def export_to_google_drive(payload: DriveExportRequest) -> dict:
+    store.refresh()
     source = store.sources.get(payload.source_id)
     if not source:
         raise HTTPException(status_code=404, detail="Source not found")
@@ -53,6 +54,7 @@ def get_export(export_id: str) -> dict:
 
 @router.post("/{export_id}/retry")
 def retry_export(export_id: str) -> dict:
+    store.refresh()
     job = store.exports.get(export_id)
     if not job:
         raise HTTPException(status_code=404, detail="Export not found")
@@ -67,12 +69,15 @@ def retry_export(export_id: str) -> dict:
 
 @router.post("/{export_id}/advance")
 def advance_export(export_id: str) -> dict:
+    store.refresh()
     job = store.exports.get(export_id)
     if not job:
         raise HTTPException(status_code=404, detail="Export not found")
     if job["status"] == "queued":
+        previous = job["status"]
         job["status"] = "uploading"
     elif job["status"] == "uploading":
+        previous = job["status"]
         job["status"] = "exported"
         job["drive_reference"] = f"mock-drive://cognix-core/{job['source_id']}"
     elif job["status"] == "exported":
@@ -80,5 +85,5 @@ def advance_export(export_id: str) -> dict:
     else:
         raise HTTPException(status_code=409, detail=f"Export cannot advance from {job['status']}")
     store.save_export(job)
-    store.add_activity("drive_export_state_changed", job["source_id"], job["status"], job["id"])
+    store.add_activity("drive_export_state_changed", job["source_id"], previous, job["status"])
     return job
