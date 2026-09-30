@@ -1,14 +1,27 @@
 import unittest
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.store import store
 from app.worker import run_once
+from app.services.research_processor import ProcessingResult
 
 
 class CognixApiTests(unittest.TestCase):
     def setUp(self):
+        self.processing_patch = patch(
+            "app.services.processing.process_stage",
+            side_effect=lambda stage, source: ProcessingResult(
+                original_text="Test source text" if stage == "extracting" else None,
+                cleaned_text="Test source text" if stage == "cleaning" else None,
+                summary="Test summary" if stage == "summarizing" else None,
+                translation="Test Myanmar translation" if stage == "translating" else None,
+                key_points=["Test key point"] if stage == "key_points" else None,
+            ),
+        )
+        self.processing_patch.start()
         store.sources.clear()
         store.tasks.clear()
         store.reviews.clear()
@@ -176,6 +189,9 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(activity.status_code, 200)
         self.assertGreaterEqual(activity.json()["total"], 3)
 
+
+    def tearDown(self):
+        self.processing_patch.stop()
 
     def test_worker_advances_queued_processing(self):
         source = self.client.post(
