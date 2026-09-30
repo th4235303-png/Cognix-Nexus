@@ -1,43 +1,83 @@
 # Cognix Core
 
-Cognix Core is the Logixa Ecosystem research intelligence workspace.
+Cognix Core is a private research intelligence workspace in the Logixa Ecosystem.
 
-## Flow
+## Architecture
 
-Research source → extraction → cleaning → Myanmar translation → summary → key points → fact-check flags → trust scoring → human review → approval → Google Drive export → Logixa Flow delivery.
+- **Frontend:** Next.js + React + TypeScript + Tailwind CSS
+- **Backend:** FastAPI + Python
+- **Database:** PostgreSQL / Supabase
+- **Authentication:** Supabase Auth + backend JWT verification
+- **Processing:** Python worker and research-processing services
+- **Delivery:** Google Drive only
+- **Hosting:** Netlify (frontend) + Render (API/worker)
 
-## Structure
+Python is intentionally kept in `backend/` for the API, processing pipeline, background worker, persistence, and Google Drive integration. It is not a second frontend.
 
-- `app/` — Next.js workspace UI
-- `components/` — reusable UI and research workflow components
-- `lib/` — mock data, typed API client, workflow types
-- `backend/` — FastAPI boundary and Google Drive integration boundary
+## Research flow
 
-## Prototype safety
+Research source → extraction → cleaning → Myanmar translation → summary → key points → fact-check flags → trust scoring → human review → approval → Google Drive export.
 
-The current UI uses mock research data and mock export states. No Google OAuth credentials, refresh tokens, API keys, or provider secrets belong in the browser or repository.
+## Repository structure
 
-## Backend contract
+```
+app/                 Next.js routes and pages
+components/          Shared UI and research workspace components
+lib/                 Frontend API client, auth, types, and UI data
+backend/             FastAPI API, worker, persistence, processing, Drive integration
+backend/migrations/  PostgreSQL schema migrations
+backend/tests/       Backend tests
+docs/                Production integration documentation
+.github/             CI workflow
+```
 
-- `POST /sources`
-- `GET /sources`
-- `GET /sources/{id}`
-- `GET /processing`
-- `GET /processing/{id}`
-- `GET /reviews`
-- `POST /reviews/{id}/approve`
-- `POST /reviews/{id}/revision`
-- `POST /exports/google-drive`
-- `GET /exports/{id}`
-- `GET /activity`
-- `GET /usage`
+## Production delivery
+
+Approved research is packaged and uploaded to Google Drive as:
+
+```
+/cognix-core/
+  /YYYY-MM-DD/
+    /research-id/
+      source.json
+      original-reference.txt
+      summary.md
+      myanmar-summary.md
+      claims.json
+      review.json
+```
+
+No Logixa Flow webhook is used.
+
+## Local development
+
+Frontend:
+
+```bash
+npm ci
+npm run dev
+```
+
+Backend:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
+```
 
 ## Verification
-
-Run frontend checks before merging:
 
 ```bash
 npm run typecheck
 npm run lint
 npm run build
+
+cd backend
+python -m compileall app
+python -m unittest discover -s tests -v
 ```
+
+Never commit API keys, OAuth refresh tokens, database passwords, or other provider secrets.
