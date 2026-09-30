@@ -451,6 +451,20 @@ class Database:
             "weight": float(row["weight"]), "created_at": row["created_at"].isoformat(),
         }
 
+    def save_brain_concept_link(self, link: dict[str, Any]) -> None:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """INSERT INTO concept_links (
+                        id, from_concept_id, to_concept_id, relation, weight, created_at
+                    ) VALUES (%(id)s, %(from_concept_id)s, %(to_concept_id)s,
+                              %(relation)s, %(weight)s, %(created_at)s)
+                    ON CONFLICT (from_concept_id, to_concept_id, relation) DO UPDATE SET
+                        weight=EXCLUDED.weight""",
+                    link,
+                )
+            conn.commit()
+
     def add_activity(self, event: dict[str, Any]) -> None:
         with self.connect() as conn:
             with conn.cursor() as cur:
