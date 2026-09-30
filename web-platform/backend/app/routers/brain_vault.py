@@ -35,6 +35,13 @@ class ConceptCreate(BaseModel):
     description: str | None = None
 
 
+class ConceptLinkCreate(BaseModel):
+    from_concept_id: str
+    to_concept_id: str
+    relation: str = Field(default="related", max_length=80)
+    weight: float = Field(default=1, ge=0, le=1)
+
+
 def _chunk_text(text: str, size: int = 1800) -> list[str]:
     paragraphs = [part.strip() for part in text.replace("\r\n", "\n").split("\n\n") if part.strip()]
     chunks: list[str] = []
@@ -193,6 +200,20 @@ def create_note(payload: NoteCreate) -> dict:
     return note
 
 
+@router.get("/notes/{note_id}/backlinks")
+def note_backlinks(note_id: str) -> dict:
+    store.refresh()
+    if note_id not in store.brain_notes:
+        raise HTTPException(status_code=404, detail="Note not found")
+    items = []
+    for note in store.brain_notes.values():
+        for source in note.get("sources", []):
+            if source["source_type"] == "note" and source["source_id"] == note_id:
+                items.append(note)
+                break
+    return {"items": items, "total": len(items)}
+
+
 @router.get("/concepts")
 def list_concepts() -> dict:
     store.refresh()
@@ -258,3 +279,33 @@ def query_brain(q: str) -> dict:
         "total": len(evidence),
         "message": "Semantic embeddings and LLM synthesis are not enabled yet; results are evidence-ranked text matches.",
     }
+
+
+@router.post("/concept-links", status_code=201)
+def create_concept_link(payload: ConceptLinkCreate) -> dict:
+    store.refresh()
+    if payload.from_concept_id not in store.brain_concepts or payload.to_concept_id not in store.brain_concepts:
+        raise HTTPException(status_code=404, detail="Concept not found")
+    existing = next(
+        (
+            link for link in store.brain_concept_links.values()
+            if link["from_concept_id"] == payload.from_concept_id
+            and link["to_concept_id"] == payload.to_concept_id
+            and link["relation"] == payload.relation
+        ),
+        None,
+    )
+    if existing:
+        return existing
+    link = {
+        "id": f"CL-{uuid4().hex[:8].upper()}",
+        "from_concept_id": payload.from_concept_id,
+        "to_concept_id": payload.to_concept_id,
+        "relation": payload.relation,
+        "weight": payload.weight,
+        "created_at": now_iso(),
+    }
+    store.brain_concept_links[link["id"]] = link
+    store.save_brain_concept_link(link)
+    store.add_activity("brain_concept_linked", link["id"], "new", "active")
+    return link
