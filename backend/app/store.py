@@ -65,6 +65,15 @@ class Store:
         if self.database:
             self.database.save_export(job)
 
+    def create_export_if_absent(self, job: dict[str, Any]) -> dict[str, Any]:
+        if self.database:
+            saved = self.database.create_export_if_absent(job)
+            self.refresh()
+            return self.exports[saved['id']]
+        self.exports[job['id']] = job
+        self.export_keys[job['idempotency_key']] = job['id']
+        return job
+
     def add_activity(self, action: str, target: str, previous: str, new: str) -> None:
         event = {
             "id": f"ACT-{uuid4().hex[:8].upper()}",
