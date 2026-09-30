@@ -122,8 +122,4 @@ export function apiSourceToSource(source: ApiSource): Source {
   };
 }
 
-export function mergeSources(live: ApiSource[], fallback: Source[]): Source[] {
-  const liveSources = live.map(apiSourceToSource);
-  const liveIds = new Set(liveSources.map((source) => source.id));
-  return [...liveSources, ...fallback.filter((source) => !liveIds.has(source.id))];
-}
+export function mergeSources(live: ApiSource[]): Source[] { return live.map(apiSourceToSource); }

@@ -18,10 +18,8 @@ import {
   Brain,
   ChevronLeft,
   LogOut,
-  Bell,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { notifications } from '@/lib/mockData';
 import { supabase } from '@/lib/supabase';
 
 const navSections = [
@@ -72,7 +70,6 @@ export function Sidebar({
     window.location.href = '/login';
   };
   const pathname = usePathname();
-  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <aside
@@ -135,9 +132,9 @@ export function Sidebar({
                       )}
                     />
                     {!collapsed && <span className="truncate">{item.label}</span>}
-                    {!collapsed && item.label === 'Source Inbox' && unreadCount > 0 && (
+                    {!collapsed && item.label === 'Source Inbox' && (
                       <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-primary/20 px-1.5 text-[10px] font-medium text-primary">
-                        {unreadCount}
+                        0
                       </span>
                     )}
                   </Link>

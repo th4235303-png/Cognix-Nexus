@@ -12,7 +12,7 @@ import {
   PlayCircle,
   Radio,
 } from 'lucide-react';
-import type { SourceStatus, TrustLevel, Priority } from '@/lib/mockData';
+import type { SourceStatus, TrustLevel, Priority } from '@/lib/types/source';
 
 const statusConfig: Record<
   SourceStatus,

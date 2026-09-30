@@ -72,7 +72,7 @@ export default function AddSourcePage() {
                   <AlertTriangle className="h-4 w-4 shrink-0" />
                   <div>
                     <p className="font-medium">Possible duplicate source</p>
-                    <p className="mt-1 text-warning/80">{'title' in duplicate ? duplicate.title : duplicate.url} · {duplicate.id}</p>
+                    <p className="mt-1 text-warning/80">{duplicate.url} · {duplicate.id}</p>
                   </div>
                 </div>
               )}
