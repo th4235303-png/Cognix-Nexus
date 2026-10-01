@@ -393,35 +393,68 @@ async def semantic_query(payload: SemanticQuery) -> dict:
         raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
     vector = (await embedding_provider.embed([payload.q]))[0]
     vector_literal = "[" + ",".join(str(float(v)) for v in vector) + "]"
+    terms = [term for term in payload.q.lower().split() if term][:12]
+    lexical_limit = min(50, max(payload.limit * 4, 12))
     with db.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT e.owner_id, e.content, e.model, 1 - (e.embedding_vector <=> %s::vector) AS similarity, "
+                "SELECT e.owner_id, e.content, e.model, "
+                "1 - (e.embedding_vector <=> %s::vector) AS similarity, "
                 "c.chapter_id, c.page_number, c.sequence "
                 "FROM embeddings e JOIN chunks c ON c.id=e.owner_id "
                 "WHERE e.embedding_vector IS NOT NULL AND e.owner_type='chunk' "
                 "ORDER BY e.embedding_vector <=> %s::vector LIMIT %s",
-                (vector_literal, vector_literal, payload.limit),
+                (vector_literal, vector_literal, lexical_limit),
             )
-            rows = cur.fetchall()
-    items = [
-        {
-            "chunk_id": row["owner_id"],
-            "content": row["content"],
-            "similarity": float(row["similarity"]),
-            "chapter_id": row["chapter_id"],
-            "page_number": row["page_number"],
-            "sequence": row["sequence"],
-            "model": row["model"],
-        }
-        for row in rows
-    ]
+            semantic_rows = cur.fetchall()
+            if terms:
+                like_parts = []
+                params = []
+                for term in terms:
+                    like_parts.append("lower(c.content) LIKE %s")
+                    params.append("%" + term[:80] + "%")
+                cur.execute(
+                    "SELECT c.id AS owner_id, c.content, NULL::text AS model, "
+                    "c.chapter_id, c.page_number, c.sequence "
+                    "FROM chunks c WHERE " + " OR ".join(like_parts) +
+                    " ORDER BY c.created_at DESC LIMIT %s",
+                    (*params, lexical_limit),
+                )
+                lexical_rows = cur.fetchall()
+            else:
+                lexical_rows = []
+
+    # Reciprocal Rank Fusion (D14): combine semantic and lexical evidence
+    # without pretending either ranking is ground truth.
+    fused: dict[str, dict] = {}
+    k = 60
+    for rank, row in enumerate(semantic_rows, start=1):
+        item = fused.setdefault(row["owner_id"], {
+            "chunk_id": row["owner_id"], "content": row["content"],
+            "chapter_id": row["chapter_id"], "page_number": row["page_number"],
+            "sequence": row["sequence"], "model": row.get("model"),
+            "semantic_similarity": float(row["similarity"]),
+            "semantic_rank": rank, "lexical_rank": None, "rrf_score": 0.0,
+        })
+        item["rrf_score"] += 1.0 / (k + rank)
+    for rank, row in enumerate(lexical_rows, start=1):
+        item = fused.setdefault(row["owner_id"], {
+            "chunk_id": row["owner_id"], "content": row["content"],
+            "chapter_id": row["chapter_id"], "page_number": row["page_number"],
+            "sequence": row["sequence"], "model": row.get("model"),
+            "semantic_similarity": None, "semantic_rank": None,
+            "lexical_rank": rank, "rrf_score": 0.0,
+        })
+        item["lexical_rank"] = rank
+        item["rrf_score"] += 1.0 / (k + rank)
+    items = sorted(fused.values(), key=lambda item: item["rrf_score"], reverse=True)[:payload.limit]
+
     answer = None
     citations: list[str] = []
-    message = "Evidence retrieved. Configure COGNIX_LLM_API_URL and COGNIX_LLM_MODEL to enable cited answer synthesis."
+    message = "Evidence retrieved with hybrid semantic + lexical ranking. Configure COGNIX_LLM_API_URL and COGNIX_LLM_MODEL to enable cited answer synthesis."
     if llm_provider.configured and items:
         evidence = "\n\n".join(
-            f"[chunk:{item['chunk_id']}] similarity={item['similarity']:.3f}\n{item['content'][:5000]}"
+            f"[chunk:{item['chunk_id']}] rrf={item['rrf_score']:.5f}\\n{item['content'][:5000]}"
             for item in items
         )
         answer = await llm_provider.complete(
@@ -430,13 +463,14 @@ async def semantic_query(payload: SemanticQuery) -> dict:
             f"Question: {payload.q}\n\nEvidence:\n{evidence}",
         )
         citations = [item["chunk_id"] for item in items if f"[chunk:{item['chunk_id']}]" in answer]
-        message = "Answer synthesized from retrieved evidence; citations identify the supporting chunks."
+        message = "Answer synthesized from hybrid retrieved evidence; citations identify supporting chunks."
     return {
         "query": payload.q,
-        "mode": "semantic_rag" if answer else "semantic_evidence",
+        "mode": "hybrid_rrf_rag" if answer else "hybrid_rrf_evidence",
         "answer": answer,
         "citations": citations,
         "items": items,
+        "total": len(items),
         "message": message,
     }
 
