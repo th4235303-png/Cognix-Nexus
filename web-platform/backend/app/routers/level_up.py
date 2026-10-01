@@ -101,6 +101,10 @@ class TimelineIn(BaseModel):
 def timeline(payload: TimelineIn):
     return restore_context(payload.events)
 
+@router.get("/language-policy")
+def language_policy():
+    return {"primary_pair":["my","en"],"reading_aids":["my","en","ja","ko"],"jp_kr_mode":"reading_level_first","translation_truth":"human_review_required","full_multilingual_ai":"provider_dependent"}
+
 @router.get("/mood-policy")
 def mood():
     return {"storage":"local_only","server_logging":False,"cloud_sync":"disabled_by_default","inference":"user_triggered_only"}
