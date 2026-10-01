@@ -335,7 +335,7 @@ def list_vault_items() -> dict:
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id,label,ciphertext,nonce,kdf_salt,kdf_params,created_at,updated_at FROM vault_items ORDER BY updated_at DESC")
+            cur.execute("SELECT id,label,nonce,kdf_salt,kdf_params,created_at,updated_at FROM vault_items ORDER BY updated_at DESC")
             items = cur.fetchall()
     return {"items": items, "total": len(items)}
 
