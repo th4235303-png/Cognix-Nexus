@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import time
 from app.services.agent import enqueue_due_agent_schedules, run_due_agent_jobs
-from app.routers.exports import advance_export
+from app.services.export_worker import advance_export_job
 
 from app.services.processing import STAGES, advance
 from app.store import store
@@ -21,7 +21,7 @@ def _advance_exports(limit: int = 5) -> int:
         if job["status"] not in {"queued", "uploading"}:
             continue
         try:
-            advance_export(job["id"])
+            advance_export_job(job["id"])
             processed += 1
         except Exception:
             continue
