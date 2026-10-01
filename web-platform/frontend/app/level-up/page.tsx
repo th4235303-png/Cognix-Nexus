@@ -13,6 +13,7 @@ const features = [
   ['4.17','Knowledge Compounding'],['4.18','Idea Generator'],['4.19','Offline-first AI'],['4.20','Legacy Mode'],
 ];
 
+type InterleaveResponse = { sequence: string[] };
 async function call<T>(path: string, body: unknown) { return postApi<T>(path, body); }
 
 export default function LevelUpPage() {
@@ -30,7 +31,7 @@ export default function LevelUpPage() {
   }
   async function runInterleave() {
     setError(null);
-    try { const r=await call('/brain/level-up/interleave',{subjects:subjects.split(',').map(s=>s.trim()).filter(Boolean),rounds:3}); setSequence(r.sequence); }
+    try { const r=await call<InterleaveResponse>('/brain/level-up/interleave',{subjects:subjects.split(',').map(s=>s.trim()).filter(Boolean),rounds:3}); setSequence(r.sequence); }
     catch(e){setError(e instanceof Error?e.message:'Request failed');}
   }
 
