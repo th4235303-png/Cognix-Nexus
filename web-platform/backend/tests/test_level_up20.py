@@ -2,7 +2,7 @@ import unittest
 from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 from app.main import app
-from app.services.level_up import feynman_grade, interleave, synthesis_contract, detect_sync_conflict
+from app.services.level_up import feynman_grade, interleave, synthesis_contract, detect_sync_conflict, analyze_gap, build_learning_path, decision_balance, writing_citation_check
 
 class LevelUpTests(unittest.TestCase):
     def setUp(self):
@@ -31,6 +31,34 @@ class LevelUpTests(unittest.TestCase):
         self.assertEqual(self.client.get("/brain/level-up/mood-policy").json()["storage"], "local_only")
         self.assertFalse(self.client.get("/brain/level-up/ambient-policy").json()["background_listening"])
         self.assertTrue(self.client.get("/brain/level-up/legacy/policy").json()["encrypted"])
+
+    def test_learning_path_is_library_only(self):
+        result = build_learning_path([
+            {"source_type": "book", "title": "Book", "priority": 2},
+            {"source_type": "web", "title": "External", "priority": 99},
+        ], "learn")
+        self.assertTrue(result["library_only"])
+        self.assertEqual([x["title"] for x in result["items"]], ["Book"])
+
+    def test_gap_is_explicit(self):
+        result = analyze_gap("python", ["syntax"], ["syntax", "asyncio"])
+        self.assertEqual(result["gaps"], ["asyncio"])
+        self.assertEqual(result["status"], "open")
+
+    def test_decision_support_does_not_select_an_option(self):
+        result = decision_balance([{ "id": "a" }, { "id": "b" }], [{"option_id": "a", "source_id": "s1"}])
+        self.assertEqual(result["options"], {"a": 1, "b": 0})
+        self.assertTrue(result["needs_more_evidence"])
+        self.assertNotIn("winner", result)
+
+    def test_writing_citation_contract(self):
+        self.assertTrue(writing_citation_check(["s1", "s2"], ["s1"])["valid"])
+        self.assertEqual(writing_citation_check(["s1"], ["s2"])["missing_source_ids"], ["s2"])
+
+    def test_feature_matrix_contains_all_20(self):
+        response = self.client.get("/brain/level-up/feature-matrix")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(len(response.json()["features"]), 20)
 
 if __name__ == "__main__":
     unittest.main()
