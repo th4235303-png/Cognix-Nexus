@@ -54,6 +54,7 @@ const navSections = [
       { label: 'Document OCR', href: '/documents', icon: FileText },
       { label: 'Secret Vault', href: '/vault', icon: FolderOpen },
       { label: 'Unified Export', href: '/export', icon: GitBranch },
+      { label: 'Vizora Lens', href: '/lens', icon: Brain },
     ],
   },
   {

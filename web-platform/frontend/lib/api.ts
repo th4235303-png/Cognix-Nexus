@@ -311,3 +311,13 @@ export function saveVaultItem(payload: { label: string; ciphertext: string; nonc
   return request<ApiVaultItem>('/brain/vault/items', { method: 'POST', body: JSON.stringify(payload) });
 }
 export function exportBrainVault() { return request<Record<string, unknown>>('/brain/export'); }
+
+export function ingestBrainMedia(file: File, ocrLanguage = 'eng') {
+  const body = new FormData();
+  body.append('file', file);
+  body.append('ocr_language', ocrLanguage);
+  return request<{ id: string; filename: string; media_type: string; content_hash: string; ocr_text: string; message: string }>(
+    '/brain/media/ingest',
+    { method: 'POST', body },
+  );
+}
