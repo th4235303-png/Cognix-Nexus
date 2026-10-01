@@ -1,8 +1,11 @@
+import os
 import unittest
+from unittest.mock import patch
 from datetime import datetime, timedelta, timezone
 from fastapi.testclient import TestClient
 from app.main import app
 from app.services.level_up import feynman_grade, interleave, synthesis_contract, detect_sync_conflict, analyze_gap, build_learning_path, decision_balance, writing_citation_check
+from app.services.llm import LLMProvider
 
 class LevelUpTests(unittest.TestCase):
     def setUp(self):
@@ -54,6 +57,12 @@ class LevelUpTests(unittest.TestCase):
     def test_writing_citation_contract(self):
         self.assertTrue(writing_citation_check(["s1", "s2"], ["s1"])["valid"])
         self.assertEqual(writing_citation_check(["s1"], ["s2"])["missing_source_ids"], ["s2"])
+
+    def test_llm_provider_accepts_production_ai_environment(self):
+        with patch.dict(os.environ, {"COGNIX_AI_BASE_URL": "https://ai.invalid", "COGNIX_AI_MODEL": "test-model"}, clear=False):
+            provider = LLMProvider()
+        self.assertTrue(provider.configured)
+        self.assertEqual(provider.model, "test-model")
 
     def test_feature_matrix_contains_all_20(self):
         response = self.client.get("/brain/level-up/feature-matrix")
