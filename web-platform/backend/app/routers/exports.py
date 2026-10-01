@@ -4,7 +4,8 @@ from uuid import uuid4
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 
-from app.services.google_drive import build_export_package, upload_export
+from app.services.google_drive import build_export_package
+from app.services.export_worker import advance_export_job
 from app.store import store
 
 router = APIRouter()
@@ -77,29 +78,9 @@ def retry_export(export_id: str) -> dict:
 
 @router.post("/{export_id}/advance")
 def advance_export(export_id: str) -> dict:
-    store.refresh()
-    job = store.exports.get(export_id)
-    if not job:
-        raise HTTPException(status_code=404, detail="Export not found")
-    if job["status"] == "queued":
-        previous = job["status"]
-        job["status"] = "uploading"
-    elif job["status"] == "uploading":
-        previous = job["status"]
-        source = store.sources.get(job["source_id"])
-        if not source:
-            raise HTTPException(status_code=404, detail="Source not found")
-        try:
-            job["drive_reference"] = upload_export(source, build_export_package(source["id"], date.today().isoformat()))
-            job["status"] = "exported"
-            job["error"] = None
-        except Exception as exc:
-            job["status"] = "failed"
-            job["error"] = str(exc)
-    elif job["status"] == "exported":
-        return job
-    else:
-        raise HTTPException(status_code=409, detail=f"Export cannot advance from {job['status']}")
-    store.save_export(job)
-    store.add_activity("drive_export_state_changed", job["source_id"], previous, job["status"])
-    return job
+    try:
+        return advance_export_job(export_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc).strip("'")) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
