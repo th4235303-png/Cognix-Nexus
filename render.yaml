@@ -38,6 +38,20 @@ services:
         sync: false
       - key: COGNIX_DRIVE_PROVIDER
         value: "google"
+      - key: COGNIX_BOOK_STORAGE_PROVIDER
+        value: "r2"
+      - key: COGNIX_MEDIA_STORAGE_PROVIDER
+        value: "r2"
+      - key: COGNIX_R2_ENDPOINT
+        sync: false
+      - key: COGNIX_R2_BUCKET
+        sync: false
+      - key: COGNIX_R2_ACCESS_KEY_ID
+        sync: false
+      - key: COGNIX_R2_SECRET_ACCESS_KEY
+        sync: false
+      - key: COGNIX_R2_REGION
+        value: "auto"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
