@@ -1,3 +1,4 @@
+import html
 import os
 
 from fastapi import APIRouter, HTTPException
@@ -32,7 +33,7 @@ def callback(code: str, state: str) -> str:
         "<h2>Cognix Core Google Drive authorization complete</h2>"
         "<p>Copy the refresh token below into the server secret "
         "<code>GOOGLE_REFRESH_TOKEN</code>. Do not commit or share it.</p>"
-        f"<textarea readonly rows='6' cols='100'>{token}</textarea>"
+        f"<textarea readonly rows='6' cols='100'>{html.escape(token)}</textarea>"
     )
 
 
