@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hmac
 from datetime import datetime, timezone
 from uuid import uuid4
 
@@ -658,6 +659,51 @@ class BackupManifestIn(BaseModel):
     object_key: str = Field(min_length=1, max_length=1000)
     checksum: str = Field(min_length=32, max_length=256)
     encrypted: bool = True
+
+
+@router.get("/operational/backups")
+def list_backups(limit: int = 20):
+    db = _db()
+    limit = max(1, min(limit, 100))
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id,provider,object_key,checksum,encrypted,verified_at,created_at "
+                "FROM backup_manifests ORDER BY created_at DESC LIMIT %s",
+                (limit,),
+            )
+            items = cur.fetchall()
+    return {"items": items, "total": len(items)}
+
+
+class BackupVerifyIn(BaseModel):
+    checksum: str = Field(min_length=32, max_length=256)
+
+
+@router.post("/operational/backups/{manifest_id}/verify")
+def verify_backup(manifest_id: str, payload: BackupVerifyIn):
+    db = _db()
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id,checksum FROM backup_manifests WHERE id=%s FOR UPDATE",
+                (manifest_id,),
+            )
+            row = cur.fetchone()
+            _row_or_404(row, "Backup manifest not found")
+            verified = hmac.compare_digest(str(row["checksum"]), payload.checksum)
+            if verified:
+                cur.execute(
+                    "UPDATE backup_manifests SET verified_at=now() WHERE id=%s RETURNING id,verified_at",
+                    (manifest_id,),
+                )
+                result = cur.fetchone()
+            else:
+                result = {"id": manifest_id, "verified": False}
+        conn.commit()
+    if not verified:
+        raise HTTPException(409, detail={"code": "BACKUP_CHECKSUM_MISMATCH", "verified": False})
+    return {"verified": True, **result}
 
 
 @router.post("/operational/backups", status_code=201)
