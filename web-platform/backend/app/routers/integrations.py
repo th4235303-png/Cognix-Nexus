@@ -2,8 +2,9 @@ import os
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
+
 from app.services.google_drive import authorization_url, exchange_code, google_configured
-from app.services.object_storage import r2_storage
+from app.services.object_storage import b2_storage, r2_storage, supabase_storage
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -24,19 +25,22 @@ def callback(code: str) -> str:
         exchange_code(code)
     except Exception as exc:
         raise HTTPException(status_code=502, detail={"code": "GOOGLE_OAUTH_FAILED", "message": str(exc)}) from exc
-    return (
-        "<h2>Cognix Core Google Drive authorization complete</h2>"
-        "<p>Authorization succeeded. The refresh token is intentionally not displayed in the browser.</p>"
-        "<p>Store the credential through your backend secret-management process as GOOGLE_REFRESH_TOKEN, then reload the API.</p>"
-    )
+    return "<h2>Cognix Core Google Drive authorization complete</h2><p>The refresh token is intentionally not displayed.</p>"
 
 
 @router.get("/storage/status")
 def storage_status() -> dict:
-    r2 = r2_storage()
     return {
-        "book_storage_provider": __import__("os").getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower(),
-        "media_storage_provider": __import__("os").getenv("COGNIX_MEDIA_STORAGE_PROVIDER", "local").strip().lower(),
-        "r2_configured": r2.configured,
+        "book_storage_provider": os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower(),
+        "media_storage_provider": os.getenv("COGNIX_MEDIA_STORAGE_PROVIDER", "local").strip().lower(),
+        "b2_configured": b2_storage().configured,
+        "supabase_storage_configured": supabase_storage().configured,
+        "r2_configured": r2_storage().configured,
         "google_drive_configured": google_configured(),
+        "roles": {
+            "primary_originals": os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower(),
+            "media_originals": os.getenv("COGNIX_MEDIA_STORAGE_PROVIDER", "local").strip().lower(),
+            "app_artifacts": "supabase_storage",
+            "exports_and_backup": "google_drive",
+        },
     }
