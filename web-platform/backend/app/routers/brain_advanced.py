@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
+from hashlib import sha256
 from uuid import uuid4
 import json
 
@@ -8,6 +9,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
 from app.services.embeddings import embedding_provider
+from app.services.llm import llm_provider
 from app.store import store
 
 router = APIRouter(prefix="/brain", tags=["brain-vault-advanced"])
@@ -57,6 +59,93 @@ def list_summaries(book_id: str) -> dict:
             cur.execute("SELECT * FROM book_summaries WHERE book_id=%s ORDER BY level, version DESC", (book_id,))
             items = cur.fetchall()
     return {"items": items, "total": len(items)}
+
+
+class SummaryGenerationRequest(BaseModel):
+    levels: list[str] = Field(default_factory=lambda: [f"L{i}" for i in range(1, 8)])
+
+
+@router.post("/books/{book_id}/summaries/generate")
+async def generate_book_summaries(book_id: str, payload: SummaryGenerationRequest) -> dict:
+    db = _db()
+    levels = []
+    for level in payload.levels:
+        if level not in {f"L{i}" for i in range(1, 8)}:
+            raise HTTPException(status_code=400, detail="levels must contain only L1-L7")
+        if level not in levels:
+            levels.append(level)
+    if not levels:
+        raise HTTPException(status_code=400, detail="At least one summary level is required")
+    if not llm_provider.configured:
+        raise HTTPException(status_code=503, detail="LLM synthesis is not configured")
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id,title,author FROM books WHERE id=%s", (book_id,))
+            book = cur.fetchone()
+            if not book:
+                raise HTTPException(status_code=404, detail="Book not found")
+            cur.execute(
+                "SELECT id,chapter_id,content,page_number,sequence FROM chunks "
+                "WHERE chapter_id IN (SELECT id FROM chapters WHERE book_id=%s) "
+                "ORDER BY chapter_id,sequence LIMIT 120",
+                (book_id,),
+            )
+            chunks = cur.fetchall()
+            cur.execute(
+                "SELECT level,content FROM book_summaries WHERE book_id=%s ORDER BY level,version DESC",
+                (book_id,),
+            )
+            existing = cur.fetchall()
+    evidence = "\n\n".join(
+        f"[chunk:{row['id']}] chapter={row['chapter_id']} page={row['page_number']}\n{row['content'][:3500]}"
+        for row in chunks
+    )
+    prior = {row["level"]: row["content"] for row in existing}
+    generated = []
+    level_instructions = {
+        "L1": "Write a one-sentence essence of the whole book.",
+        "L2": "Write a concise executive overview: thesis, scope, and major conclusions.",
+        "L3": "Map the book's major chapters or sections and what each contributes.",
+        "L4": "Extract the central concepts, definitions, and relationships.",
+        "L5": "Explain the important mechanisms, arguments, methods, or causal chains.",
+        "L6": "Identify limitations, assumptions, open questions, disagreements, and evidence gaps.",
+        "L7": "Produce a durable synthesis connecting the book's ideas while preserving uncertainty.",
+    }
+    for level in levels:
+        previous = "\n\n".join(f"{k}: {v[:5000]}" for k, v in prior.items()) if prior else ""
+        prompt = (
+            f"Book: {book['title']} by {book.get('author') or 'Unknown'}\n"
+            f"Task: {level_instructions[level]}\n"
+            "Every factual claim must be traceable to supplied chunks. "
+            "Use [chunk:ID] citations inline. Do not invent content."
+            f"\n\nSource chunks:\n{evidence}\nPrior levels:\n{previous}"
+        )
+        content = await llm_provider.complete(
+            "You are a research summarizer. Preserve evidence boundaries and uncertainty.",
+            prompt,
+        )
+        source_ids = [row["id"] for row in chunks if f"[chunk:{row['id']}]" in content]
+        with db.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT COALESCE(MAX(version),0)+1 AS version FROM book_summaries WHERE book_id=%s AND level=%s",
+                    (book_id, level),
+                )
+                version = int(cur.fetchone()["version"])
+                summary_id = f"SUM-{uuid4().hex[:8].upper()}"
+                cur.execute(
+                    "INSERT INTO book_summaries(id,book_id,level,title,content,version,model) VALUES(%s,%s,%s,%s,%s,%s,%s)",
+                    (summary_id, book_id, level, level, content, version, llm_provider.model),
+                )
+                for source_id in source_ids:
+                    cur.execute(
+                        "INSERT INTO summary_sources(summary_id,source_type,source_id) VALUES(%s,%s,%s) ON CONFLICT DO NOTHING",
+                        (summary_id, "chunk", source_id),
+                    )
+            conn.commit()
+        prior[level] = content
+        generated.append({"id": summary_id, "level": level, "version": version, "content": content, "source_ids": source_ids})
+    return {"book_id": book_id, "model": llm_provider.model, "items": generated}
 
 
 class LanguageCardCreate(BaseModel):
@@ -176,6 +265,48 @@ def get_synthesis(run_id: str) -> dict:
     return row
 
 
+
+class SynthesisGenerateRequest(BaseModel):
+    limit: int = Field(default=12, ge=1, le=30)
+
+
+@router.post("/synthesis/{run_id}/generate")
+async def generate_synthesis(run_id: str, payload: SynthesisGenerateRequest) -> dict:
+    db = _db()
+    if not llm_provider.configured:
+        raise HTTPException(status_code=503, detail="LLM synthesis is not configured")
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM synthesis_runs WHERE id=%s FOR UPDATE", (run_id,))
+            run = cur.fetchone()
+            if not run:
+                raise HTTPException(status_code=404, detail="Synthesis run not found")
+            source_ids = run.get("source_ids") or []
+            if isinstance(source_ids, str):
+                source_ids = json.loads(source_ids)
+            if source_ids:
+                cur.execute("SELECT id,content FROM chunks WHERE id=ANY(%s) ORDER BY id LIMIT %s", (source_ids, payload.limit))
+            else:
+                terms = [term for term in run["query"].lower().split() if term][:8]
+                pattern = "%" + "%".join(terms) + "%" if terms else "%"
+                cur.execute("SELECT id,content FROM chunks WHERE lower(content) LIKE %s ORDER BY created_at DESC LIMIT %s", (pattern, payload.limit))
+            rows = cur.fetchall()
+    evidence = "\n\n".join(f"[chunk:{row['id']}]\n{row['content'][:5000]}" for row in rows)
+    if not evidence:
+        raise HTTPException(status_code=404, detail="No evidence found for synthesis")
+    answer = await llm_provider.complete(
+        "Synthesize only from supplied evidence. Keep disagreements explicit and cite every substantive claim with [chunk:ID].",
+        f"Research question: {run['query']}\n\nEvidence:\n{evidence}",
+    )
+    citations = [row["id"] for row in rows if f"[chunk:{row['id']}]" in answer]
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE synthesis_runs SET result=%s,citations=%s::jsonb,status=%s WHERE id=%s RETURNING *", (answer, json.dumps(citations), "completed", run_id))
+            updated = cur.fetchone()
+        conn.commit()
+    return updated
+
+
 class VaultItem(BaseModel):
     label: str = Field(min_length=1, max_length=300)
     ciphertext: str = Field(min_length=1)
@@ -273,21 +404,40 @@ async def semantic_query(payload: SemanticQuery) -> dict:
                 (vector_literal, vector_literal, payload.limit),
             )
             rows = cur.fetchall()
+    items = [
+        {
+            "chunk_id": row["owner_id"],
+            "content": row["content"],
+            "similarity": float(row["similarity"]),
+            "chapter_id": row["chapter_id"],
+            "page_number": row["page_number"],
+            "sequence": row["sequence"],
+            "model": row["model"],
+        }
+        for row in rows
+    ]
+    answer = None
+    citations: list[str] = []
+    message = "Evidence retrieved. Configure COGNIX_LLM_API_URL and COGNIX_LLM_MODEL to enable cited answer synthesis."
+    if llm_provider.configured and items:
+        evidence = "\n\n".join(
+            f"[chunk:{item['chunk_id']}] similarity={item['similarity']:.3f}\n{item['content'][:5000]}"
+            for item in items
+        )
+        answer = await llm_provider.complete(
+            "Answer only from the supplied evidence. Do not invent facts. "
+            "Cite every substantive statement with [chunk:ID]. If the evidence is insufficient, say so.",
+            f"Question: {payload.q}\n\nEvidence:\n{evidence}",
+        )
+        citations = [item["chunk_id"] for item in items if f"[chunk:{item['chunk_id']}]" in answer]
+        message = "Answer synthesized from retrieved evidence; citations identify the supporting chunks."
     return {
         "query": payload.q,
-        "mode": "semantic",
-        "items": [
-            {
-                "chunk_id": row["owner_id"],
-                "content": row["content"],
-                "similarity": float(row["similarity"]),
-                "chapter_id": row["chapter_id"],
-                "page_number": row["page_number"],
-                "sequence": row["sequence"],
-                "model": row["model"],
-            }
-            for row in rows
-        ],
+        "mode": "semantic_rag" if answer else "semantic_evidence",
+        "answer": answer,
+        "citations": citations,
+        "items": items,
+        "message": message,
     }
 
 
@@ -346,12 +496,43 @@ def contradiction_candidates(limit: int = 50) -> dict:
                 (limit,),
             )
             rows = cur.fetchall()
+    items = []
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            for row in rows:
+                candidate_id = "CONTR-" + sha256(f"{row['left_id']}:{row['right_id']}".encode()).hexdigest()[:16].upper()
+                cur.execute(
+                    "INSERT INTO contradictions(id,left_source_type,left_source_id,right_source_type,right_source_id,statement,status) VALUES(%s,'chunk',%s,'chunk',%s,%s,'needs_review') ON CONFLICT (id) DO NOTHING",
+                    (candidate_id, row["left_id"], row["right_id"], "Potential contradiction candidate; human review required."),
+                )
+                items.append({
+                    "id": candidate_id,
+                    "left_chunk_id": row["left_id"],
+                    "right_chunk_id": row["right_id"],
+                    "left_content": row["left_content"],
+                    "right_content": row["right_content"],
+                    "status": "needs_review",
+                })
+        conn.commit()
     return {
         "mode": "candidate_detection",
         "message": "Candidates require human review; this endpoint does not assert that a contradiction is true.",
-        "items": [
-            {"left_chunk_id": row["left_id"], "right_chunk_id": row["right_id"],
-             "left_content": row["left_content"], "right_content": row["right_content"]}
-            for row in rows
-        ],
+        "items": items,
     }
+
+
+class ContradictionReview(BaseModel):
+    status: str = Field(pattern=r"^(confirmed|rejected|needs_review)$")
+
+
+@router.post("/contradictions/{contradiction_id}/review")
+def review_contradiction(contradiction_id: str, payload: ContradictionReview) -> dict:
+    db = _db()
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE contradictions SET status=%s WHERE id=%s RETURNING *", (payload.status, contradiction_id))
+            row = cur.fetchone()
+        conn.commit()
+    if not row:
+        raise HTTPException(status_code=404, detail="Contradiction candidate not found")
+    return row
