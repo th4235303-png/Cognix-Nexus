@@ -80,24 +80,28 @@ Brain Vault schema is introduced after the existing Cognix migrations:
 
 The migrations are applied automatically by the existing database bootstrap.
 
-## Future phases
+## Delivery phases 1–11
 
-1. PDF/EPUB ingestion adapters and page-accurate source spans
-2. semantic embeddings + pgvector
-3. L1–L7 hierarchical book intelligence
-4. cross-book synthesis and contradiction review
-5. language tutor + FSRS
-6. document assistant + OCR
-7. client-side encrypted Secret Vault
-8. unified export
-9. Expo mobile client
-10. Vizora Lens media intelligence
+1. **PDF/EPUB ingestion** — local extraction, ordered sections, page metadata, content hashing, and storage abstraction.
+2. **Semantic retrieval** — provider-neutral embeddings, pgvector indexing, and cited vector search when configured.
+3. **Hierarchical intelligence** — versioned L1–L7 summaries with chunk-level source links.
+4. **Cross-book synthesis** — evidence-only synthesis records, generated citations, and reviewable contradiction candidates.
+5. **Language Tutor** — language cards with spaced-review scheduling, ratings, lapses, and review history.
+6. **Document Assistant** — bounded OCR ingestion, per-page OCR results, persisted job state, and failure reporting.
+7. **Secret Vault** — ciphertext, nonce, KDF salt, and KDF parameters only; decryption material stays client-side.
+8. **Unified export** — Brain Vault export extends the existing research export contract rather than replacing it.
+9. **Mobile foundation** — Expo client foundation is present for the same Brain Vault API surface.
+10. **Vizora Lens** — image ingest, hashing, OCR, and media asset metadata form the input boundary for future visual intelligence.
+11. **Production hardening** — request IDs, security headers, configurable authentication, rate limiting, readiness checks, bounded uploads, and regression CI.
 
-## Architecture rules
+### Verification contract
 
-- Research evidence and personal knowledge remain linked but distinct domains.
-- AI-generated content is never automatically canonical.
-- Human review remains the approval boundary for evidence-derived knowledge.
-- Secrets remain isolated from ordinary knowledge records.
-- Media/Vizora is a future input layer, not a replacement for Brain Vault.
-- Original binary storage must sit behind a storage abstraction; the current book foundation persists extracted text in PostgreSQL.
+Every phase is expected to preserve these invariants:
+
+- source evidence remains traceable to its original source/chunk;
+- AI-generated text remains non-canonical until the existing human-review boundary is satisfied;
+- secret records contain ciphertext metadata only;
+- optional providers fail closed when they are not configured;
+- upload endpoints enforce file-type and size limits;
+- /health remains a liveness check while /ready reports persistence readiness;
+- the frontend and backend verification commands remain part of CI.
