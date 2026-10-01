@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from hashlib import sha256
+import os
 from uuid import uuid4
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
@@ -383,8 +384,9 @@ async def upload_book(file: UploadFile = File(...), language: str = "en", descri
         "chapters": chapters,
         "chunk_count": total_chunks,
         "original_filename": filename,
-        "binary_storage": "filesystem",
+        "binary_storage": os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower(),
         "binary_path": binary_path,
+        "binary_sha256": sha256(data).hexdigest(),
     }
     store.brain_books[book_id] = book
     store.save_brain_book(book)
