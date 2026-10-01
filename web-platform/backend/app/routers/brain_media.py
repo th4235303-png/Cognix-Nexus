@@ -52,8 +52,8 @@ async def ingest_media(file: UploadFile = File(...), ocr_language: str = "eng") 
     with store.database.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO media_assets(id,filename,media_type,content_hash,metadata) VALUES(%s,%s,%s,%s,%s) RETURNING *",
-                (media_id, filename, suffix, content_hash, {"ocr_language": ocr_language, "ocr_text_length": len(text), "storage_provider": storage_provider, "binary_path": binary_path, "binary_sha256": content_hash}),
+                "INSERT INTO media_assets(id,filename,media_type,content_hash,metadata,binary_storage,binary_path,binary_sha256) VALUES(%s,%s,%s,%s,%s,%s,%s,%s) RETURNING *",
+                (media_id, filename, suffix, content_hash, {"ocr_language": ocr_language, "ocr_text_length": len(text)}, storage_provider, binary_path, content_hash),
             )
         conn.commit()
     return {
