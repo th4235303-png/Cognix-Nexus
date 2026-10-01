@@ -1,7 +1,11 @@
 """Google Drive OAuth and export boundary."""
 from __future__ import annotations
 
+import base64
+import hashlib
+import hmac
 import os
+import time
 from dataclasses import dataclass
 
 from app.services.google_drive_package import build_file_contents
@@ -20,11 +24,32 @@ def build_export_package(source_id: str, date: str) -> ExportPackage:
 def google_configured() -> bool:
     return all(os.getenv(name, "").strip() for name in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "GOOGLE_REFRESH_TOKEN"))
 
+def _oauth_state() -> str:
+    issued_at = str(int(time.time()))
+    secret = os.environ["GOOGLE_CLIENT_SECRET"].encode("utf-8")
+    signature = hmac.new(secret, issued_at.encode("ascii"), hashlib.sha256).hexdigest()
+    return base64.urlsafe_b64encode(f"{issued_at}.{signature}".encode("ascii")).decode("ascii").rstrip("=")
+
+
+def verify_oauth_state(state: str, max_age_seconds: int = 600) -> bool:
+    try:
+        raw = base64.urlsafe_b64decode(state + "=" * (-len(state) % 4)).decode("ascii")
+        issued_at, signature = raw.split(".", 1)
+        issued = int(issued_at)
+    except (ValueError, TypeError, UnicodeError):
+        return False
+    if abs(int(time.time()) - issued) > max_age_seconds:
+        return False
+    secret = os.environ.get("GOOGLE_CLIENT_SECRET", "").encode("utf-8")
+    expected = hmac.new(secret, issued_at.encode("ascii"), hashlib.sha256).hexdigest()
+    return bool(secret) and hmac.compare_digest(signature, expected)
+
+
 def authorization_url() -> str:
     from google_auth_oauthlib.flow import Flow
     flow = Flow.from_client_config({"web": {"client_id": os.environ["GOOGLE_CLIENT_ID"], "client_secret": os.environ["GOOGLE_CLIENT_SECRET"], "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token", "redirect_uris": [os.environ["GOOGLE_REDIRECT_URI"]]}}, scopes=SCOPES)
     flow.redirect_uri = os.environ["GOOGLE_REDIRECT_URI"]
-    return flow.authorization_url(access_type="offline", prompt="consent", include_granted_scopes="true")[0]
+    return flow.authorization_url(access_type="offline", prompt="consent", include_granted_scopes="true", state=_oauth_state())[0]
 
 def exchange_code(code: str) -> dict[str, str]:
     from google_auth_oauthlib.flow import Flow
