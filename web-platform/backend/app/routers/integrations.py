@@ -3,7 +3,7 @@ import os
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
-from app.services.google_drive import authorization_url, exchange_code, google_configured
+from app.services.google_drive import authorization_url, exchange_code, google_configured, verify_oauth_state
 from app.services.object_storage import b2_storage, r2_storage, supabase_storage
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
@@ -20,12 +20,20 @@ def authorize() -> dict[str, str]:
 
 
 @router.get("/google-drive/callback", response_class=HTMLResponse)
-def callback(code: str) -> str:
+def callback(code: str, state: str) -> str:
+    if not verify_oauth_state(state):
+        raise HTTPException(status_code=400, detail={"code": "GOOGLE_OAUTH_STATE_INVALID", "message": "OAuth state is invalid or expired"})
     try:
-        exchange_code(code)
+        result = exchange_code(code)
     except Exception as exc:
-        raise HTTPException(status_code=502, detail={"code": "GOOGLE_OAUTH_FAILED", "message": str(exc)}) from exc
-    return "<h2>Cognix Core Google Drive authorization complete</h2><p>The refresh token is intentionally not displayed.</p>"
+        raise HTTPException(status_code=502, detail={"code": "GOOGLE_OAUTH_FAILED", "message": type(exc).__name__}) from exc
+    token = result["refresh_token"]
+    return (
+        "<h2>Cognix Core Google Drive authorization complete</h2>"
+        "<p>Copy the refresh token below into the server secret "
+        "<code>GOOGLE_REFRESH_TOKEN</code>. Do not commit or share it.</p>"
+        f"<textarea readonly rows='6' cols='100'>{token}</textarea>"
+    )
 
 
 @router.get("/storage/status")
