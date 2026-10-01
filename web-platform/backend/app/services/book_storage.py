@@ -4,11 +4,11 @@ import hashlib
 import os
 from pathlib import Path
 
-from app.services.object_storage import r2_storage
+from app.services.object_storage import b2_storage, r2_storage
 
 
 class BookBinaryStorage:
-    """Original-binary storage with local or Cloudflare R2 backends."""
+    """Original-binary storage with local, Backblaze B2, or legacy R2 backends."""
 
     def __init__(self, root: str | None = None):
         self.provider = os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower()
@@ -17,16 +17,24 @@ class BookBinaryStorage:
 
     @property
     def configured(self) -> bool:
+        if self.provider == "b2":
+            return b2_storage().configured
         if self.provider == "r2":
             return r2_storage().configured
         return self.root is not None
 
+    def _object_storage(self):
+        if self.provider == "b2":
+            return b2_storage()
+        if self.provider == "r2":
+            return r2_storage()
+        return None
+
     def put(self, book_id: str, filename: str, data: bytes) -> str:
         safe_name = Path(filename).name or "document"
-        if self.provider == "r2":
-            key = f"books/{book_id}/{safe_name}"
-            stored = r2_storage().put_bytes(key, data)
-            return stored.key
+        storage = self._object_storage()
+        if storage:
+            return storage.put_bytes(f"books/{book_id}/{safe_name}", data).key
         if not self.configured:
             raise RuntimeError("COGNIX_BOOK_STORAGE_DIR is not configured")
         target_dir = self.root / book_id
@@ -37,8 +45,9 @@ class BookBinaryStorage:
 
     def get(self, book_id: str, filename: str) -> bytes:
         safe_name = Path(filename).name or "document"
-        if self.provider == "r2":
-            return r2_storage().get_bytes(f"books/{book_id}/{safe_name}")
+        storage = self._object_storage()
+        if storage:
+            return storage.get_bytes(f"books/{book_id}/{safe_name}")
         if not self.configured:
             raise RuntimeError("COGNIX_BOOK_STORAGE_DIR is not configured")
         return (self.root / book_id / safe_name).read_bytes()
@@ -48,8 +57,9 @@ class BookBinaryStorage:
 
     def delete(self, book_id: str, filename: str) -> None:
         safe_name = Path(filename).name or "document"
-        if self.provider == "r2":
-            r2_storage().delete(f"books/{book_id}/{safe_name}")
+        storage = self._object_storage()
+        if storage:
+            storage.delete(f"books/{book_id}/{safe_name}")
             return
         if not self.configured:
             raise RuntimeError("COGNIX_BOOK_STORAGE_DIR is not configured")
