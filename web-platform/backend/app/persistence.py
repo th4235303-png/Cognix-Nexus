@@ -82,6 +82,7 @@ class Database:
                     "013_workflow_fk_indexes.sql",
                     "014_move_vector_extension.sql",
                     "015_supabase_storage_bucket.sql",
+                    "016_processing_idempotency.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
