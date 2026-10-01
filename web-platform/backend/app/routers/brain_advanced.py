@@ -7,6 +7,7 @@ import json
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
+from app.services.embeddings import embedding_provider
 from app.store import store
 
 router = APIRouter(prefix="/brain", tags=["brain-vault-advanced"])
@@ -206,3 +207,85 @@ def list_vault_items() -> dict:
             cur.execute("SELECT id,label,nonce,kdf_salt,kdf_params,created_at,updated_at FROM vault_items ORDER BY updated_at DESC")
             items = cur.fetchall()
     return {"items": items, "total": len(items)}
+
+
+class EmbedRequest(BaseModel):
+    owner_type: str = Field(min_length=1, max_length=64)
+    owner_ids: list[str] = Field(min_length=1, max_length=100)
+
+
+@router.post("/embeddings/index")
+async def index_embeddings(payload: EmbedRequest) -> dict:
+    db = _db()
+    if not embedding_provider.configured:
+        raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id, content FROM chunks WHERE id = ANY(%s) ORDER BY id",
+                (payload.owner_ids,),
+            )
+            rows = cur.fetchall()
+    if not rows:
+        return {"indexed": 0}
+    vectors = await embedding_provider.embed([row["content"] for row in rows])
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            for row, vector in zip(rows, vectors):
+                cur.execute(
+                    "INSERT INTO embeddings(id,owner_type,owner_id,content,embedding,model,created_at,embedding_vector) "
+                    "VALUES(%s,%s,%s,%s,%s,%s,now(),%s::vector) "
+                    "ON CONFLICT(owner_type,owner_id) DO UPDATE SET content=EXCLUDED.content,embedding=EXCLUDED.embedding,model=EXCLUDED.model,embedding_vector=EXCLUDED.embedding_vector",
+                    (
+                        f"EMB-{row['id']}",
+                        payload.owner_type,
+                        row["id"],
+                        row["content"],
+                        json.dumps(vector),
+                        embedding_provider.model,
+                        "[" + ",".join(str(float(v)) for v in vector) + "]",
+                    ),
+                )
+        conn.commit()
+    return {"indexed": len(rows), "model": embedding_provider.model}
+
+
+class SemanticQuery(BaseModel):
+    q: str = Field(min_length=1, max_length=2000)
+    limit: int = Field(default=8, ge=1, le=30)
+
+
+@router.post("/query/semantic")
+async def semantic_query(payload: SemanticQuery) -> dict:
+    db = _db()
+    if not embedding_provider.configured:
+        raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
+    vector = (await embedding_provider.embed([payload.q]))[0]
+    vector_literal = "[" + ",".join(str(float(v)) for v in vector) + "]"
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT e.owner_id, e.content, e.model, 1 - (e.embedding_vector <=> %s::vector) AS similarity, "
+                "c.chapter_id, c.page_number, c.sequence "
+                "FROM embeddings e JOIN chunks c ON c.id=e.owner_id "
+                "WHERE e.embedding_vector IS NOT NULL AND e.owner_type='chunk' "
+                "ORDER BY e.embedding_vector <=> %s::vector LIMIT %s",
+                (vector_literal, vector_literal, payload.limit),
+            )
+            rows = cur.fetchall()
+    return {
+        "query": payload.q,
+        "mode": "semantic",
+        "items": [
+            {
+                "chunk_id": row["owner_id"],
+                "content": row["content"],
+                "similarity": float(row["similarity"]),
+                "chapter_id": row["chapter_id"],
+                "page_number": row["page_number"],
+                "sequence": row["sequence"],
+                "model": row["model"],
+            }
+            for row in rows
+        ],
+    }
