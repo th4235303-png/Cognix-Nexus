@@ -2,6 +2,9 @@
 base = "web-platform/frontend"
 command = "npm run build"
 publish = ".next"
+# Development pause: Netlify builds stay skipped until this env var is set to "true".
+# Re-enable later in Netlify UI with COGNIX_NETLIFY_DEPLOY=true.
+ignore = "if [ \"$COGNIX_NETLIFY_DEPLOY\" = \"true\" ]; then exit 1; else exit 0; fi"
 
 [build.environment]
 NODE_VERSION = "20"
