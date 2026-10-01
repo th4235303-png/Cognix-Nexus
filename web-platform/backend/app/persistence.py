@@ -335,7 +335,7 @@ class Database:
             conn.commit()
 
     def save_brain_book(self, book: dict[str, Any]) -> None:
-        book_params = {**book, "binary_storage": book.get("binary_storage"), "binary_path": book.get("binary_path")}
+        book_params = {**book, "binary_storage": book.get("binary_storage"), "binary_path": book.get("binary_path"), "binary_sha256": book.get("binary_sha256") or book.get("content_hash")}
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
