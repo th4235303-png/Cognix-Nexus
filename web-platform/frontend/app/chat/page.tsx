@@ -19,7 +19,7 @@ export default function BrainChatPage() {
     try {
       if (semantic) {
         const response = await semanticBrainQuery(query.trim());
-        setItems(response.items.map((item) => ({ chunk_id: item.chunk_id, chapter_id: item.chapter_id, chapter_title: 'Semantic match', book_title: 'Brain Vault', sequence: item.sequence, score: Number(item.similarity.toFixed(4)), content: item.content })));
+        setItems(response.items.map((item) => ({ chunk_id: item.chunk_id, chapter_id: item.chapter_id, chapter_title: 'Semantic match', book_title: 'Brain Vault', sequence: item.sequence, score: Number((item.semantic_similarity ?? item.rrf_score).toFixed(4)), content: item.content })));
         setMessage('Semantic retrieval returned cited source chunks.');
       } else {
         const response = await queryBrain(query.trim());
