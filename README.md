@@ -102,13 +102,19 @@ See `web-platform/docs/brain-vault.md` for the detailed architecture and phase r
 5. `005_brain_vault_search.sql`
 6. `006_brain_vault_advanced.sql`
 7. `007_book_storage.sql`
+8. `008_document_and_synthesis_hardening.sql`
+9. `009_media_assets.sql`
+10. `010_agent_active_layer.sql`
+11. `010_intelligence_life_reliability.sql`
+12. `011_level_up20_completion.sql`
+13. `012_storage_reliability.sql`
 
 The existing database bootstrap applies the Brain Vault migrations after the Cognix Core schema.
 
 ## Implemented Brain Vault capabilities
 
 - PDF/EPUB upload and extraction
-- Original binary storage behind a persistent storage adapter
+- Original binary storage behind a local/Cloudflare R2 storage adapter with SHA-256 integrity metadata
 - Page/section metadata on extracted chunks
 - Optional pgvector embedding index and semantic retrieval
 - Versioned L1–L7 summary records with source linkage
@@ -147,7 +153,7 @@ The Brain Vault roadmap is implemented as a continuous delivery sequence. The re
 
 All 20 feature contracts are now represented in the backend and the web workspace. The contracts intentionally separate deterministic/product logic from provider-dependent AI execution and keep the Master Plan safety rules explicit: synthesis requires 3+ sources, decisions expose evidence coverage, writing checks citations, learning paths are library-only, mood remains local-only, ambient mode is user-triggered, wiki remains private, offline sync detects conflicts, and legacy metadata stays encrypted. These are implementation boundaries, not claims that every external AI/provider integration is live.
 
-The original Master Plan phases 0–15 remain the broader product roadmap. Phases 1–12 cover the delivered core foundation and hardening; phases 13–15 are extended by the Level Up and integration work. Production deployment remains intentionally paused until the full verification pass is complete.
+The original Master Plan phases 0–15 remain the broader product roadmap. Phases 1–12 cover the delivered core foundation and hardening; phases 13–15 are extended by the Level Up and integration work. Production deployment remains intentionally paused until the full verification pass is complete. All credential-dependent adapters are implemented in code; operator credentials and live drills remain external activation steps.
 
 Phase 11 is intentionally an engineering hardening phase: it does not make AI output canonical and does not bypass the existing human-review boundaries.
 
