@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { BookOpen, Plus } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
-import { ApiBrainBook, createBrainBook, listBrainBooks } from '@/lib/api';
+import { ApiBrainBook, createBrainBook, listBrainBooks, uploadBrainBook } from '@/lib/api';
 
 export default function BooksPage() {
   const [books, setBooks] = useState<ApiBrainBook[]>([]);
@@ -13,6 +13,7 @@ export default function BooksPage() {
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [file, setFile] = useState<File | null>(null);
 
   const load = async () => setBooks((await listBrainBooks()).items);
   useEffect(() => { load().catch(() => setError('Unable to load the book library.')); }, []);
@@ -29,6 +30,22 @@ export default function BooksPage() {
       await load();
     } catch {
       setError('Book could not be imported.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const upload = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!file) return;
+    setSaving(true);
+    setError('');
+    try {
+      await uploadBrainBook(file);
+      setFile(null);
+      await load();
+    } catch {
+      setError('PDF/EPUB upload failed. Make sure persistent book storage is configured.');
     } finally {
       setSaving(false);
     }
@@ -54,9 +71,12 @@ export default function BooksPage() {
             ))}
           </div>
         </SectionCard>
-        <SectionCard title="Import book" description="Foundation importer. PDF/EPUB adapters can attach to the same model later.">
+        <SectionCard title="Import book" description="Paste text or upload a PDF/EPUB. Original files are stored behind the backend storage boundary.">
           <form onSubmit={submit} className="space-y-4">
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Book title" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
+            <input type="file" accept=".pdf,.epub,application/pdf,application/epub+zip" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
+            <button type="button" onClick={() => file && upload({ preventDefault() {} } as FormEvent)} disabled={!file || saving} className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium disabled:opacity-50">{saving ? "Uploading…" : "Upload PDF / EPUB"}</button>
+            <div className="text-center text-xs text-muted-foreground">or paste extracted text</div>
             <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste extracted book text here…" rows={10} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
             {error && <p className="text-sm text-destructive">{error}</p>}
             <button disabled={saving} className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"><Plus className="h-4 w-4" /> {saving ? 'Importing…' : 'Import book'}</button>
