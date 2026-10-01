@@ -105,18 +105,13 @@ def create_book(payload: BookCreate) -> dict:
         "created_at": now,
         "chunks": chunks,
     })
-    try:
-        binary_path = BookBinaryStorage().put(book_id, filename, data)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
     book = {
         "id": book_id,
         "title": payload.title,
         "author": payload.author,
         "language": payload.language,
         "file_type": payload.file_type.lower(),
-        "source_kind": "upload",
+        "source_kind": "imported_text",
         "source_url": payload.source_url,
         "status": "ready",
         "description": payload.description,
