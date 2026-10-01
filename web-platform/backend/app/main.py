@@ -1,3 +1,4 @@
+import json
 import os
 import time
 from collections import defaultdict, deque
@@ -74,7 +75,7 @@ async def request_context(request: Request, call_next):
                             "http.request",
                             request_id,
                             duration_ms,
-                            __import__("json").dumps({
+                            json.dumps({
                                 "method": request.method,
                                 "path": request.url.path[:500],
                                 "status_code": response.status_code,
