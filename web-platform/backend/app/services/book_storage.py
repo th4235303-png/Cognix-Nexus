@@ -34,7 +34,8 @@ class BookBinaryStorage:
         safe_name = Path(filename).name or "document"
         storage = self._object_storage()
         if storage:
-            return storage.put_bytes(f"books/{book_id}/{safe_name}", data).key
+            content_type = {"pdf": "application/pdf", "epub": "application/epub+zip"}.get(Path(safe_name).suffix.lower().lstrip("."), "application/octet-stream")
+            return storage.put_bytes(f"books/{book_id}/{safe_name}", data, content_type=content_type).key
         if not self.configured:
             raise RuntimeError("COGNIX_BOOK_STORAGE_DIR is not configured")
         target_dir = self.root / book_id
