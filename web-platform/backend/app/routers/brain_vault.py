@@ -333,8 +333,13 @@ async def upload_book(file: UploadFile = File(...), language: str = "en", descri
     except Exception as exc:
         raise HTTPException(status_code=400, detail=f"Document extraction failed: {exc}") from exc
 
-    now = now_iso()
     book_id = f"BOOK-{uuid4().hex[:8].upper()}"
+    try:
+        binary_path = BookBinaryStorage().put(book_id, filename, data)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    now = now_iso()
     chapters = []
     total_chunks = 0
     for chapter_number, section in enumerate(document.sections, start=1):
