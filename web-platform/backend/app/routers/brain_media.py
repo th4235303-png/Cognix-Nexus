@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from hashlib import sha256
+import os
 from uuid import uuid4
 
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.services.document_ocr import extract_ocr
+from app.services.object_storage import r2_storage
 from app.store import store
 
 router = APIRouter(prefix="/brain/media", tags=["brain-media"])
@@ -36,11 +38,21 @@ async def ingest_media(file: UploadFile = File(...), ocr_language: str = "eng") 
         raise HTTPException(status_code=503, detail=f"Media OCR failed: {exc}") from exc
     text = pages[0].text if pages else ""
 
+    storage_provider = os.getenv("COGNIX_MEDIA_STORAGE_PROVIDER", "local").strip().lower()
+    binary_path = None
+    if storage_provider == "r2":
+        try:
+            binary_path = r2_storage().put_bytes(f"media/{media_id}/{filename}", data, content_type=f"image/{\"jpeg\" if suffix in {\"jpg\", \"jpeg\"} else suffix}").key
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail=f"Media object storage failed: {type(exc).__name__}") from exc
+    elif storage_provider != "local":
+        raise HTTPException(status_code=503, detail="Unsupported media storage provider")
+
     with store.database.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "INSERT INTO media_assets(id,filename,media_type,content_hash,metadata) VALUES(%s,%s,%s,%s,%s) RETURNING *",
-                (media_id, filename, suffix, content_hash, {"ocr_language": ocr_language, "ocr_text_length": len(text)}),
+                (media_id, filename, suffix, content_hash, {"ocr_language": ocr_language, "ocr_text_length": len(text), "storage_provider": storage_provider, "binary_path": binary_path, "binary_sha256": content_hash}),
             )
         conn.commit()
     return {
