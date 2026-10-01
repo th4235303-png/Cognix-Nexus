@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from app.services.book_storage import BookBinaryStorage
-from app.services.object_storage import B2ObjectStorage, R2ObjectStorage, SupabaseObjectStorage
+from app.services.object_storage import B2ObjectStorage, R2ObjectStorage, SupabaseObjectStorage, S3ObjectStorage
 from app.main import app
 from fastapi.testclient import TestClient
 
@@ -50,6 +50,14 @@ class StorageContractTests(unittest.TestCase):
             clear=False,
         ):
             self.assertFalse(SupabaseObjectStorage().configured)
+
+    def test_object_key_rejects_traversal_and_control_chars(self):
+        for key in ("../secret", "books/../secret", "books\\secret", "books/\x00secret"):
+            with self.assertRaises(ValueError):
+                S3ObjectStorage._safe_key(key)
+
+    def test_object_key_allows_nested_keys(self):
+        self.assertEqual(S3ObjectStorage._safe_key("/books/BOOK-1/file.pdf"), "books/BOOK-1/file.pdf")
 
     def test_storage_status_never_returns_secret_values(self):
         client = TestClient(app)
