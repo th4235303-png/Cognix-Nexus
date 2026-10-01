@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard, GlowButton } from '@/components/shared/cognix-primitives';
+import { postApi } from '@/lib/api';
 
 const features = [
   ['4.1','Agent Mode'],['4.2','Synthesis Engine'],['4.3','Decision Support'],['4.4','Writing Assistant'],
@@ -12,13 +13,7 @@ const features = [
   ['4.17','Knowledge Compounding'],['4.18','Idea Generator'],['4.19','Offline-first AI'],['4.20','Legacy Mode'],
 ];
 
-async function call(path: string, body: unknown) {
-  const base = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const res = await fetch(base + path, { method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data?.detail || 'Request failed');
-  return data;
-}
+async function call<T>(path: string, body: unknown) { return postApi<T>(path, body); }
 
 export default function LevelUpPage() {
   const [explanation,setExplanation]=useState('');
