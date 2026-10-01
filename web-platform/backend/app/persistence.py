@@ -73,6 +73,7 @@ class Database:
                     "005_brain_vault_search.sql",
                     "006_brain_vault_advanced.sql",
                     "007_book_storage.sql",
+                    "008_document_and_synthesis_hardening.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
