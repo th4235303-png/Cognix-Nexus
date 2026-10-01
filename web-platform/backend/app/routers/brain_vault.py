@@ -7,6 +7,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from app.services.book_ingestion import extract_document
+from app.services.book_storage import BookBinaryStorage
 from app.store import now_iso, store
 
 router = APIRouter(prefix="/brain", tags=["brain-vault"])
@@ -104,6 +105,11 @@ def create_book(payload: BookCreate) -> dict:
         "created_at": now,
         "chunks": chunks,
     })
+    try:
+        binary_path = BookBinaryStorage().put(book_id, filename, data)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     book = {
         "id": book_id,
         "title": payload.title,
@@ -378,7 +384,8 @@ async def upload_book(file: UploadFile = File(...), language: str = "en", descri
         "chapters": chapters,
         "chunk_count": total_chunks,
         "original_filename": filename,
-        "binary_storage": "external-storage-required",
+        "binary_storage": "filesystem",
+        "binary_path": binary_path,
     }
     store.brain_books[book_id] = book
     store.save_brain_book(book)
