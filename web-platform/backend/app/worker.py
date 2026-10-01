@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import time
-from app.services.agent import run_due_agent_jobs
+from app.services.agent import enqueue_due_agent_schedules, run_due_agent_jobs
 
 from app.services.processing import STAGES, advance
 from app.store import store
@@ -42,6 +42,7 @@ def run_once() -> int:
 def main() -> None:
     while True:
         run_once()
+        enqueue_due_agent_schedules()
         run_due_agent_jobs()
         time.sleep(POLL_SECONDS)
 
