@@ -92,13 +92,14 @@ def run_due_agent_jobs(limit: int = 5) -> int:
             ids = [row["id"] for row in cur.fetchall()]
 
     for job_id in ids:
-        if not store.database.try_claim_task("agent:" + job_id):
+        claimed, worker_id = _lease_agent_job(job_id)
+        if not claimed:
             continue
         try:
             if asyncio.run(_run_agent_job(job_id)):
                 processed += 1
         finally:
-            store.database.release_task("agent:" + job_id)
+            _release_agent_lease(job_id, worker_id)
     return processed
 
 
