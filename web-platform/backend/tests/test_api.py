@@ -295,6 +295,13 @@ class CognixApiTests(unittest.TestCase):
             response = getattr(self.client, method)(path, **kwargs)
             self.assertIn(response.status_code, {400, 503}, path)
 
+    def test_readiness_requires_database_when_configured(self):
+        with patch.dict("app.main.__dict__", {"REQUIRE_DATABASE": True, "store": store}):
+            response = self.client.get("/ready")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "not_ready")
+        self.assertTrue(response.json()["database_required"])
+
     def test_worker_advances_queued_processing(self):
         source = self.client.post(
             "/sources", json={"url": "https://example.com/worker"}
