@@ -76,8 +76,7 @@ async def _run_agent_job(job_id: str) -> bool:
         _fail_agent_job(job_id, "No approved evidence was supplied for this agent job")
         return False
 
-    input_material = question + "
-" + evidence
+    input_material = question + "\n" + evidence
     input_hash = sha256(input_material.encode("utf-8")).hexdigest()
     run_id = f"ARUN-{uuid4().hex[:8].upper()}"
     with db.connect() as conn:
@@ -144,11 +143,8 @@ def _load_chunk_evidence(source_ids: list[str]) -> str:
                 (source_ids,),
             )
             rows = cur.fetchall()
-    return "
-
-".join(
-        f"[chunk:{row['id']}] page={row.get('page_number')}
-{row['content'][:5000]}"
+    return "\n\n".join(
+        f"[chunk:{row['id']}] page={row.get('page_number')}\n{row['content'][:5000]}"
         for row in rows
     )
 
