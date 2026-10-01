@@ -329,6 +329,7 @@ class Database:
             conn.commit()
 
     def save_brain_book(self, book: dict[str, Any]) -> None:
+        book_params = {**book, "binary_storage": book.get("binary_storage"), "binary_path": book.get("binary_path")}
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -343,7 +344,7 @@ class Database:
                         file_type=EXCLUDED.file_type, source_url=EXCLUDED.source_url,
                         status=EXCLUDED.status, description=EXCLUDED.description,
                         content_hash=EXCLUDED.content_hash, binary_storage=EXCLUDED.binary_storage, binary_path=EXCLUDED.binary_path, updated_at=EXCLUDED.updated_at""",
-                    book,
+                    book_params,
                 )
                 cur.execute("DELETE FROM chunks WHERE chapter_id IN (SELECT id FROM chapters WHERE book_id = %s)", (book["id"],))
                 cur.execute("DELETE FROM chapters WHERE book_id = %s", (book["id"],))
