@@ -1,0 +1,3 @@
+ALTER TABLE books
+  ADD COLUMN IF NOT EXISTS binary_storage TEXT,
+  ADD COLUMN IF NOT EXISTS binary_path TEXT;
