@@ -76,6 +76,8 @@ class Database:
                     "008_document_and_synthesis_hardening.sql",
                     "009_media_assets.sql",
                     "010_agent_active_layer.sql",
+                    "010_intelligence_life_reliability.sql",
+                    "011_level_up20_completion.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
