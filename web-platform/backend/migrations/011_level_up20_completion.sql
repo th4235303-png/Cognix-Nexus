@@ -95,16 +95,21 @@ CREATE TABLE IF NOT EXISTS legacy_manifests (
   beneficiary_hint TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
-CREATE TABLE IF NOT EXISTS agent_schedules (
-  id TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  cron TEXT NOT NULL,
-  enabled BOOLEAN NOT NULL DEFAULT TRUE,
-  task_type TEXT NOT NULL,
-  config JSONB NOT NULL DEFAULT '{}'::jsonb,
-  last_run_at TIMESTAMPTZ,
-  next_run_at TIMESTAMPTZ
-);
+-- Phase 13 already owns agent_schedules. Extend it without redefining its existing contract.
+ALTER TABLE agent_schedules
+  ADD COLUMN IF NOT EXISTS cron TEXT,
+  ADD COLUMN IF NOT EXISTS task_type TEXT,
+  ADD COLUMN IF NOT EXISTS last_run_at TIMESTAMPTZ;
+UPDATE agent_schedules
+SET cron = COALESCE(cron, CASE
+  WHEN cadence_minutes = 1440 THEN 'daily'
+  ELSE 'every_' || cadence_minutes || '_minutes'
+END),
+task_type = COALESCE(task_type, 'knowledge_review')
+WHERE cron IS NULL OR task_type IS NULL;
+ALTER TABLE agent_schedules
+  ALTER COLUMN cron SET DEFAULT 'daily',
+  ALTER COLUMN task_type SET DEFAULT 'knowledge_review';
 CREATE TABLE IF NOT EXISTS job_leases (
   job_id TEXT PRIMARY KEY,
   worker_id TEXT NOT NULL,
