@@ -79,13 +79,8 @@ def list_books() -> dict:
 
 @router.post("/books", status_code=201)
 def create_book(payload: BookCreate) -> dict:
-    try:
-        binary_path = BookBinaryStorage().put(book_id, filename, data)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
     now = now_iso()
-    chapters = []
+    book_id = f"BOOK-{uuid4().hex[:8].upper()}"
     paragraphs = _chunk_text(payload.text)
     chapter_id = f"CH-{uuid4().hex[:8].upper()}"
     chunks = []
@@ -101,14 +96,14 @@ def create_book(payload: BookCreate) -> dict:
             "token_count": max(1, len(content.split())),
             "created_at": now,
         })
-    chapters.append({
+    chapters = [{
         "id": chapter_id,
         "book_id": book_id,
         "chapter_number": 1,
         "title": "Imported Content",
         "created_at": now,
         "chunks": chunks,
-    })
+    }]
     book = {
         "id": book_id,
         "title": payload.title,
