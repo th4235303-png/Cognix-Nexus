@@ -3,14 +3,13 @@ from __future__ import annotations
 import time
 import unittest
 
-from app.services.processing import STAGES, advance
-from app.store import Store
+from app.services.processing import STAGES
 
 
 class StressWorkflowTests(unittest.TestCase):
     def test_500_page_synthetic_workflow_budget(self) -> None:
-        # Keep this deterministic and offline: the goal is to catch accidental
-        # O(n^2) regressions in the pure workflow boundary before live load tests.
+        # Deterministic and offline: catches accidental O(n^2) regressions
+        # before a live load test.
         pages = [f"Page {i}: " + ("synthetic knowledge content " * 40) for i in range(1, 501)]
         started = time.perf_counter()
         chunks = []
@@ -28,11 +27,11 @@ class StressWorkflowTests(unittest.TestCase):
 
     def test_pipeline_stage_contract_is_complete(self) -> None:
         expected = {
-            "ingest", "extract", "ocr", "section_detect",
-            "smart_chunk", "summarize", "embed", "concepts",
-            "cross_links", "review", "canonical",
+            "queued", "extracting", "cleaning", "translating",
+            "summarizing", "key_points", "fact_check",
+            "trust_scoring", "needs_review", "approved",
         }
-        self.assertTrue(expected.issubset(set(STAGES)))
+        self.assertEqual(set(STAGES), expected)
 
 
 if __name__ == "__main__":
