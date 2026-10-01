@@ -11,6 +11,53 @@ from app.services.llm import llm_provider
 from app.store import store
 
 
+def enqueue_due_agent_schedules(limit: int = 5) -> int:
+    """Materialize enabled schedules into idempotent agent jobs."""
+    db = store.database
+    if db is None:
+        return 0
+    created = 0
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id,name,task_type,cadence_minutes,config FROM agent_schedules "
+                "WHERE enabled AND next_run_at <= now() ORDER BY next_run_at LIMIT %s",
+                (max(1, min(limit, 20)),),
+            )
+            schedules = cur.fetchall()
+            for schedule in schedules:
+                config = schedule.get("config") or {}
+                question = str(config.get("question") or "").strip()
+                if not question:
+                    cur.execute(
+                        "UPDATE agent_schedules SET next_run_at=now()+(cadence_minutes * interval '1 minute'),"
+                        "last_run_at=now(),updated_at=now() WHERE id=%s",
+                        (schedule["id"],),
+                    )
+                    continue
+                job_id = f"AJOB-{uuid4().hex[:8].upper()}"
+                idem = f"schedule:{schedule['id']}:{schedule.get('next_run_at')}"
+                cur.execute(
+                    "INSERT INTO agent_jobs(id,schedule_id,job_type,payload,run_after,idempotency_key) "
+                    "VALUES(%s,%s,%s,%s::jsonb,now(),%s) ON CONFLICT(idempotency_key) DO NOTHING",
+                    (
+                        job_id, schedule["id"], schedule["task_type"],
+                        json.dumps({
+                            "question": question,
+                            "source_ids": list(config.get("source_ids") or [])[:30],
+                        }),
+                        idem,
+                    ),
+                )
+                created += cur.rowcount
+                cur.execute(
+                    "UPDATE agent_schedules SET next_run_at=now()+(cadence_minutes * interval '1 minute'),"
+                    "last_run_at=now(),updated_at=now() WHERE id=%s",
+                    (schedule["id"],),
+                )
+        conn.commit()
+    return created
+
 def run_due_agent_jobs(limit: int = 5) -> int:
     """Run a small bounded batch of due agent jobs.
 
@@ -22,6 +69,16 @@ def run_due_agent_jobs(limit: int = 5) -> int:
         return 0
 
     processed = 0
+    # Recover jobs abandoned by a crashed worker after their durable lease expires.
+    with store.database.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE agent_jobs SET status=CASE WHEN attempt_count < max_attempts THEN 'retry_pending' ELSE 'failed' END,"
+                "locked_at=NULL,error=COALESCE(error,'worker lease expired'),updated_at=now() "
+                "WHERE status='running' AND locked_at < now()-interval '20 minutes' "
+                "AND NOT EXISTS (SELECT 1 FROM job_leases l WHERE l.job_id=agent_jobs.id AND l.expires_at > now())"
+            )
+        conn.commit()
     with store.database.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
