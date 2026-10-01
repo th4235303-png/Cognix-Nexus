@@ -49,6 +49,7 @@ app = FastAPI(
 async def request_context(request: Request, call_next):
     request_id = request.headers.get("x-request-id") or str(uuid4())
     request.state.request_id = request_id
+    started = time.perf_counter()
     try:
         request.state.auth = authenticate_request(request)
         response = await call_next(request)
@@ -59,6 +60,30 @@ async def request_context(request: Request, call_next):
         else:
             raise
     response.headers["x-request-id"] = request_id
+
+    # Best-effort request telemetry. Never let observability failure break a request.
+    if store.database is not None:
+        try:
+            duration_ms = round((time.perf_counter() - started) * 1000, 2)
+            with store.database.connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "INSERT INTO observability_events(event_type,request_id,duration_ms,metadata) "
+                        "VALUES(%s,%s,%s,%s::jsonb)",
+                        (
+                            "http.request",
+                            request_id,
+                            duration_ms,
+                            __import__("json").dumps({
+                                "method": request.method,
+                                "path": request.url.path[:500],
+                                "status_code": response.status_code,
+                            }),
+                        ),
+                    )
+                conn.commit()
+        except Exception:
+            pass
     return response
 
 
