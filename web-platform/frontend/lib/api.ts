@@ -44,6 +44,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 }
 
 export function getApiBaseUrl() { return API_BASE_URL; }
+export function postApi<T>(path: string, body: unknown) {
+  return request<T>(path, { method: 'POST', body: JSON.stringify(body) });
+}
 export function listSources() { return request<{ total: number; items: ApiSource[] }>('/sources'); }
 export function getSource(sourceId: string) { return request<ApiSource>(`/sources/${sourceId}`); }
 export function createSource(url: string, note?: string) { return request<{ status: string; source: ApiSource }>('/sources', { method: 'POST', body: JSON.stringify({ url, note: note || null }) }); }
@@ -265,10 +268,17 @@ export function semanticBrainQuery(q: string, limit = 8) {
   return request<{
     query: string;
     mode: string;
+    answer: string | null;
+    citations: string[];
+    message: string;
+    total: number;
     items: Array<{
       chunk_id: string;
       content: string;
-      similarity: number;
+      semantic_similarity: number | null;
+      semantic_rank: number | null;
+      lexical_rank: number | null;
+      rrf_score: number;
       chapter_id: string;
       page_number?: number | null;
       sequence: number;
