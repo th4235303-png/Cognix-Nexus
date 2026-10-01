@@ -42,7 +42,8 @@ async def ingest_media(file: UploadFile = File(...), ocr_language: str = "eng") 
     binary_path = None
     if storage_provider == "r2":
         try:
-            binary_path = r2_storage().put_bytes(f"media/{media_id}/{filename}", data, content_type=f"image/{\"jpeg\" if suffix in {\"jpg\", \"jpeg\"} else suffix}").key
+            content_type = "image/jpeg" if suffix in {"jpg", "jpeg"} else f"image/{suffix}"
+            binary_path = r2_storage().put_bytes(f"media/{media_id}/{filename}", data, content_type=content_type).key
         except Exception as exc:
             raise HTTPException(status_code=503, detail=f"Media object storage failed: {type(exc).__name__}") from exc
     elif storage_provider != "local":
