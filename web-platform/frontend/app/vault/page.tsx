@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
-import { listVaultItems, saveVaultItem, ApiVaultItem } from '@/lib/api';
+import { listVaultItems, getVaultItem, saveVaultItem, ApiVaultItem } from '@/lib/api';
 
 function bytesToBase64(bytes: Uint8Array) { let binary=''; bytes.forEach(b=>binary+=String.fromCharCode(b)); return btoa(binary); }
 function base64ToBytes(value:string) { const binary=atob(value); return Uint8Array.from(binary,c=>c.charCodeAt(0)); }
@@ -21,6 +21,6 @@ export default function VaultPage() {
       <input value={password} onChange={e=>setPassword(e.target.value)} type="password" placeholder="Vault password" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
       <textarea value={secret} onChange={e=>setSecret(e.target.value)} rows={7} placeholder="Secret text" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
       <button onClick={save} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Encrypt</button></div></SectionCard>
-      <SectionCard title="Vault items" description={items.length+' encrypted records'}><div className="space-y-3">{items.map(item=><article key={item.id} className="rounded-lg border border-border/60 p-4"><div className="font-medium">{item.label}</div><button onClick={()=>{const p=window.prompt('Vault password');if(p)decryptSecret(item,p).then(setRevealed).catch(()=>setError('Wrong password or corrupted ciphertext.'));}} className="mt-3 rounded-md border border-border px-3 py-1.5 text-xs">Decrypt locally</button></article>)}</div>
+      <SectionCard title="Vault items" description={items.length+' encrypted records'}><div className="space-y-3">{items.map(item=><article key={item.id} className="rounded-lg border border-border/60 p-4"><div className="font-medium">{item.label}</div><button onClick={async()=>{const p=window.prompt('Vault password');if(!p)return;setError('');try{const full=await getVaultItem(item.id);setRevealed(await decryptSecret(full,p));}catch{setError('Wrong password or corrupted ciphertext.');}}} className="mt-3 rounded-md border border-border px-3 py-1.5 text-xs">Decrypt locally</button></article>)}</div>
       {revealed&&<pre className="mt-4 whitespace-pre-wrap rounded-lg border border-border/60 p-4 text-sm">{revealed}</pre>}{error&&<p className="mt-3 text-sm text-destructive">{error}</p>}</SectionCard></div></AppShell>;
 }
