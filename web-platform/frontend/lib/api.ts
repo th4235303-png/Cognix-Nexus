@@ -304,7 +304,7 @@ export function ocrDocument(file: File, language = 'eng', maxPages = 50) {
   return request<{ job_id: string; status: string; text: string; pages: Array<{ page_number: number; text: string }> }>('/brain/documents/ocr', { method: 'POST', body });
 }
 export interface ApiVaultItem {
-  id: string; label: string; nonce: string; kdf_salt: string; kdf_params: Record<string, unknown>; created_at: string; updated_at: string;
+  id: string; label: string; ciphertext: string; nonce: string; kdf_salt: string; kdf_params: Record<string, unknown>; created_at: string; updated_at: string;
 }
 export function listVaultItems() { return request<{ items: ApiVaultItem[]; total: number }>('/brain/vault/items'); }
 export function saveVaultItem(payload: { label: string; ciphertext: string; nonce: string; kdf_salt: string; kdf_params: Record<string, unknown> }) {
