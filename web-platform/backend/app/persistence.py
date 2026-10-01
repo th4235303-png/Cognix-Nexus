@@ -78,6 +78,7 @@ class Database:
                     "010_agent_active_layer.sql",
                     "010_intelligence_life_reliability.sql",
                     "011_level_up20_completion.sql",
+                    "012_storage_reliability.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
@@ -340,15 +341,15 @@ class Database:
                 cur.execute(
                     """INSERT INTO books (
                         id, title, author, language, file_type, source_kind,
-                        source_url, status, description, content_hash, binary_storage, binary_path, created_at, updated_at
+                        source_url, status, description, content_hash, binary_storage, binary_path, binary_sha256, created_at, updated_at
                     ) VALUES (%(id)s, %(title)s, %(author)s, %(language)s, %(file_type)s,
                               %(source_kind)s, %(source_url)s, %(status)s, %(description)s,
-                              %(content_hash)s, %(binary_storage)s, %(binary_path)s, %(created_at)s, %(updated_at)s)
+                              %(content_hash)s, %(binary_storage)s, %(binary_path)s, %(binary_sha256)s, %(created_at)s, %(updated_at)s)
                     ON CONFLICT (id) DO UPDATE SET
                         title=EXCLUDED.title, author=EXCLUDED.author, language=EXCLUDED.language,
                         file_type=EXCLUDED.file_type, source_url=EXCLUDED.source_url,
                         status=EXCLUDED.status, description=EXCLUDED.description,
-                        content_hash=EXCLUDED.content_hash, binary_storage=EXCLUDED.binary_storage, binary_path=EXCLUDED.binary_path, updated_at=EXCLUDED.updated_at""",
+                        content_hash=EXCLUDED.content_hash, binary_storage=EXCLUDED.binary_storage, binary_path=EXCLUDED.binary_path, binary_sha256=EXCLUDED.binary_sha256, updated_at=EXCLUDED.updated_at""",
                     book_params,
                 )
                 cur.execute("DELETE FROM chunks WHERE chapter_id IN (SELECT id FROM chapters WHERE book_id = %s)", (book["id"],))
