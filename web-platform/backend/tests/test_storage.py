@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from app.services.book_storage import BookBinaryStorage
+from app.services.google_drive import _oauth_state, verify_oauth_state
 from app.services.object_storage import B2ObjectStorage, R2ObjectStorage, SupabaseObjectStorage, S3ObjectStorage
 from app.main import app
 from fastapi.testclient import TestClient
@@ -58,6 +59,12 @@ class StorageContractTests(unittest.TestCase):
 
     def test_object_key_allows_nested_keys(self):
         self.assertEqual(S3ObjectStorage._safe_key("/books/BOOK-1/file.pdf"), "books/BOOK-1/file.pdf")
+
+    def test_google_oauth_state_is_signed_and_time_bound(self):
+        with patch.dict(os.environ, {"GOOGLE_CLIENT_SECRET": "test-secret"}, clear=False):
+            state = _oauth_state()
+            self.assertTrue(verify_oauth_state(state))
+            self.assertFalse(verify_oauth_state(state + "x"))
 
     def test_storage_status_never_returns_secret_values(self):
         client = TestClient(app)
