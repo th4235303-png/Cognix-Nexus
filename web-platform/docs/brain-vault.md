@@ -80,7 +80,7 @@ Brain Vault schema is introduced after the existing Cognix migrations:
 
 The migrations are applied automatically by the existing database bootstrap.
 
-## Delivery phases 1–12
+## Delivery phases 1–13
 
 1. **PDF/EPUB ingestion** — local extraction, ordered sections, page metadata, content hashing, and storage abstraction.
 2. **Semantic retrieval** — provider-neutral embeddings, pgvector indexing, and cited vector search when configured.
@@ -94,6 +94,7 @@ The migrations are applied automatically by the existing database bootstrap.
 10. **Vizora Lens** — image ingest, hashing, OCR, and media asset metadata form the input boundary for future visual intelligence.
 11. **Production hardening** — request IDs, security headers, configurable authentication, rate limiting, readiness checks, bounded uploads, and regression CI.
 12. **Operational readiness** — explicit production database readiness, bounded runtime rate limiting, environment guidance, and release/rollback operations.
+13. **AI Active Layer foundation** — durable agent jobs, runs, findings and worker execution; evidence-bound model output remains `needs_review` and never becomes canonical automatically.
 
 ### Verification contract
 
