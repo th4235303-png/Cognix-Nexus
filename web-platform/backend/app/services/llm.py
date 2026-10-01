@@ -10,9 +10,9 @@ class LLMProvider:
     """OpenAI-compatible chat adapter; vendor-neutral by configuration."""
 
     def __init__(self) -> None:
-        self.url = os.getenv("COGNIX_LLM_API_URL", "").strip()
-        self.api_key = os.getenv("COGNIX_LLM_API_KEY", "").strip()
-        self.model = os.getenv("COGNIX_LLM_MODEL", "").strip()
+        self.url = (os.getenv("COGNIX_LLM_API_URL") or os.getenv("COGNIX_AI_BASE_URL") or "").strip()
+        self.api_key = (os.getenv("COGNIX_LLM_API_KEY") or os.getenv("COGNIX_AI_API_KEY") or "").strip()
+        self.model = (os.getenv("COGNIX_LLM_MODEL") or os.getenv("COGNIX_AI_MODEL") or "").strip()
         self.timeout = float(os.getenv("COGNIX_LLM_TIMEOUT_SECONDS", "90"))
 
     @property
