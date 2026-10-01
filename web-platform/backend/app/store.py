@@ -52,6 +52,10 @@ class Store:
         self.exports = state["exports"]
         self.activity = state["activity"]
         self.export_keys = state["export_keys"]
+        self.brain_books = state.get("brain_books", {})
+        self.brain_notes = state.get("brain_notes", {})
+        self.brain_concepts = state.get("brain_concepts", {})
+        self.brain_concept_links = state.get("brain_concept_links", {})
 
     @property
     def persistence_mode(self) -> str:
