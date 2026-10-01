@@ -80,6 +80,7 @@ class Database:
                     "011_level_up20_completion.sql",
                     "012_storage_reliability.sql",
                     "013_workflow_fk_indexes.sql",
+                    "014_move_vector_extension.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
