@@ -53,4 +53,4 @@ jobs:
         with:
           node-version: 20
       - run: npm install --no-audit --no-fund
-      - run: npx expo export --platform web
+      - run: npx expo config --type public
