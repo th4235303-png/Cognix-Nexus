@@ -5,6 +5,7 @@ from hashlib import sha256
 import json
 from uuid import uuid4
 import asyncio
+import os
 
 from app.services.llm import llm_provider
 from app.store import store
@@ -149,8 +150,48 @@ def _load_chunk_evidence(source_ids: list[str]) -> str:
     )
 
 
+def _lease_agent_job(job_id: str) -> tuple[bool, str]:
+    db = store.database
+    if db is None:
+        return False, ""
+    worker_id = os.getenv("COGNIX_WORKER_ID", "").strip() or f"worker-{os.getpid()}"
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO job_leases(job_id,worker_id,expires_at) "
+                "VALUES(%s,%s,now()+interval '5 minutes') "
+                "ON CONFLICT(job_id) DO UPDATE SET worker_id=EXCLUDED.worker_id,leased_at=now(),"
+                "expires_at=EXCLUDED.expires_at,attempts=job_leases.attempts+1 "
+                "WHERE job_leases.expires_at < now() "
+                "RETURNING job_id",
+                (job_id, worker_id),
+            )
+            claimed = cur.fetchone() is not None
+        conn.commit()
+    return claimed, worker_id
+
+
+def _release_agent_lease(job_id: str, worker_id: str) -> None:
+    db = store.database
+    if db is None:
+        return
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM job_leases WHERE job_id=%s AND worker_id=%s",
+                (job_id, worker_id),
+            )
+        conn.commit()
+
+
 async def run_agent_job_now(job_id: str) -> bool:
-    return await _run_agent_job(job_id)
+    claimed, worker_id = _lease_agent_job(job_id)
+    if not claimed:
+        return False
+    try:
+        return await _run_agent_job(job_id)
+    finally:
+        _release_agent_lease(job_id, worker_id)
 
 
 def _fail_agent_job(job_id: str, error: str) -> None:
