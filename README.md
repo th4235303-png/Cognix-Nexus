@@ -89,7 +89,7 @@ Frontend routes are:
 - `/graph`
 - `/chat`
 
-The current retrieval layer intentionally uses deterministic PostgreSQL text search. It does **not** claim semantic RAG yet. The next retrieval milestone is pgvector embeddings with source/chunk citations.
+The retrieval layer supports deterministic PostgreSQL search and an optional pgvector semantic path with source/chunk citations. Semantic embeddings are provider-neutral and enabled only when embedding configuration is supplied.
 
 See `web-platform/docs/brain-vault.md` for the detailed architecture and phase roadmap.
 
@@ -100,10 +100,25 @@ See `web-platform/docs/brain-vault.md` for the detailed architecture and phase r
 3. `003_persistence_hardening.sql`
 4. `004_brain_vault_foundation.sql`
 5. `005_brain_vault_search.sql`
+6. `006_brain_vault_advanced.sql`
+7. `007_book_storage.sql`
 
 The existing database bootstrap applies the Brain Vault migrations after the Cognix Core schema.
 
-## Planned knowledge phases
+## Implemented Brain Vault capabilities
+
+- PDF/EPUB upload and extraction
+- Original binary storage behind a persistent storage adapter
+- Page/section metadata on extracted chunks
+- Optional pgvector embedding index and semantic retrieval
+- Versioned L1–L7 summary records with source linkage
+- Language cards with spaced-review scheduling
+- Evidence-only synthesis records
+- Unified Brain Vault JSON export
+- Contradiction candidate review surface (human confirmation required)
+- Ciphertext-only Secret Vault storage boundary
+
+## Remaining product phases
 
 1. PDF/EPUB ingestion and page-accurate source spans
 2. Semantic embeddings + pgvector
