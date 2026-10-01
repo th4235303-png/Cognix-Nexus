@@ -135,6 +135,11 @@ The Brain Vault roadmap is implemented as a continuous delivery sequence. The re
 11. Production hardening and verification — implemented with request IDs, security headers, optional auth enforcement, rate limiting, readiness checks, and CI regression coverage
 12. Operational readiness — implemented with explicit production database readiness requirements, bounded in-process rate limiting, environment guidance, and a deployment/rollback runbook
 13. AI Active Layer foundation — durable agent jobs/runs/findings, evidence-bound execution, retry/expiry state, human review boundary, and worker integration
+14. Vizora Lens media intelligence — durable analysis/review lineage and explicit copyright status
+15. Native + multilingual policy — local-first/offline boundaries, cloud-permission policy, and mood-local handling
+16. Reliability + recovery foundations — durable research, learning, decision, writing, and encrypted capsule records
+17. Observability + operations — bounded records, operational hooks, and deployment pause safeguards
+18. Integration + final verification — cross-module lineage and evidence/review invariants
 
 Phase 11 is intentionally an engineering hardening phase: it does not make AI output canonical and does not bypass the existing human-review boundaries.
 
