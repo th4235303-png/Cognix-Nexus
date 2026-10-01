@@ -20,6 +20,8 @@ from app.store import store
 API_VERSION = "0.1.0"
 DEFAULT_CORS_ORIGINS = ("http://localhost:3000",)
 RATE_LIMIT = int(os.getenv("COGNIX_RATE_LIMIT_PER_MINUTE", "120"))
+REQUIRE_DATABASE = os.getenv("COGNIX_REQUIRE_DATABASE", "false").strip().lower() in {"1", "true", "yes", "on"}
+RATE_LIMIT_MAX_IDENTITIES = int(os.getenv("COGNIX_RATE_LIMIT_MAX_IDENTITIES", "10000"))
 _rate_windows: dict[str, deque[float]] = defaultdict(deque)
 
 
@@ -88,6 +90,10 @@ async def rate_limit(request: Request, call_next):
             response.headers["x-request-id"] = getattr(request.state, "request_id", str(uuid4()))
             return response
         window.append(now)
+        if len(_rate_windows) > RATE_LIMIT_MAX_IDENTITIES:
+            oldest = min(_rate_windows.items(), key=lambda item: item[1][-1] if item[1] else now)[0]
+            if oldest != identity:
+                _rate_windows.pop(oldest, None)
     return await call_next(request)
 
 allowed_hosts = [host.strip() for host in os.getenv("COGNIX_ALLOWED_HOSTS", "").split(",") if host.strip()]
@@ -135,7 +141,7 @@ def readiness() -> dict[str, object]:
             database_reachable = bool(store.database.ping())
         except Exception:
             database_reachable = False
-    ready = not database_configured or database_reachable
+    ready = (database_configured or not REQUIRE_DATABASE) and (not database_configured or database_reachable)
     return {
         "status": "ready" if ready else "not_ready",
         "service": "cognix-core-api",
@@ -143,4 +149,5 @@ def readiness() -> dict[str, object]:
         "database_configured": database_configured,
         "database_reachable": database_reachable,
         "persistence_mode": store.persistence_mode,
+        "database_required": REQUIRE_DATABASE,
     }
