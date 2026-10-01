@@ -118,7 +118,7 @@ The existing database bootstrap applies the Brain Vault migrations after the Cog
 - Contradiction candidate review surface (human confirmation required)
 - Ciphertext-only Secret Vault storage boundary
 
-## Product phases 1–13
+## Product phases 0–18 + Level Up 20
 
 The Brain Vault roadmap is implemented as a continuous delivery sequence. The repository keeps the phase boundaries explicit so each layer can be regression-tested without replacing the existing research foundation.
 
@@ -140,6 +140,14 @@ The Brain Vault roadmap is implemented as a continuous delivery sequence. The re
 16. Reliability + recovery foundations — durable research, learning, decision, writing, and encrypted capsule records
 17. Observability + operations — bounded records, operational hooks, and deployment pause safeguards
 18. Integration + final verification — cross-module lineage and evidence/review invariants
+19. Level Up 20 completion layer — deterministic learning/intelligence contracts, privacy boundaries, offline sync checks, and web workspace
+20. Final production activation — pending full provider credentials, real database/R2/Drive verification, mobile release signing, and deployment re-enable
+
+### Level Up 20 delivery matrix
+
+All 20 feature contracts are now represented in the backend and the web workspace. The contracts intentionally separate deterministic/product logic from provider-dependent AI execution and keep the Master Plan safety rules explicit: synthesis requires 3+ sources, decisions expose evidence coverage, writing checks citations, learning paths are library-only, mood remains local-only, ambient mode is user-triggered, wiki remains private, offline sync detects conflicts, and legacy metadata stays encrypted. These are implementation boundaries, not claims that every external AI/provider integration is live.
+
+The original Master Plan phases 0–15 remain the broader product roadmap. Phases 1–12 cover the delivered core foundation and hardening; phases 13–15 are extended by the Level Up and integration work. Production deployment remains intentionally paused until the full verification pass is complete.
 
 Phase 11 is intentionally an engineering hardening phase: it does not make AI output canonical and does not bypass the existing human-review boundaries.
 
