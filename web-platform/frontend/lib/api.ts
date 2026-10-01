@@ -279,3 +279,35 @@ export function semanticBrainQuery(q: string, limit = 8) {
     body: JSON.stringify({ q, limit }),
   });
 }
+
+
+export interface ApiLanguageCard {
+  id: string; front: string; back: string; language: string; source_note?: string | null;
+  due_at: string; stability: number; difficulty: number; reps: number; lapses: number; state: string;
+}
+export function getDueLanguageCards(limit = 20) {
+  return request<{ items: ApiLanguageCard[]; total: number }>(`/brain/language/due?limit=${limit}`);
+}
+export function createLanguageCard(payload: { front: string; back: string; language: string; source_note?: string }) {
+  return request<ApiLanguageCard>('/brain/language/cards', { method: 'POST', body: JSON.stringify(payload) });
+}
+export function reviewLanguageCard(cardId: string, rating: 1 | 2 | 3 | 4) {
+  return request<ApiLanguageCard>(`/brain/language/cards/${cardId}/review`, { method: 'POST', body: JSON.stringify({ rating }) });
+}
+export function generateBookSummaries(bookId: string, levels = ['L1','L2','L3','L4','L5','L6','L7']) {
+  return request<{ book_id: string; model: string; items: Array<{ id: string; level: string; version: number; content: string; source_ids: string[] }> }>(
+    `/brain/books/${bookId}/summaries/generate`, { method: 'POST', body: JSON.stringify({ levels }) },
+  );
+}
+export function ocrDocument(file: File, language = 'eng', maxPages = 50) {
+  const body = new FormData(); body.append('file', file); body.append('language', language); body.append('max_pages', String(maxPages));
+  return request<{ job_id: string; status: string; text: string; pages: Array<{ page_number: number; text: string }> }>('/brain/documents/ocr', { method: 'POST', body });
+}
+export interface ApiVaultItem {
+  id: string; label: string; nonce: string; kdf_salt: string; kdf_params: Record<string, unknown>; created_at: string; updated_at: string;
+}
+export function listVaultItems() { return request<{ items: ApiVaultItem[]; total: number }>('/brain/vault/items'); }
+export function saveVaultItem(payload: { label: string; ciphertext: string; nonce: string; kdf_salt: string; kdf_params: Record<string, unknown> }) {
+  return request<ApiVaultItem>('/brain/vault/items', { method: 'POST', body: JSON.stringify(payload) });
+}
+export function exportBrainVault() { return request<Record<string, unknown>>('/brain/export'); }

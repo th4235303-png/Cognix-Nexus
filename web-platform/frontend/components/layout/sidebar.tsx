@@ -50,6 +50,10 @@ const navSections = [
       { label: 'Second Brain', href: '/notes', icon: Brain },
       { label: 'Brain Query', href: '/chat', icon: MessageSquare },
       { label: 'Knowledge Graph', href: '/graph', icon: Network },
+      { label: 'Language Tutor', href: '/tutor', icon: Brain },
+      { label: 'Document OCR', href: '/documents', icon: FileText },
+      { label: 'Secret Vault', href: '/vault', icon: FolderOpen },
+      { label: 'Unified Export', href: '/export', icon: GitBranch },
     ],
   },
   {
