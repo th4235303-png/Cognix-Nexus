@@ -118,7 +118,7 @@ The existing database bootstrap applies the Brain Vault migrations after the Cog
 - Contradiction candidate review surface (human confirmation required)
 - Ciphertext-only Secret Vault storage boundary
 
-## Product phases 1–12
+## Product phases 1–13
 
 The Brain Vault roadmap is implemented as a continuous delivery sequence. The repository keeps the phase boundaries explicit so each layer can be regression-tested without replacing the existing research foundation.
 
@@ -134,6 +134,7 @@ The Brain Vault roadmap is implemented as a continuous delivery sequence. The re
 10. Vizora Lens media intelligence input boundary — implemented for image ingest + OCR, with richer vision provider integration remaining configuration-dependent
 11. Production hardening and verification — implemented with request IDs, security headers, optional auth enforcement, rate limiting, readiness checks, and CI regression coverage
 12. Operational readiness — implemented with explicit production database readiness requirements, bounded in-process rate limiting, environment guidance, and a deployment/rollback runbook
+13. AI Active Layer foundation — durable agent jobs/runs/findings, evidence-bound execution, retry/expiry state, human review boundary, and worker integration
 
 Phase 11 is intentionally an engineering hardening phase: it does not make AI output canonical and does not bypass the existing human-review boundaries.
 
