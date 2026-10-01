@@ -330,6 +330,22 @@ def put_vault_item(payload: VaultItem) -> dict:
     return row
 
 
+@router.get("/vault/items/{item_id}")
+def get_vault_item(item_id: str) -> dict:
+    db = _db()
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id,label,ciphertext,nonce,kdf_salt,kdf_params,created_at,updated_at "
+                "FROM vault_items WHERE id=%s",
+                (item_id,),
+            )
+            item = cur.fetchone()
+    if not item:
+        raise HTTPException(status_code=404, detail="Vault item not found")
+    return item
+
+
 @router.get("/vault/items")
 def list_vault_items() -> dict:
     db = _db()
