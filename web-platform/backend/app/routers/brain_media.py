@@ -7,7 +7,7 @@ from uuid import uuid4
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.services.document_ocr import extract_ocr
-from app.services.object_storage import r2_storage
+from app.services.object_storage import b2_storage, r2_storage
 from app.store import store
 
 router = APIRouter(prefix="/brain/media", tags=["brain-media"])
@@ -40,10 +40,14 @@ async def ingest_media(file: UploadFile = File(...), ocr_language: str = "eng") 
 
     storage_provider = os.getenv("COGNIX_MEDIA_STORAGE_PROVIDER", "local").strip().lower()
     binary_path = None
-    if storage_provider == "r2":
+    if storage_provider in {"b2", "r2"}:
         try:
+            storage = b2_storage() if storage_provider == "b2" else r2_storage()
             content_type = "image/jpeg" if suffix in {"jpg", "jpeg"} else f"image/{suffix}"
-            binary_path = r2_storage().put_bytes(f"media/{media_id}/{filename}", data, content_type=content_type).key
+            stored = storage.put_bytes(f"media/{media_id}/{filename}", data, content_type=content_type)
+            binary_path = stored.key
+            if stored.checksum != content_hash:
+                raise RuntimeError("object storage checksum mismatch")
         except Exception as exc:
             raise HTTPException(status_code=503, detail=f"Media object storage failed: {type(exc).__name__}") from exc
     elif storage_provider != "local":
