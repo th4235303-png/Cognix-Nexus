@@ -295,6 +295,13 @@ class CognixApiTests(unittest.TestCase):
             response = getattr(self.client, method)(path, **kwargs)
             self.assertIn(response.status_code, {400, 503}, path)
 
+    def test_agent_mode_requires_persistent_database(self):
+        response = self.client.post(
+            "/brain/agent/jobs",
+            json={"question": "test", "idempotency_key": "agent-test-1"},
+        )
+        self.assertEqual(response.status_code, 503)
+
     def test_readiness_requires_database_when_configured(self):
         with patch.dict("app.main.__dict__", {"REQUIRE_DATABASE": True, "store": store}):
             response = self.client.get("/ready")
