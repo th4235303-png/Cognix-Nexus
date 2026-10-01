@@ -74,6 +74,7 @@ class Database:
                     "006_brain_vault_advanced.sql",
                     "007_book_storage.sql",
                     "008_document_and_synthesis_hardening.sql",
+                    "009_media_assets.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():

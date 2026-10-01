@@ -62,6 +62,16 @@ async def request_context(request: Request, call_next):
 
 
 @app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["x-content-type-options"] = "nosniff"
+    response.headers["x-frame-options"] = "DENY"
+    response.headers["referrer-policy"] = "strict-origin-when-cross-origin"
+    response.headers["permissions-policy"] = "camera=(), microphone=(), geolocation=()"
+    return response
+
+
+@app.middleware("http")
 async def rate_limit(request: Request, call_next):
     if RATE_LIMIT > 0 and request.url.path not in {"/", "/health", "/ready"}:
         identity = request.headers.get("authorization", "")[:80] or (request.client.host if request.client else "unknown")
