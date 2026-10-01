@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import os
 import time
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from app.services.agent import enqueue_due_agent_schedules, run_due_agent_jobs
 from app.services.export_worker import advance_export_job
 
@@ -55,7 +57,31 @@ def run_once() -> int:
     return processed
 
 
+class _WorkerHealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path in {"/", "/health"}:
+            payload = b'{"status":"ok","service":"cognix-core-worker"}'
+            self.send_response(200)
+            self.send_header("content-type", "application/json")
+            self.send_header("content-length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return
+        self.send_response(404)
+        self.end_headers()
+
+    def log_message(self, *_args):
+        return
+
+
+def _start_health_server() -> None:
+    port = int(os.getenv("PORT", "10000"))
+    server = ThreadingHTTPServer(("0.0.0.0", port), _WorkerHealthHandler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+
+
 def main() -> None:
+    _start_health_server()
     while True:
         run_once()
         enqueue_due_agent_schedules()
