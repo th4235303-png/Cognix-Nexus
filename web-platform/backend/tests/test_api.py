@@ -7,6 +7,7 @@ from app.main import app
 from app.store import store
 from app.worker import run_once
 from app.services.research_processor import ProcessingResult
+from app.routers.brain_advanced import _schedule
 
 
 class CognixApiTests(unittest.TestCase):
@@ -243,6 +244,56 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(query.status_code, 200)
         self.assertGreaterEqual(query.json()["total"], 1)
         self.assertEqual(query.json()["mode"], "evidence_search")
+
+
+
+    def test_security_headers_and_request_id_are_consistent(self):
+        response = self.client.get("/health", headers={"x-request-id": "test-request-123"})
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.headers["x-request-id"], "test-request-123")
+        self.assertEqual(response.headers["x-content-type-options"], "nosniff")
+        self.assertEqual(response.headers["x-frame-options"], "DENY")
+        self.assertEqual(response.headers["referrer-policy"], "strict-origin-when-cross-origin")
+        self.assertIn("geolocation=()", response.headers["permissions-policy"])
+
+    def test_authentication_boundary_can_be_enabled(self):
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_JWT_SECRET": ""},
+            clear=False,
+        ):
+            response = self.client.get("/sources")
+        self.assertEqual(response.status_code, 401)
+        self.assertEqual(response.json()["detail"]["code"], "AUTH_REQUIRED")
+
+    def test_language_schedule_handles_learning_and_lapse(self):
+        card = {
+            "stability": 2.0,
+            "difficulty": 5.0,
+            "reps": 1,
+            "lapses": 0,
+        }
+        stable = _schedule(card, 4)
+        self.assertGreater(stable[0], card["stability"])
+        self.assertEqual(stable[2], 2)
+        self.assertEqual(stable[4], "review")
+        lapse = _schedule(card, 1)
+        self.assertEqual(lapse[2], 0)
+        self.assertEqual(lapse[3], 1)
+        self.assertEqual(lapse[4], "relearning")
+
+    def test_optional_advanced_services_fail_closed_without_persistence(self):
+        self.assertIsNone(store.database)
+        for method, path, kwargs in (
+            ("post", "/brain/embeddings/index", {"json": {"owner_type": "chunk", "owner_ids": ["missing"]}}),
+            ("post", "/brain/query/semantic", {"json": {"q": "recall"}}),
+            ("post", "/brain/language/cards", {"json": {"front": "hello", "back": "မင်္ဂလာပါ", "language": "my"}}),
+            ("post", "/brain/vault/items", {"json": {"label": "test", "ciphertext": "ct", "nonce": "n", "kdf_salt": "s", "kdf_params": {}}}),
+            ("post", "/brain/documents/ocr", {"files": {"file": ("note.txt", b"not supported", "text/plain")}}),
+            ("post", "/brain/media/ingest", {"files": {"file": ("note.txt", b"not supported", "text/plain")}}),
+        ):
+            response = getattr(self.client, method)(path, **kwargs)
+            self.assertIn(response.status_code, {400, 503}, path)
 
     def test_worker_advances_queued_processing(self):
         source = self.client.post(
