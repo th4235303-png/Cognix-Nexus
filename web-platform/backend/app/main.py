@@ -129,7 +129,12 @@ def health() -> dict[str, str]:
 @app.get("/ready")
 def readiness() -> dict[str, object]:
     database_configured = store.database is not None
-    database_reachable = store.database.ping() if store.database else False
+    database_reachable = False
+    if store.database:
+        try:
+            database_reachable = bool(store.database.ping())
+        except Exception:
+            database_reachable = False
     ready = not database_configured or database_reachable
     return {
         "status": "ready" if ready else "not_ready",
