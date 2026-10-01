@@ -79,8 +79,12 @@ def list_books() -> dict:
 
 @router.post("/books", status_code=201)
 def create_book(payload: BookCreate) -> dict:
+    try:
+        binary_path = BookBinaryStorage().put(book_id, filename, data)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
     now = now_iso()
-    book_id = f"BOOK-{uuid4().hex[:8].upper()}"
     chapters = []
     paragraphs = _chunk_text(payload.text)
     chapter_id = f"CH-{uuid4().hex[:8].upper()}"
