@@ -118,18 +118,23 @@ The existing database bootstrap applies the Brain Vault migrations after the Cog
 - Contradiction candidate review surface (human confirmation required)
 - Ciphertext-only Secret Vault storage boundary
 
-## Remaining product phases
+## Product phases 1–11
 
-1. PDF/EPUB ingestion and page-accurate source spans
-2. Semantic embeddings + pgvector
-3. L1–L7 hierarchical book intelligence
-4. Cross-book synthesis + contradiction review
-5. Language Tutor + FSRS
-6. Document Assistant + OCR
-7. Client-side encrypted Secret Vault
-8. Unified export and automation
-9. Expo mobile client
-10. Vizora Lens media intelligence
+The Brain Vault roadmap is implemented as a continuous delivery sequence. The repository keeps the phase boundaries explicit so each layer can be regression-tested without replacing the existing research foundation.
+
+1. PDF/EPUB ingestion and page-accurate source spans — implemented
+2. Semantic embeddings + pgvector — implemented, provider-configured
+3. L1–L7 hierarchical book intelligence — implemented with cited synthesis boundaries
+4. Cross-book synthesis + contradiction review — implemented with human-review state
+5. Language Tutor + FSRS-style scheduling — implemented
+6. Document Assistant + OCR — implemented with bounded uploads and job persistence
+7. Client-side encrypted Secret Vault — implemented as ciphertext-only server storage
+8. Unified export and automation surfaces — implemented without replacing the existing Drive export contract
+9. Expo mobile foundation — implemented
+10. Vizora Lens media intelligence input boundary — implemented for image ingest + OCR, with richer vision provider integration remaining configuration-dependent
+11. Production hardening and verification — implemented with request IDs, security headers, optional auth enforcement, rate limiting, readiness checks, and CI regression coverage
+
+Phase 11 is intentionally an engineering hardening phase: it does not make AI output canonical and does not bypass the existing human-review boundaries.
 
 ## Google Drive output
 
