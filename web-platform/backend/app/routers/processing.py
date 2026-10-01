@@ -2,6 +2,7 @@ from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+import psycopg
 
 from app.services.processing import advance
 from app.store import now_iso, store
@@ -39,8 +40,19 @@ def create_processing_task(payload: ProcessingCreate) -> dict:
         "created_at": now_iso(),
         "updated_at": now_iso(),
     }
-    store.tasks[task_id] = task
-    store.save_task(task)
+    try:
+        store.tasks[task_id] = task
+        store.save_task(task)
+    except psycopg.errors.UniqueViolation:
+        store.refresh()
+        existing = next(
+            (item for item in store.tasks.values()
+             if item["source_id"] == payload.source_id and item["status"] in {"queued", "running"}),
+            None,
+        )
+        if existing:
+            return existing
+        raise
     previous = source.get("status", "new")
     source["status"] = "processing"
     source["processing_stage"] = "queued"
