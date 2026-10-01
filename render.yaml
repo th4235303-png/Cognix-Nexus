@@ -58,16 +58,6 @@ services:
         sync: false
       - key: COGNIX_SUPABASE_STORAGE_BUCKET
         value: "cognix-artifacts"
-      - key: COGNIX_R2_ENDPOINT
-        sync: false
-      - key: COGNIX_R2_BUCKET
-        sync: false
-      - key: COGNIX_R2_ACCESS_KEY_ID
-        sync: false
-      - key: COGNIX_R2_SECRET_ACCESS_KEY
-        sync: false
-      - key: COGNIX_R2_REGION
-        value: "auto"
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
@@ -123,16 +113,6 @@ services:
         sync: false
       - key: COGNIX_SUPABASE_STORAGE_BUCKET
         value: "cognix-artifacts"
-      - key: COGNIX_R2_ENDPOINT
-        sync: false
-      - key: COGNIX_R2_BUCKET
-        sync: false
-      - key: COGNIX_R2_ACCESS_KEY_ID
-        sync: false
-      - key: COGNIX_R2_SECRET_ACCESS_KEY
-        sync: false
-      - key: COGNIX_R2_REGION
-        value: "auto"
       - key: COGNIX_DRIVE_PROVIDER
         value: "google"
       - key: GOOGLE_CLIENT_ID
