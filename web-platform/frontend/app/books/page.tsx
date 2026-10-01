@@ -35,8 +35,7 @@ export default function BooksPage() {
     }
   };
 
-  const upload = async (event: FormEvent) => {
-    event.preventDefault();
+  const upload = async () => {
     if (!file) return;
     setSaving(true);
     setError('');
@@ -75,7 +74,7 @@ export default function BooksPage() {
           <form onSubmit={submit} className="space-y-4">
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Book title" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
             <input type="file" accept=".pdf,.epub,application/pdf,application/epub+zip" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
-            <button type="button" onClick={() => file && upload({ preventDefault() {} } as FormEvent)} disabled={!file || saving} className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium disabled:opacity-50">{saving ? "Uploading…" : "Upload PDF / EPUB"}</button>
+            <button type="button" onClick={() => file && upload()} disabled={!file || saving} className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium disabled:opacity-50">{saving ? "Uploading…" : "Upload PDF / EPUB"}</button>
             <div className="text-center text-xs text-muted-foreground">or paste extracted text</div>
             <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste extracted book text here…" rows={10} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
             {error && <p className="text-sm text-destructive">{error}</p>}
