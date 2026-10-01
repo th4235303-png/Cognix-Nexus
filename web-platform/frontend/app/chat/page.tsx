@@ -3,22 +3,29 @@
 import { FormEvent, useState } from 'react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard } from '@/components/shared/cognix-primitives';
-import { ApiBrainSearchResult, queryBrain } from '@/lib/api';
+import { ApiBrainSearchResult, queryBrain, semanticBrainQuery } from '@/lib/api';
 
 export default function BrainChatPage() {
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<ApiBrainSearchResult[]>([]);
   const [message, setMessage] = useState('Ask across your current Brain Vault evidence.');
   const [loading, setLoading] = useState(false);
+  const [semantic, setSemantic] = useState(false);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!query.trim()) return;
     setLoading(true);
     try {
-      const response = await queryBrain(query.trim());
-      setItems(response.items);
-      setMessage(response.message);
+      if (semantic) {
+        const response = await semanticBrainQuery(query.trim());
+        setItems(response.items.map((item) => ({ chunk_id: item.chunk_id, chapter_id: item.chapter_id, chapter_title: 'Semantic match', book_title: 'Brain Vault', sequence: item.sequence, score: Number(item.similarity.toFixed(4)), content: item.content })));
+        setMessage('Semantic retrieval returned cited source chunks.');
+      } else {
+        const response = await queryBrain(query.trim());
+        setItems(response.items);
+        setMessage(response.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -28,9 +35,9 @@ export default function BrainChatPage() {
     <AppShell>
       <PageHeader title="Brain Query" description="Search your knowledge base with evidence-first retrieval." />
       <SectionCard title="Online Query">
-        <form onSubmit={submit} className="flex gap-2">
+        <form onSubmit={submit} className="flex flex-wrap gap-2">
           <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="What do I know about…?" className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm" />
-          <button disabled={loading} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">{loading ? 'Searching…' : 'Search'}</button>
+          <label className="flex items-center gap-2 rounded-md border border-border px-3 text-xs"><input type="checkbox" checked={semantic} onChange={(e) => setSemantic(e.target.checked)} /> Semantic</label>\n          <button disabled={loading} className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">{loading ? 'Searching…' : 'Search'}</button>
         </form>
         <p className="mt-3 text-xs text-muted-foreground">{message}</p>
         <div className="mt-5 space-y-3">
