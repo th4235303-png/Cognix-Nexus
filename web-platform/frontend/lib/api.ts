@@ -31,7 +31,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${path}`, {
     ...init,
     headers: {
-      'Content-Type': 'application/json',
+      ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
       ...authHeaders,
       ...(init?.headers || {}),
     },
@@ -250,4 +250,32 @@ export function queryBrain(q: string) {
   return request<{ query: string; mode: string; answer: string | null; message: string; total: number; items: ApiBrainSearchResult[] }>(
     `/brain/query?q=${encodeURIComponent(q)}`,
   );
+}
+
+
+export function uploadBrainBook(file: File, language = 'en', description?: string) {
+  const body = new FormData();
+  body.append('file', file);
+  body.append('language', language);
+  if (description) body.append('description', description);
+  return request<ApiBrainBook>('/brain/books/upload', { method: 'POST', body });
+}
+
+export function semanticBrainQuery(q: string, limit = 8) {
+  return request<{
+    query: string;
+    mode: string;
+    items: Array<{
+      chunk_id: string;
+      content: string;
+      similarity: number;
+      chapter_id: string;
+      page_number?: number | null;
+      sequence: number;
+      model?: string | null;
+    }>;
+  }>('/brain/query/semantic', {
+    method: 'POST',
+    body: JSON.stringify({ q, limit }),
+  });
 }
