@@ -75,6 +75,7 @@ class Database:
                     "007_book_storage.sql",
                     "008_document_and_synthesis_hardening.sql",
                     "009_media_assets.sql",
+                    "010_agent_active_layer.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
