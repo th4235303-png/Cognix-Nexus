@@ -289,3 +289,69 @@ async def semantic_query(payload: SemanticQuery) -> dict:
             for row in rows
         ],
     }
+
+
+@router.get("/export")
+def export_brain_vault() -> dict:
+    db = _db()
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM books ORDER BY created_at")
+            books = cur.fetchall()
+            cur.execute("SELECT * FROM chapters ORDER BY book_id, chapter_number")
+            chapters = cur.fetchall()
+            cur.execute("SELECT id,title,content,note_type,status,created_at,updated_at FROM notes ORDER BY updated_at DESC")
+            notes = cur.fetchall()
+            cur.execute("SELECT * FROM concepts ORDER BY name")
+            concepts = cur.fetchall()
+            cur.execute("SELECT * FROM concept_links ORDER BY created_at")
+            links = cur.fetchall()
+            cur.execute("SELECT * FROM book_summaries ORDER BY book_id, level, version")
+            summaries = cur.fetchall()
+    return {
+        "format": "cognix-brain-vault-json",
+        "version": 1,
+        "exported_at": datetime.now(timezone.utc).isoformat(),
+        "books": books,
+        "chapters": chapters,
+        "notes": notes,
+        "concepts": concepts,
+        "concept_links": links,
+        "summaries": summaries,
+    }
+
+
+@router.get("/contradictions/candidates")
+def contradiction_candidates(limit: int = 50) -> dict:
+    db = _db()
+    limit = max(1, min(limit, 100))
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT a.id AS left_id, b.id AS right_id, a.content AS left_content, b.content AS right_content
+                FROM chunks a
+                JOIN chunks b ON a.id < b.id
+                WHERE (
+                    lower(a.content) LIKE '%%not %%' OR lower(a.content) LIKE '%%no %%' OR
+                    lower(a.content) LIKE '%%never %%' OR lower(a.content) LIKE '%%cannot %%'
+                )
+                AND (
+                    lower(b.content) NOT LIKE '%%not %%' AND lower(b.content) NOT LIKE '%%no %%' AND
+                    lower(b.content) NOT LIKE '%%never %%' AND lower(b.content) NOT LIKE '%%cannot %%'
+                )
+                ORDER BY a.created_at DESC
+                LIMIT %s
+                """,
+                (limit,),
+            )
+            rows = cur.fetchall()
+    return {
+        "mode": "candidate_detection",
+        "message": "Candidates require human review; this endpoint does not assert that a contradiction is true.",
+        "items": [
+            {"left_chunk_id": row["left_id"], "right_chunk_id": row["right_id"],
+             "left_content": row["left_content"], "right_content": row["right_content"]}
+            for row in rows
+        ],
+    }
