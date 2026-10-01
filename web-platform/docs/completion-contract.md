@@ -16,6 +16,9 @@ This document is the acceptance checklist for the Cognix Brain Vault target: the
 - Database migration registration for the new intelligence/reliability tables.
 - Request IDs, security headers, bounded rate limiting, readiness fail-closed behavior.
 - Render/Netlify deployment pause safeguards.
+- Cloudflare R2-compatible object storage adapter and binary integrity metadata.
+- Background worker processing for queued Google Drive exports.
+- Safe PostgreSQL backup/restore drill helper with explicit restore guard.
 
 ## Level Up safety invariants
 
