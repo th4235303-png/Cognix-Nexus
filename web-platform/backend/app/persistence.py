@@ -44,7 +44,7 @@ class Database:
             conn.close()
 
     def connect(self):
-        return psycopg.connect(self.dsn, row_factory=dict_row)
+        return psycopg.connect(self.dsn, row_factory=dict_row, options='-c search_path=public,extensions')
 
     def ping(self) -> bool:
         try:
