@@ -31,6 +31,17 @@ class S3ObjectStorage:
     def configured(self) -> bool:
         return all((self.endpoint, self.bucket, self.access_key, self.secret_key))
 
+    @staticmethod
+    def _safe_key(key: str) -> str:
+        normalized = key.strip().lstrip("/")
+        if not normalized or len(normalized) > 1024:
+            raise ValueError("Invalid object key")
+        if any(ord(char) < 32 or ord(char) == 127 for char in normalized):
+            raise ValueError("Object key contains control characters")
+        if "\\" in normalized or any(part == ".." for part in normalized.split("/")):
+            raise ValueError("Object key contains an unsafe path segment")
+        return normalized
+
     def _client(self):
         if not self.configured:
             raise RuntimeError(f"{self.label} object storage is not configured")
@@ -40,10 +51,11 @@ class S3ObjectStorage:
             aws_access_key_id=self.access_key,
             aws_secret_access_key=self.secret_key,
             region_name=self.region,
-            config=Config(signature_version="s3v4", retries={"max_attempts": 3, "mode": "standard"}),
+            config=Config(signature_version="s3v4", connect_timeout=10, read_timeout=60, retries={"max_attempts": 3, "mode": "standard"}),
         )
 
     def put_bytes(self, key: str, data: bytes, content_type: str | None = None) -> StoredObject:
+        key = self._safe_key(key)
         checksum = hashlib.sha256(data).hexdigest()
         extra = {"ChecksumSHA256": checksum}
         if content_type:
@@ -52,13 +64,16 @@ class S3ObjectStorage:
         return StoredObject(key=key, checksum=checksum, size=len(data))
 
     def get_bytes(self, key: str) -> bytes:
+        key = self._safe_key(key)
         response = self._client().get_object(Bucket=self.bucket, Key=key)
         return response["Body"].read()
 
     def head(self, key: str) -> dict:
+        key = self._safe_key(key)
         return self._client().head_object(Bucket=self.bucket, Key=key)
 
     def delete(self, key: str) -> None:
+        key = self._safe_key(key)
         self._client().delete_object(Bucket=self.bucket, Key=key)
 
     def verify(self, key: str, expected_sha256: str) -> bool:
@@ -100,7 +115,11 @@ class SupabaseObjectStorage:
         return headers
 
     def _url(self, key: str) -> str:
-        return f"{self.url}/storage/v1/object/{self.bucket}/{key.lstrip('/')}"
+        from urllib.parse import quote
+        if not self.configured:
+            raise RuntimeError("Supabase Storage is not configured")
+        safe_key = S3ObjectStorage._safe_key(key)
+        return f"{self.url}/storage/v1/object/{quote(self.bucket, safe='')}/{quote(safe_key, safe='/')}"
 
     def put_bytes(self, key: str, data: bytes, content_type: str | None = None) -> StoredObject:
         checksum = hashlib.sha256(data).hexdigest()
