@@ -17,7 +17,7 @@ export default function LoginPage() {
     e.preventDefault();
     setError(null);
     if (!supabaseConfigured || !supabase) {
-      setError('Authentication is not configured yet. Add the Supabase public URL and anon key first.');
+      setError('Authentication is not configured yet. Add the Supabase public URL and publishable key first.');
       return;
     }
 
@@ -40,7 +40,7 @@ export default function LoginPage() {
       <div className="relative z-10 w-full max-w-md px-6 animate-fade-in-up">
         <div className="mb-8 flex flex-col items-center text-center">
           <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 border border-primary/30 glow-cyan"><Brain className="h-7 w-7 text-primary" /></div>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">Cognix Core</h1>
+          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-foreground">Cognix Nexus</h1>
           <p className="mt-1 text-xs uppercase tracking-widest text-muted-foreground">Research Intelligence Workspace</p>
         </div>
 
@@ -74,7 +74,7 @@ export default function LoginPage() {
             <p className="text-[11px] text-muted-foreground">Sign-in uses Supabase Auth. The API validates the resulting access token before protected actions.</p>
           </div>
         </div>
-        <p className="mt-6 text-center text-[11px] text-muted-foreground/60">Cognix Core</p>
+        <p className="mt-6 text-center text-[11px] text-muted-foreground/60">Cognix Nexus</p>
       </div>
     </div>
   );
