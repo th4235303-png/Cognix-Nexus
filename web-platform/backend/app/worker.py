@@ -93,6 +93,9 @@ def _start_health_server() -> None:
 def main() -> None:
     logging.basicConfig(level=os.getenv("COGNIX_WORKER_LOG_LEVEL", "INFO"))
     _start_health_server()
+    require_database = os.getenv("COGNIX_REQUIRE_DATABASE", "false").strip().lower() in {"1", "true", "yes", "on"}
+    if require_database and store.database is None:
+        raise RuntimeError("COGNIX_REQUIRE_DATABASE is enabled but DATABASE_URL is not configured")
     logger.info("worker_started persistence=%s database_configured=%s poll_seconds=%s", store.persistence_mode, bool(store.database), POLL_SECONDS)
     while True:
         run_once()
