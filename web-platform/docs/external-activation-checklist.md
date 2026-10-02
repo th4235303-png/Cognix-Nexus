@@ -57,6 +57,10 @@ Set:
 Production device builds still require Expo/EAS account and signing setup.
 
 ## Render
+Production API and worker must share the same `DATABASE_URL`.
+- Set `DATABASE_URL` on the live worker service (`cognix-core-worker-runtime`) as well as the API.
+- Set `COGNIX_REQUIRE_DATABASE=true` on the live worker so a missing database binding fails fast instead of silently running in memory mode.
+- The checked-in `render.yaml` declares these variables for the intended worker definition, but an existing live Render service must be reconciled manually if its configuration predates the blueprint.
 The checked-in render.yaml defines the Python API, native Render worker, B2 originals, private Supabase artifact storage, and Google Drive export boundary.
 
 If an existing Render service has a different resource type/root directory, reconcile it in the Render dashboard rather than creating duplicates.
