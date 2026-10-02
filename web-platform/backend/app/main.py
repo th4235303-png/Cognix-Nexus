@@ -40,9 +40,9 @@ if sentry_sdk and os.getenv("SENTRY_DSN", "").strip():
     )
 
 app = FastAPI(
-    title="Cognix Core API",
+    title="Cognix Nexus API",
     version=API_VERSION,
-    description="Research intelligence and personal knowledge OS API.",
+    description="Research intelligence and personal knowledge OS API for Cognix Nexus.",
 )
 
 
@@ -153,12 +153,12 @@ app.include_router(integrations.router)
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"service": "cognix-core-api", "version": API_VERSION, "docs": "/docs"}
+    return {"service": "cognix-nexus-api", "version": API_VERSION, "docs": "/docs"}
 
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "cognix-core-api", "version": API_VERSION}
+    return {"status": "ok", "service": "cognix-nexus-api", "version": API_VERSION}
 
 
 @app.get("/ready")
@@ -173,7 +173,7 @@ def readiness() -> dict[str, object]:
     ready = (database_configured or not REQUIRE_DATABASE) and (not database_configured or database_reachable)
     return {
         "status": "ready" if ready else "not_ready",
-        "service": "cognix-core-api",
+        "service": "cognix-nexus-api",
         "version": API_VERSION,
         "database_configured": database_configured,
         "database_reachable": database_reachable,
