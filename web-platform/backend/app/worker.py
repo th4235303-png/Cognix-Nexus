@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 import time
 import threading
@@ -10,6 +11,8 @@ from app.services.export_worker import advance_export_job
 from app.services.processing import STAGES, advance
 from app.store import store
 
+
+logger = logging.getLogger("cognix.worker")
 
 POLL_SECONDS = float(os.getenv("COGNIX_WORKER_POLL_SECONDS", "2"))
 
@@ -54,13 +57,20 @@ def run_once() -> int:
         finally:
             if store.database:
                 store.database.release_task(task["id"])
+    if candidates:
+        logger.info("worker_cycle candidates=%d processed=%d persistence=%s", len(candidates), processed, store.persistence_mode)
     return processed
 
 
 class _WorkerHealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in {"/", "/health"}:
-            payload = b'{"status":"ok","service":"cognix-core-worker"}'
+            database_ok = bool(store.database and store.database.ping())
+            payload = (
+                '{"status":"ok","service":"cognix-core-worker","persistence":"postgresql","database":true}'
+                if database_ok
+                else '{"status":"degraded","service":"cognix-core-worker","persistence":"memory-prototype","database":false}'
+            ).encode("utf-8")
             self.send_response(200)
             self.send_header("content-type", "application/json")
             self.send_header("content-length", str(len(payload)))
@@ -81,7 +91,9 @@ def _start_health_server() -> None:
 
 
 def main() -> None:
+    logging.basicConfig(level=os.getenv("COGNIX_WORKER_LOG_LEVEL", "INFO"))
     _start_health_server()
+    logger.info("worker_started persistence=%s database_configured=%s poll_seconds=%s", store.persistence_mode, bool(store.database), POLL_SECONDS)
     while True:
         run_once()
         enqueue_due_agent_schedules()
