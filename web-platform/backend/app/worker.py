@@ -147,6 +147,12 @@ def main() -> None:
     logger.info("worker_started persistence=%s database_configured=%s poll_seconds=%s", store.persistence_mode, bool(store.database), POLL_SECONDS)
     while True:
         run_once()
+        try:
+            indexed = asyncio.run(_index_unembedded_chunks())
+            if indexed:
+                logger.info("embedding_index_cycle indexed=%d model=%s", indexed, embedding_provider.model)
+        except Exception as exc:
+            logger.warning("embedding_index_cycle_failed error=%s", exc)
         enqueue_due_agent_schedules()
         run_due_agent_jobs()
         _advance_exports()
