@@ -72,7 +72,8 @@ def _wikipedia_rest_url(url: str) -> str | None:
     title = unquote(parsed.path[len("/wiki/"):]).strip("/")
     if not title:
         return None
-    return f"{parsed.scheme}://{hostname}/api/rest_v1/page/html/{quote(title, safe="/:@")}"
+    encoded_title = quote(title, safe="/:@")
+    return f"{parsed.scheme}://{hostname}/api/rest_v1/page/html/{encoded_title}"
 
 
 def fetch_source(url: str) -> str:
