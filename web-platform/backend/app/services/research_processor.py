@@ -5,6 +5,7 @@ import os
 import re
 import socket
 import asyncio
+import json
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from urllib.parse import quote, unquote, urljoin, urlparse
@@ -19,6 +20,7 @@ USER_AGENT = os.getenv("COGNIX_FETCH_USER_AGENT", "Cognix-Nexus/0.1 research-fet
 
 class _TextExtractor(HTMLParser):
     _ignored = {"script", "style", "noscript", "svg", "template"}
+
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
         self.parts: list[str] = []
@@ -55,7 +57,14 @@ def _assert_public_url(url: str) -> None:
     if parsed.username or parsed.password:
         raise ValueError("Source URLs must not contain credentials")
     try:
-        addresses = {info[4][0] for info in socket.getaddrinfo(parsed.hostname, parsed.port or (443 if parsed.scheme == "https" else 80), type=socket.SOCK_STREAM)}
+        addresses = {
+            info[4][0]
+            for info in socket.getaddrinfo(
+                parsed.hostname,
+                parsed.port or (443 if parsed.scheme == "https" else 80),
+                type=socket.SOCK_STREAM,
+            )
+        }
     except socket.gaierror as exc:
         raise ValueError("Source hostname could not be resolved") from exc
     for address in addresses:
@@ -72,8 +81,77 @@ def _wikipedia_rest_url(url: str) -> str | None:
     title = unquote(parsed.path[len("/wiki/"):]).strip("/")
     if not title:
         return None
-    encoded_title = quote(title, safe="/:@")
+    encoded_title = quote(title, safe="")
     return f"{parsed.scheme}://{hostname}/api/rest_v1/page/html/{encoded_title}"
+
+
+def _wikipedia_api_url(url: str) -> tuple[str, str] | None:
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    if not hostname.endswith(".wikipedia.org") or not parsed.path.startswith("/wiki/"):
+        return None
+    title = unquote(parsed.path[len("/wiki/"):]).strip("/")
+    if not title:
+        return None
+    return (
+        f"{parsed.scheme}://{hostname}/w/api.php",
+        title,
+    )
+
+
+def _extract_html_text(html: str) -> str:
+    parser = _TextExtractor()
+    parser.feed(html)
+    return "\n".join(parser.parts).strip()
+
+
+def _fetch_wikipedia_fallback(client: httpx.Client, url: str) -> str | None:
+    rest_url = _wikipedia_rest_url(url)
+    if rest_url:
+        _assert_public_url(rest_url)
+        response = client.get(
+            rest_url,
+            headers={
+                "Accept": "text/html",
+                "Api-User-Agent": USER_AGENT,
+            },
+        )
+        if response.is_success:
+            if len(response.content) > MAX_DOCUMENT_BYTES:
+                raise ValueError("Source document exceeds the configured size limit")
+            return _extract_html_text(response.text)
+
+    api = _wikipedia_api_url(url)
+    if not api:
+        return None
+    api_url, title = api
+    _assert_public_url(api_url)
+    response = client.get(
+        api_url,
+        params={
+            "action": "parse",
+            "page": title,
+            "prop": "text",
+            "format": "json",
+            "formatversion": "2",
+        },
+        headers={
+            "Accept": "application/json",
+            "Api-User-Agent": USER_AGENT,
+        },
+    )
+    if not response.is_success:
+        return None
+    if len(response.content) > MAX_DOCUMENT_BYTES:
+        raise ValueError("Source document exceeds the configured size limit")
+    try:
+        body = response.json()
+        html = body["parse"]["text"]
+    except (json.JSONDecodeError, KeyError, TypeError):
+        return None
+    if not isinstance(html, str) or not html.strip():
+        return None
+    return _extract_html_text(html)
 
 
 def fetch_source(url: str) -> str:
@@ -96,31 +174,23 @@ def fetch_source(url: str) -> str:
                 current = urljoin(current, location)
                 continue
             if response.status_code == 403:
-                fallback = _wikipedia_rest_url(current)
-                if fallback:
-                    _assert_public_url(fallback)
-                    fallback_response = client.get(fallback)
-                    if fallback_response.is_success:
-                        response = fallback_response
-                    else:
-                        raise ValueError(
-                            "Wikipedia denied the page request (HTTP 403) and its public REST endpoint was also unavailable."
-                        )
-                else:
-                    raise ValueError(
-                        "The source server denied automated access (HTTP 403). "
-                        "Try another public URL or a source that permits automated retrieval."
-                    )
+                fallback_text = _fetch_wikipedia_fallback(client, current)
+                if fallback_text:
+                    return fallback_text
+                raise ValueError(
+                    "Wikipedia denied the page request (HTTP 403) and its public API endpoints were also unavailable."
+                )
             response.raise_for_status()
             content_type = response.headers.get("content-type", "").lower()
-            if content_type and not any(kind in content_type for kind in ("text/html", "text/plain", "application/xhtml+xml")):
+            if content_type and not any(
+                kind in content_type
+                for kind in ("text/html", "text/plain", "application/xhtml+xml")
+            ):
                 raise ValueError("Source is not an HTML or text document")
             if len(response.content) > MAX_DOCUMENT_BYTES:
                 raise ValueError("Source document exceeds the configured size limit")
             if "text/html" in content_type or "application/xhtml+xml" in content_type:
-                parser = _TextExtractor()
-                parser.feed(response.text)
-                return "\n".join(parser.parts).strip()
+                return _extract_html_text(response.text)
             return response.text.strip()
     raise ValueError("Too many redirects")
 
