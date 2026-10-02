@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import os
 import time
 import threading
+import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from app.services.embeddings import embedding_provider
 from app.services.agent import enqueue_due_agent_schedules, run_due_agent_jobs
 from app.services.export_worker import advance_export_job
 
@@ -31,6 +34,50 @@ def _advance_exports(limit: int = 5) -> int:
         except Exception:
             continue
     return processed
+
+ 
+async def _index_unembedded_chunks(limit: int = 25) -> int:
+    if not store.database or not embedding_provider.configured:
+        return 0
+    with store.database.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """SELECT c.id, c.content
+                   FROM chunks c
+                   LEFT JOIN embeddings e ON e.owner_type='chunk' AND e.owner_id=c.id
+                   WHERE e.owner_id IS NULL
+                   ORDER BY c.created_at
+                   LIMIT %s""",
+                (limit,),
+            )
+            rows = cur.fetchall()
+    if not rows:
+        return 0
+    vectors = await embedding_provider.embed([row["content"] for row in rows])
+    with store.database.connect() as conn:
+        with conn.cursor() as cur:
+            for row, vector in zip(rows, vectors):
+                vector_literal = "[" + ",".join(str(float(v)) for v in vector) + "]"
+                cur.execute(
+                    """INSERT INTO embeddings(
+                           id, owner_type, owner_id, content, embedding, model, created_at, embedding_vector
+                       ) VALUES(%s, 'chunk', %s, %s, %s, %s, now(), %s::vector)
+                       ON CONFLICT(owner_type, owner_id) DO UPDATE SET
+                           content=EXCLUDED.content,
+                           embedding=EXCLUDED.embedding,
+                           model=EXCLUDED.model,
+                           embedding_vector=EXCLUDED.embedding_vector""",
+                    (
+                        f"EMB-{row['id']}",
+                        row["id"],
+                        row["content"],
+                        json.dumps(vector),
+                        embedding_provider.model,
+                        vector_literal,
+                    ),
+                )
+        conn.commit()
+    return len(rows)
 
 
 def run_once() -> int:
