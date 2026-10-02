@@ -1,4 +1,4 @@
-from app.services.research_processor import ProcessingResult, process_stage
+from hashlib import sha256\n\nfrom app.services.research_processor import ProcessingResult, process_stage
 from app.store import now_iso, store
 
 STAGES = (
@@ -21,7 +21,7 @@ def _apply_result(source: dict, result: ProcessingResult) -> None:
         if not source.get("claims"):
             source["claims"] = [
                 {
-                    "id": f"CLM-AUTO-{index + 1:02d}",
+                    "id": f"CLM-AUTO-{sha256((source['id'] + ':' + str(index + 1)).encode()).hexdigest()[:12].upper()}",
                     "text": point,
                     "excerpt": point,
                     "location": "AI key point",
