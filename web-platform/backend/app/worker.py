@@ -32,6 +32,7 @@ def _advance_exports(limit: int = 5) -> int:
             continue
     return processed
 
+
 def run_once() -> int:
     """Advance queued/running tasks once.
 
@@ -67,9 +68,9 @@ class _WorkerHealthHandler(BaseHTTPRequestHandler):
         if self.path in {"/", "/health"}:
             database_ok = bool(store.database and store.database.ping())
             payload = (
-                '{"status":"ok","service":"cognix-core-worker","persistence":"postgresql","database":true}'
+                '{"status":"ok","service":"cognix-nexus-worker","persistence":"postgresql","database":true}'
                 if database_ok
-                else '{"status":"degraded","service":"cognix-core-worker","persistence":"memory-prototype","database":false}'
+                else '{"status":"degraded","service":"cognix-nexus-worker","persistence":"memory-prototype","database":false}'
             ).encode("utf-8")
             self.send_response(200)
             self.send_header("content-type", "application/json")
