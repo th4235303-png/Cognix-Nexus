@@ -15,9 +15,9 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Cognix Core — Research Intelligence Workspace',
+  title: 'Cognix Nexus — Research Intelligence Workspace',
   description:
-    'Private research intelligence workspace for the Logixa Ecosystem.',
+    'Private research intelligence workspace for Cognix Nexus.',
 };
 
 export default function RootLayout({
@@ -34,4 +34,4 @@ export default function RootLayout({
       </body>
     </html>
   );
-}
+};
