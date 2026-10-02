@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus, FileText, FileCheck, Video, Mic, Database, Search, Clock, Loader2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, GlowButton, FilterChip, EmptyState } from '@/components/shared/cognix-primitives';
@@ -18,8 +19,10 @@ const filters: { label: string; status?: SourceStatus; key: string }[] = [
 ];
 
 export default function AllSourcesPage() {
+  const searchParams = useSearchParams();
+  const initialSearch = searchParams.get('search') || '';
   const [activeFilter, setActiveFilter] = useState('all');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
   const [items, setItems] = useState<ReturnType<typeof mergeSources>>([]);
   const [loading, setLoading] = useState(true);
 
