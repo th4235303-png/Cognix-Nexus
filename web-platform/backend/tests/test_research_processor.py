@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from app.services.research_processor import clean_text, mock_key_points, mock_summary, process_stage
+from app.services.research_processor import _wikipedia_rest_url, clean_text, mock_key_points, mock_summary, process_stage
 
 
 class ResearchProcessorTests(unittest.TestCase):
@@ -13,6 +13,13 @@ class ResearchProcessorTests(unittest.TestCase):
         text = "First sentence. Second sentence! Third sentence? Fourth sentence."
         self.assertEqual(mock_summary(text), "First sentence. Second sentence! Third sentence?")
         self.assertEqual(mock_key_points(text), ["First sentence.", "Second sentence!", "Third sentence?", "Fourth sentence."])
+
+    def test_wikipedia_urls_use_public_rest_fallback(self):
+        self.assertEqual(
+            _wikipedia_rest_url("https://en.wikipedia.org/wiki/Logistics"),
+            "https://en.wikipedia.org/api/rest_v1/page/html/Logistics",
+        )
+        self.assertIsNone(_wikipedia_rest_url("https://example.com/wiki/Logistics"))
 
     def test_mock_processing_creates_translation_and_key_points(self):
         source = {"url": "https://example.com", "ai_summary": "A short summary."}
