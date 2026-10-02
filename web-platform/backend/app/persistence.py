@@ -81,6 +81,7 @@ class Database:
                     "014_move_vector_extension.sql",
                     "015_supabase_storage_bucket.sql",
                     "016_processing_idempotency.sql",
+                    "017_lock_down_data_api_roles.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
