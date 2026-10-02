@@ -25,7 +25,7 @@ class EmbeddingProvider:
         headers = {"Content-Type": "application/json"}
         if self.api_key:
             headers["Authorization"] = f"Bearer {self.api_key}"
-        payload = {"model": self.model, "input": list(inputs)}
+        payload = {"model": self.model, "input": list(inputs), "dimensions": self.dimension}
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(self.url, headers=headers, json=payload)
             response.raise_for_status()
