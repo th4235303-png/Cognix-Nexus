@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Plus, FileText, FileCheck, Video, Mic, Database, Search, Clock, Loader2 } from 'lucide-react';
 import { AppShell } from '@/components/layout/app-shell';
@@ -18,7 +18,7 @@ const filters: { label: string; status?: SourceStatus; key: string }[] = [
   { label: 'High Priority', key: 'high_priority' },
 ];
 
-export default function AllSourcesPage() {
+function AllSourcesContent() {
   const searchParams = useSearchParams();
   const initialSearch = searchParams.get('search') || '';
   const [activeFilter, setActiveFilter] = useState('all');
@@ -57,4 +57,12 @@ export default function AllSourcesPage() {
       </Link>;
     })}</div>}
   </AppShell>;
+}
+
+export default function AllSourcesPage() {
+  return (
+    <Suspense fallback={<AppShell><div className="flex items-center justify-center rounded-xl border border-border/40 p-10 text-sm text-muted-foreground">Loading sources…</div></AppShell>}>
+      <AllSourcesContent />
+    </Suspense>
+  );
 }
