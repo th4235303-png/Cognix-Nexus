@@ -1,4 +1,6 @@
-from hashlib import sha256\n\nfrom app.services.research_processor import ProcessingResult, process_stage
+from hashlib import sha256
+
+from app.services.research_processor import ProcessingResult, process_stage
 from app.store import now_iso, store
 
 STAGES = (
