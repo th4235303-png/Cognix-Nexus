@@ -230,6 +230,85 @@ def review_language_card(card_id: str, payload: LanguageReview) -> dict:
     return updated
 
 
+class RetrievalRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=2000)
+    limit: int = Field(default=8, ge=1, le=30)
+    rrf_k: int = Field(default=60, ge=1, le=200)
+
+
+@router.post("/retrieval")
+async def hybrid_retrieval(payload: RetrievalRequest) -> dict:
+    db = _db()
+    if not embedding_provider.configured:
+        raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
+
+    vectors = await embedding_provider.embed([payload.query])
+    query_vector = "[" + ",".join(str(float(value)) for value in vectors[0]) + "]"
+
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                WITH semantic AS (
+                    SELECT c.id, c.chapter_id, c.sequence, c.page_number, c.content,
+                           row_number() OVER (ORDER BY e.embedding_vector <=> %s::vector) AS rank
+                    FROM embeddings e
+                    JOIN chunks c ON c.id = e.owner_id
+                    WHERE e.owner_type = 'chunk'
+                      AND e.embedding_vector IS NOT NULL
+                    ORDER BY e.embedding_vector <=> %s::vector
+                    LIMIT %s
+                ),
+                lexical AS (
+                    SELECT c.id, c.chapter_id, c.sequence, c.page_number, c.content,
+                           row_number() OVER (
+                               ORDER BY ts_rank_cd(c.search_vector, websearch_to_tsquery('simple', %s)) DESC,
+                                        c.created_at DESC
+                           ) AS rank
+                    FROM chunks c
+                    WHERE c.search_vector @@ websearch_to_tsquery('simple', %s)
+                    ORDER BY ts_rank_cd(c.search_vector, websearch_to_tsquery('simple', %s)) DESC,
+                             c.created_at DESC
+                    LIMIT %s
+                ),
+                fused AS (
+                    SELECT id, max(chapter_id) AS chapter_id, max(sequence) AS sequence,
+                           max(page_number) AS page_number, max(content) AS content,
+                           sum(rrf_score) AS rrf_score
+                    FROM (
+                        SELECT id, chapter_id, sequence, page_number, content,
+                               1.0 / (%s + rank) AS rrf_score
+                        FROM semantic
+                        UNION ALL
+                        SELECT id, chapter_id, sequence, page_number, content,
+                               1.0 / (%s + rank) AS rrf_score
+                        FROM lexical
+                    ) ranked
+                    GROUP BY id
+                )
+                SELECT id, chapter_id, sequence, page_number, content, rrf_score
+                FROM fused
+                ORDER BY rrf_score DESC, id
+                LIMIT %s
+                """,
+                (
+                    query_vector, query_vector, payload.limit,
+                    payload.query, payload.query, payload.query, payload.limit,
+                    payload.rrf_k, payload.rrf_k, payload.limit,
+                ),
+            )
+            rows = cur.fetchall()
+
+    return {
+        "query": payload.query,
+        "strategy": "hybrid_rrf",
+        "semantic_enabled": True,
+        "rrf_k": payload.rrf_k,
+        "items": rows,
+        "total": len(rows),
+    }
+
+
 class SynthesisCreate(BaseModel):
     title: str = Field(min_length=1, max_length=300)
     query: str = Field(min_length=1, max_length=2000)
