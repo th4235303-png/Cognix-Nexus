@@ -19,6 +19,7 @@ import {
   BookOpen,
   Network,
   MessageSquare,
+  Sparkles,
   ChevronLeft,
   LogOut,
 } from 'lucide-react';
@@ -49,6 +50,7 @@ const navSections = [
       { label: 'Book Library', href: '/books', icon: BookOpen },
       { label: 'Second Brain', href: '/notes', icon: Brain },
       { label: 'Brain Query', href: '/chat', icon: MessageSquare },
+      { label: 'Level Up 20', href: '/level-up', icon: Sparkles },
       { label: 'Knowledge Graph', href: '/graph', icon: Network },
       { label: 'Language Tutor', href: '/tutor', icon: Brain },
       { label: 'Document OCR', href: '/documents', icon: FileText },
