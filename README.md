@@ -1,6 +1,6 @@
-# Cognix Core
+# Cognix Nexus
 
-Cognix Core is evolving into **Cognix Brain Vault**, a personal knowledge OS built on a research intelligence foundation.
+Cognix Nexus is evolving into **Cognix Brain Vault**, a personal knowledge OS built on a research intelligence foundation.
 
 ## Product direction
 
@@ -16,7 +16,7 @@ Research sources
   → learning / synthesis
 ```
 
-Cognix Core remains the research and evidence foundation. Brain Vault is the primary knowledge layer built on top of it. Vizora Lens is a future media-intelligence layer that will feed images and other media into the same knowledge system.
+Cognix Nexus remains the research and evidence foundation. Brain Vault is the primary knowledge layer built on top of it. Vizora Lens is a future media-intelligence layer that will feed images and other media into the same knowledge system.
 
 ## Current platform architecture
 
@@ -109,7 +109,7 @@ See `web-platform/docs/brain-vault.md` for the detailed architecture and phase r
 12. `011_level_up20_completion.sql`
 13. `012_storage_reliability.sql`
 
-The existing database bootstrap applies the Brain Vault migrations after the Cognix Core schema.
+The existing database bootstrap applies the Brain Vault migrations after the Cognix Nexus schema.
 
 ## Implemented Brain Vault capabilities
 
@@ -162,7 +162,7 @@ Phase 12 is an operational guardrail phase: production readiness must not silent
 ## Google Drive output
 
 ```text
-/cognix-core/YYYY-MM-DD/research-id/
+/cognix-nexus/YYYY-MM-DD/research-id/
 ├── source.json
 ├── original-reference.txt
 ├── summary.md
