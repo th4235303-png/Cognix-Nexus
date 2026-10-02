@@ -153,12 +153,15 @@ def ai_completion(prompt: str) -> str:
 def process_stage(stage: str, source: dict) -> ProcessingResult:
     text = source.get("original_text") or ""
     provider = os.getenv("COGNIX_PROCESSING_PROVIDER", "mock").strip().lower()
+    from app.services.llm import llm_provider
+    llm_available = llm_provider.configured
+    effective_provider = provider if provider == "mock" or llm_available else "mock"
     if stage == "extracting":
         return ProcessingResult(original_text=fetch_source(source["url"]))
     if stage == "cleaning":
         return ProcessingResult(cleaned_text=clean_text(text))
     if stage == "summarizing":
-        summary = mock_summary(text) if provider == "mock" else ai_completion(
+        summary = mock_summary(text) if effective_provider == "mock" else ai_completion(
             "Summarize the following research source accurately. Preserve uncertainty and do not invent facts.\n\n" + text
         )
         return ProcessingResult(summary=summary)
@@ -166,10 +169,10 @@ def process_stage(stage: str, source: dict) -> ProcessingResult:
         translation = ai_completion(
             "Translate the following research summary into natural Myanmar (Burmese). Preserve names, numbers, uncertainty, and factual meaning. Return only the translation.\n\n"
             + (source.get("ai_summary") or text)
-        ) if provider != "mock" else source.get("ai_summary") or text
+        ) if effective_provider != "mock" else source.get("ai_summary") or text
         return ProcessingResult(translation=translation)
     if stage == "key_points":
-        points = mock_key_points(source.get("ai_summary") or text) if provider == "mock" else [
+        points = mock_key_points(source.get("ai_summary") or text) if effective_provider == "mock" else [
             line.lstrip("-• ").strip() for line in ai_completion(
                 "Extract 3 to 7 concise key points from this research summary. Return one point per line, no numbering.\n\n" + (source.get("ai_summary") or text)
             ).splitlines() if line.strip()
