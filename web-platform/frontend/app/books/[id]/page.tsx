@@ -50,7 +50,7 @@ export default function BookDetailPage() {
             ))}
           </div>
         </SectionCard>
-        <SectionCard title="Book search" description="Evidence-ranked text retrieval; semantic embeddings come next.">
+        <SectionCard title="Book search" description="Evidence-ranked text retrieval with hybrid lexical/semantic retrieval when embeddings are configured.">
           <form onSubmit={search} className="flex gap-2">
             <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search this book…" className="min-w-0 flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm" />
             <button className="rounded-md border border-border px-3 py-2 hover:bg-white/[0.03]"><Search className="h-4 w-4" /></button>
