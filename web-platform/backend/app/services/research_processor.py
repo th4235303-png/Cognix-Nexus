@@ -7,7 +7,7 @@ import socket
 import asyncio
 from dataclasses import dataclass
 from html.parser import HTMLParser
-from urllib.parse import urljoin, urlparse
+from urllib.parse import quote, unquote, urljoin, urlparse
 
 import httpx
 
@@ -64,9 +64,27 @@ def _assert_public_url(url: str) -> None:
             raise ValueError("Source URL resolves to a non-public network address")
 
 
+def _wikipedia_rest_url(url: str) -> str | None:
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    if not hostname.endswith(".wikipedia.org") or not parsed.path.startswith("/wiki/"):
+        return None
+    title = unquote(parsed.path[len("/wiki/"):]).strip("/")
+    if not title:
+        return None
+    return f"{parsed.scheme}://{hostname}/api/rest_v1/page/html/{quote(title, safe="/:@")}"
+
+
 def fetch_source(url: str) -> str:
     current = url
-    with httpx.Client(timeout=20.0, follow_redirects=False, headers={"User-Agent": USER_AGENT}) as client:
+    with httpx.Client(
+        timeout=20.0,
+        follow_redirects=False,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1",
+        },
+    ) as client:
         for _ in range(MAX_REDIRECTS + 1):
             _assert_public_url(current)
             response = client.get(current)
@@ -76,6 +94,22 @@ def fetch_source(url: str) -> str:
                     raise ValueError("Source returned an invalid redirect")
                 current = urljoin(current, location)
                 continue
+            if response.status_code == 403:
+                fallback = _wikipedia_rest_url(current)
+                if fallback:
+                    _assert_public_url(fallback)
+                    fallback_response = client.get(fallback)
+                    if fallback_response.is_success:
+                        response = fallback_response
+                    else:
+                        raise ValueError(
+                            "Wikipedia denied the page request (HTTP 403) and its public REST endpoint was also unavailable."
+                        )
+                else:
+                    raise ValueError(
+                        "The source server denied automated access (HTTP 403). "
+                        "Try another public URL or a source that permits automated retrieval."
+                    )
             response.raise_for_status()
             content_type = response.headers.get("content-type", "").lower()
             if content_type and not any(kind in content_type for kind in ("text/html", "text/plain", "application/xhtml+xml")):
@@ -88,7 +122,6 @@ def fetch_source(url: str) -> str:
                 return "\n".join(parser.parts).strip()
             return response.text.strip()
     raise ValueError("Too many redirects")
-
 
 def clean_text(text: str) -> str:
     lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
