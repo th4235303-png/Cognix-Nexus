@@ -197,38 +197,50 @@ def fetch_source(url: str) -> str:
             "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1",
         },
     ) as client:
-        for _ in range(MAX_REDIRECTS + 1):
+        for _redirect in range(MAX_REDIRECTS + 1):
             _assert_public_url(current)
-            try:
-                response = client.get(current)
-            except httpx.TimeoutException as exc:
-                raise ValueError("Source fetch timed out") from exc
-            except httpx.HTTPError as exc:
-                if _ + 1 >= FETCH_RETRY_ATTEMPTS:
-                    raise ValueError("Source fetch failed due to a network error") from exc
-                time.sleep(2 ** _)
-                continue
-            if response.status_code == 429:
-                if _ + 1 >= FETCH_RETRY_ATTEMPTS:
-                    raise ValueError("Source rate limited after bounded retries (HTTP 429)")
-                retry_after = response.headers.get("retry-after", "").strip()
+            for attempt in range(FETCH_RETRY_ATTEMPTS):
                 try:
-                    delay = min(10.0, max(0.0, float(retry_after)))
-                except ValueError:
-                    delay = float(2 ** _)
-                time.sleep(delay)
-                continue
-            if 500 <= response.status_code <= 599:
-                if _ + 1 >= FETCH_RETRY_ATTEMPTS:
-                    raise ValueError(f"Source server error after bounded retries (HTTP {response.status_code})")
-                time.sleep(float(2 ** _))
-                continue
+                    response = client.get(current)
+                except httpx.TimeoutException as exc:
+                    if attempt == FETCH_RETRY_ATTEMPTS - 1:
+                        raise ValueError("Source fetch timed out") from exc
+                    time.sleep(float(2 ** attempt))
+                    continue
+                except httpx.HTTPError as exc:
+                    if attempt == FETCH_RETRY_ATTEMPTS - 1:
+                        raise ValueError("Source fetch failed due to a network error") from exc
+                    time.sleep(float(2 ** attempt))
+                    continue
+
+                if response.status_code == 429:
+                    if attempt == FETCH_RETRY_ATTEMPTS - 1:
+                        raise ValueError("Source rate limited after bounded retries (HTTP 429)")
+                    retry_after = response.headers.get("retry-after", "").strip()
+                    try:
+                        delay = min(10.0, max(0.0, float(retry_after)))
+                    except ValueError:
+                        delay = float(2 ** attempt)
+                    time.sleep(delay)
+                    continue
+
+                if 500 <= response.status_code <= 599:
+                    if attempt == FETCH_RETRY_ATTEMPTS - 1:
+                        raise ValueError(
+                            f"Source server error after bounded retries (HTTP {response.status_code})"
+                        )
+                    time.sleep(float(2 ** attempt))
+                    continue
+
+                break
+
             if response.is_redirect:
                 location = response.headers.get("location")
                 if not location:
                     raise ValueError("Source returned an invalid redirect")
                 current = urljoin(current, location)
                 continue
+
             if response.status_code == 403:
                 fallback_text = _fetch_wikipedia_fallback(client, current)
                 if fallback_text:
@@ -249,7 +261,6 @@ def fetch_source(url: str) -> str:
                 return _extract_html_text(response.text)
             return response.text.strip()
     raise ValueError("Too many redirects")
-
 
 def clean_text(text: str) -> str:
     lines = [re.sub(r"\s+", " ", line).strip() for line in text.splitlines()]
