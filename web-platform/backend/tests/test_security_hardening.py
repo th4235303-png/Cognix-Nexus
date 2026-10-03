@@ -42,7 +42,8 @@ class SecurityHardeningTests(unittest.TestCase):
                 validate_production_configuration()
 
     def test_auth_provider_retries_transient_failures(self):
-        response = httpx.Response(200, json={"id": "user-1"})
+        request = httpx.Request("GET", "https://example.test/auth/v1/user")
+        response = httpx.Response(200, request=request, json={"id": "user-1"})
         with patch("app.auth.httpx.get", side_effect=[httpx.ConnectError("temporary"), httpx.ConnectError("temporary"), response]) as get, patch("app.auth.time.sleep"):
             result = _http_get_with_retries("https://example.test/auth/v1/user", {"apikey": "publishable"}, attempts=3)
         self.assertEqual(result.status_code, 200)
