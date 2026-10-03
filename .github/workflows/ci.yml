@@ -2,8 +2,7 @@ name: Cognix Core CI
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   pull_request:
 
 jobs:
@@ -14,28 +13,12 @@ jobs:
     defaults:
       run:
         working-directory: web-platform/frontend
-    env:
-      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
-    services:
-      postgres:
-        image: pgvector/pgvector:pg17
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: cognix_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d cognix_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
-          registry-url: https://registry.npmjs.org
           cache-dependency-path: web-platform/frontend/package-lock.json
       - uses: actions/setup-python@v5
         with:
@@ -65,9 +48,24 @@ jobs:
 
   backend:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
     defaults:
       run:
         working-directory: web-platform/backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cognix_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cognix_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -81,13 +79,14 @@ jobs:
       - run: python -m unittest discover -s tests
         env:
           COGNIX_DEV_MODE: "true"
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
       - run: python -m coverage run --branch -m unittest discover -s tests -p 'test_*.py'
         env:
           COGNIX_DEV_MODE: "true"
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
       - run: python -m coverage report --fail-under=80
       - run: python -m pip install pip-audit
       - run: pip-audit -r requirements.lock
-
 
   mobile:
     runs-on: ubuntu-latest
