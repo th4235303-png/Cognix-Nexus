@@ -89,6 +89,12 @@ def validate_production_configuration() -> None:
             raise RuntimeError("Failed to initialize database") from exc
 
 
+@app.on_event("shutdown")
+def close_database_pool() -> None:
+    if store.database is not None:
+        store.database.close()
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
     if sentry_sdk:
