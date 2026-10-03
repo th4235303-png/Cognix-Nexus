@@ -168,7 +168,10 @@ def process_queued_books(limit: int = 2) -> int:
         with conn.cursor() as cur:
             cur.execute(
                 """SELECT id FROM books
-                   WHERE status IN ('queued','processing','failed')
+                   WHERE source_kind='upload'
+                     AND binary_path IS NOT NULL
+                     AND binary_storage IS NOT NULL
+                     AND status IN ('queued','processing','failed')
                      AND processing_attempts < 3
                      AND (
                        status <> 'processing'
