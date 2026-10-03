@@ -8,6 +8,7 @@ from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
 from app.services.book_storage import BookBinaryStorage
+from app.services.upload_limits import UploadTooLargeError, read_upload_limited
 from app.store import now_iso, store
 
 router = APIRouter(prefix="/brain", tags=["brain-vault"])
@@ -353,11 +354,13 @@ async def upload_book(file: UploadFile = File(...), language: str = "en", descri
     if store.database is None:
         raise HTTPException(status_code=503, detail="Persistent database is required for book uploads")
 
-    data = await file.read()
+    max_upload_bytes = 50 * 1024 * 1024
+    try:
+        data = await read_upload_limited(file, max_upload_bytes)
+    except UploadTooLargeError as exc:
+        raise HTTPException(status_code=413, detail="Document exceeds the 50 MB upload limit") from exc
     if not data:
         raise HTTPException(status_code=400, detail="Uploaded document is empty")
-    if len(data) > 50 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Document exceeds the 50 MB upload limit")
 
     content_hash = sha256(data).hexdigest()
     with store.database.connect() as conn:
