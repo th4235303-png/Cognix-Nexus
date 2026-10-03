@@ -25,8 +25,12 @@ jobs:
       - run: npm run build
       - name: Prevent Supabase service role leakage
         run: |
+          if grep -R -n 'SUPABASE_SERVICE_ROLE_KEY' . --exclude-dir=node_modules --exclude-dir=.next 2>/dev/null; then
+            echo "Service role environment variable found in frontend source."
+            exit 1
+          fi
           if grep -R -n 'SUPABASE_SERVICE_ROLE_KEY' .next 2>/dev/null; then
-            echo "Service role credential or identifier found in frontend build artifacts."
+            echo "Service role environment variable found in frontend build artifacts."
             exit 1
           fi
 
