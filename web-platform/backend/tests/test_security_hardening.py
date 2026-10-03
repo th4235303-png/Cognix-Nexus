@@ -5,8 +5,8 @@ from unittest.mock import patch
 import httpx
 from fastapi import Request
 
-from app.auth import _decode_token, _http_get_with_retries, _verify_with_supabase, auth_required
-from app.main import _cors_origins, global_exception_handler, validate_production_configuration, v1_app
+from app.auth import _decode_token, _http_get_with_retries, _verify_with_supabase, auth_required, authenticate_request
+from app.main import _cors_origins, global_exception_handler, validate_production_configuration, v1_app, rate_limit
 
 
 class SecurityHardeningTests(unittest.TestCase):
@@ -119,6 +119,50 @@ class SecurityHardeningTests(unittest.TestCase):
         schema = v1_app.openapi()
         self.assertEqual(schema["info"]["version"], "1.0.0")
         self.assertTrue(schema["paths"])
+
+    def test_cors_rejects_wildcard_in_production(self):
+        with patch.dict(os.environ, {"COGNIX_ENV": "production", "COGNIX_CORS_ORIGINS": "*"}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "Wildcard"):
+                _cors_origins()
+
+    def test_cors_uses_dev_default(self):
+        with patch.dict(os.environ, {"COGNIX_ENV": "development", "COGNIX_CORS_ORIGINS": ""}, clear=True):
+            self.assertEqual(_cors_origins(), ["http://localhost:3000"])
+
+    def test_auth_required_rejects_missing_bearer(self):
+        request = Request({"type": "http", "method": "GET", "path": "/sources", "headers": [], "query_string": b"", "server": ("test", 80), "client": ("test", 1), "scheme": "http"})
+        with patch.dict(os.environ, {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"}, clear=True):
+            with self.assertRaises(Exception) as ctx:
+                authenticate_request(request)
+        self.assertEqual(getattr(ctx.exception, "status_code", None), 401)
+
+    def test_supabase_auth_rejects_missing_subject(self):
+        request = httpx.Request("GET", "https://example.test/auth/v1/user")
+        response = httpx.Response(200, request=request, json={"email": "user@example.test"})
+        with patch.dict(os.environ, {"COGNIX_SUPABASE_URL": "https://example.test", "COGNIX_SUPABASE_PUBLISHABLE_KEY": "public"}, clear=True), patch("app.auth._http_get_with_retries", return_value=response):
+            with self.assertRaises(Exception) as ctx:
+                _verify_with_supabase("token")
+        self.assertEqual(getattr(ctx.exception, "status_code", None), 401)
+
+    def test_supabase_provider_failure_maps_to_503(self):
+        with patch.dict(os.environ, {"COGNIX_SUPABASE_URL": "https://example.test", "COGNIX_SUPABASE_PUBLISHABLE_KEY": "public"}, clear=True), patch("app.auth._http_get_with_retries", side_effect=httpx.ConnectError("temporary")):
+            with self.assertRaises(Exception) as ctx:
+                _verify_with_supabase("token")
+        self.assertEqual(getattr(ctx.exception, "status_code", None), 503)
+
+    def test_rate_limit_returns_429_after_limit(self):
+        import asyncio
+        from app import main as main_module
+        async def call_next(request):
+            from fastapi.responses import JSONResponse
+            return JSONResponse({"ok": True})
+        request = Request({"type": "http", "method": "GET", "path": "/sources", "headers": [], "query_string": b"", "server": ("test", 80), "client": ("test", 1), "scheme": "http"})
+        with patch.object(main_module, "RATE_LIMIT", 1), patch.object(main_module, "_rate_windows", {}):
+            first = asyncio.run(rate_limit(request, call_next))
+            second = asyncio.run(rate_limit(request, call_next))
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 429)
+
 
 
 if __name__ == "__main__":
