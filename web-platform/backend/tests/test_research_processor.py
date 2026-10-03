@@ -37,9 +37,6 @@ class ResearchProcessorTests(unittest.TestCase):
         self.assertEqual(points.key_points, ["A short summary."])
 
 
-if __name__ == "__main__":
-    unittest.main()
-
 
 def _response(status: int, text: str = "ok", headers: dict | None = None):
     item = Mock()
@@ -87,3 +84,7 @@ class SourceFetchRetryTests(unittest.TestCase):
         self.assertEqual(fetch_source("https://example.com/test"), "timeout recovered")
         self.assertEqual(client.get.call_count, 2)
         sleep.assert_called_once()
+
+
+if __name__ == "__main__":
+    unittest.main()
