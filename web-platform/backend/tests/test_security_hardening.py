@@ -66,7 +66,7 @@ class SecurityHardeningTests(unittest.TestCase):
                 _cors_origins()
 
     def test_versioned_openapi_is_mounted(self):
-        paths = {route.path for route in app.routes}
+        paths = {getattr(route, "path", None) for route in app.routes}
         self.assertIn("/v1", paths)
 
     def test_global_exception_handler_returns_safe_error(self):
