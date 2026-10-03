@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from app.services.research_processor import _wikipedia_rest_url, clean_text, mock_key_points, mock_summary, process_stage
+from app.services.research_processor import _wikipedia_core_api_url, _wikipedia_rest_url, clean_text, mock_key_points, mock_summary, process_stage
 
 
 class ResearchProcessorTests(unittest.TestCase):
@@ -20,6 +20,13 @@ class ResearchProcessorTests(unittest.TestCase):
             "https://en.wikipedia.org/api/rest_v1/page/html/Logistics",
         )
         self.assertIsNone(_wikipedia_rest_url("https://example.com/wiki/Logistics"))
+
+    def test_wikipedia_core_api_fallback_url(self):
+        self.assertEqual(
+            _wikipedia_core_api_url("https://en.wikipedia.org/wiki/Logistics"),
+            ("https://api.wikimedia.org", "en", "Logistics"),
+        )
+        self.assertIsNone(_wikipedia_core_api_url("https://example.com/wiki/Logistics"))
 
     def test_mock_processing_creates_translation_and_key_points(self):
         source = {"url": "https://example.com", "ai_summary": "A short summary."}
