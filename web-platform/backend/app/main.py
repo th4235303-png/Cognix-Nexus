@@ -14,14 +14,19 @@ try:
 except ImportError:
     sentry_sdk = None
 
-from app.auth import authenticate_request
+from app.auth import auth_required, authenticate_request
 from app.routers import activity, brain_advanced, brain_agent, brain_documents, brain_media, brain_vault, exports, integrations, intelligence, level_up, processing, reviews, sources, usage
 from app.store import store
 
 API_VERSION = "0.1.0"
 DEFAULT_CORS_ORIGINS = ("http://localhost:3000",)
 RATE_LIMIT = int(os.getenv("COGNIX_RATE_LIMIT_PER_MINUTE", "120"))
-REQUIRE_DATABASE = os.getenv("COGNIX_REQUIRE_DATABASE", "false").strip().lower() in {"1", "true", "yes", "on"}
+def _env_flag(name: str, default: str = "false") -> bool:
+    return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
+COGNIX_ENV = os.getenv("COGNIX_ENV", "").strip().lower()
+REQUIRE_DATABASE = _env_flag("COGNIX_REQUIRE_DATABASE", "true" if COGNIX_ENV == "production" else "false")
 RATE_LIMIT_MAX_IDENTITIES = int(os.getenv("COGNIX_RATE_LIMIT_MAX_IDENTITIES", "10000"))
 _rate_windows: dict[str, deque[float]] = defaultdict(deque)
 
@@ -44,6 +49,37 @@ app = FastAPI(
     version=API_VERSION,
     description="Research intelligence and personal knowledge OS API for Cognix Nexus.",
 )
+
+
+@app.on_event("startup")
+def validate_production_configuration() -> None:
+    if COGNIX_ENV == "production":
+        if not os.getenv("DATABASE_URL", "").strip():
+            raise RuntimeError("DATABASE_URL must be set in production")
+        if not auth_required():
+            raise RuntimeError("Authentication must be enabled in production; set COGNIX_AUTH_REQUIRED=true")
+    if store.database is not None:
+        try:
+            store.initialize()
+        except Exception as exc:
+            raise RuntimeError("Failed to initialize database") from exc
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    if sentry_sdk:
+        sentry_sdk.capture_exception(exc)
+    import logging
+    logging.getLogger("cognix").exception(
+        "Unhandled exception request_id=%s method=%s path=%s",
+        getattr(request.state, "request_id", "unknown"),
+        request.method,
+        request.url.path[:500],
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": {"code": "INTERNAL_ERROR", "message": "Internal server error"}},
+    )
 
 
 @app.middleware("http")
