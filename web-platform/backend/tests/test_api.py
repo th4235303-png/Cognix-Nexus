@@ -43,7 +43,7 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(health.json()["status"], "ok")
         root = self.client.get("/")
         self.assertEqual(root.status_code, 200)
-        self.assertEqual(root.json()["service"], "cognix-core-api")
+        self.assertEqual(root.json()["service"], "cognix-nexus-api")
         self.assertIn("x-request-id", health.headers)
         ready = self.client.get("/ready")
         self.assertEqual(ready.status_code, 200)
