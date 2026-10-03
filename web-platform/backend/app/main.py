@@ -53,7 +53,8 @@ app = FastAPI(
 
 @app.on_event("startup")
 def validate_production_configuration() -> None:
-    if COGNIX_ENV == "production":
+    environment = os.getenv("COGNIX_ENV", "").strip().lower()
+    if environment == "production":
         if not os.getenv("DATABASE_URL", "").strip():
             raise RuntimeError("DATABASE_URL must be set in production")
         if not auth_required():
