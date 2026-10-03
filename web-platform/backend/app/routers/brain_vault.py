@@ -256,10 +256,46 @@ def get_graph() -> dict:
 
 
 @router.get("/query")
-def query_brain(q: str) -> dict:
-    query = q.strip().lower()
+def query_brain(q: str, limit: int = 12) -> dict:
+    query = q.strip()
     if not query:
         raise HTTPException(status_code=400, detail="Query is required")
+    limit = max(1, min(limit, 50))
+    if store.database is not None:
+        terms = [term for term in query.lower().split() if term]
+        pattern = "%" + "%".join(terms) + "%"
+        with store.database.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT b.id AS book_id, b.title AS book_title,
+                              ch.id AS chapter_id, c.id AS chunk_id,
+                              ch.title AS chapter_title, c.sequence, c.content
+                       FROM chunks c
+                       JOIN chapters ch ON ch.id=c.chapter_id
+                       JOIN books b ON b.id=ch.book_id
+                       WHERE lower(c.content) LIKE %s
+                       ORDER BY c.created_at DESC
+                       LIMIT %s""",
+                    (pattern, limit),
+                )
+                rows = cur.fetchall()
+        items = []
+        for row in rows:
+            haystack = row["content"].lower()
+            score = sum(haystack.count(term) for term in terms)
+            items.append({
+                "book_id": row["book_id"], "book_title": row["book_title"],
+                "chapter_id": row["chapter_id"], "chapter_title": row["chapter_title"],
+                "chunk_id": row["chunk_id"], "sequence": row["sequence"],
+                "score": score, "content": row["content"],
+            })
+        items.sort(key=lambda item: item["score"], reverse=True)
+        return {
+            "query": q, "mode": "evidence_search", "answer": None,
+            "items": items, "total": len(items),
+            "message": "Semantic embeddings and LLM synthesis are not enabled yet; results are evidence-ranked text matches.",
+        }
+    query = query.lower()
     terms = [term for term in query.split() if term]
     evidence = []
     for book in store.brain_books.values():
@@ -267,23 +303,10 @@ def query_brain(q: str) -> dict:
             for chunk in chapter["chunks"]:
                 score = sum(chunk["content"].lower().count(term) for term in terms)
                 if score:
-                    evidence.append({
-                        "book_id": book["id"],
-                        "book_title": book["title"],
-                        "chapter_id": chapter["id"],
-                        "chunk_id": chunk["id"],
-                        "score": score,
-                        "content": chunk["content"],
-                    })
+                    evidence.append({"book_id": book["id"], "book_title": book["title"], "chapter_id": chapter["id"], "chunk_id": chunk["id"], "score": score, "content": chunk["content"]})
     evidence.sort(key=lambda item: item["score"], reverse=True)
-    return {
-        "query": q,
-        "mode": "evidence_search",
-        "answer": None,
-        "items": evidence[:12],
-        "total": len(evidence),
-        "message": "Semantic embeddings and LLM synthesis are not enabled yet; results are evidence-ranked text matches.",
-    }
+    return {"query": q, "mode": "evidence_search", "answer": None, "items": evidence[:limit], "total": len(evidence),
+            "message": "Semantic embeddings and LLM synthesis are not enabled yet; results are evidence-ranked text matches."}
 
 
 @router.post("/concept-links", status_code=201)
