@@ -153,7 +153,7 @@ def main() -> None:
             if books_processed:
                 logger.info("book_processing_cycle processed=%d", books_processed)
         except Exception as exc:
-            logger.warning("book_processing_cycle_failed error=%s", exc)
+            logger.warning("book_processing_cycle_failed error_type=%s", type(exc).__name__)
         try:
             indexed = asyncio.run(_index_unembedded_chunks())
             if indexed:
@@ -162,7 +162,7 @@ def main() -> None:
             if completed_books:
                 logger.info("book_processing_finalize completed=%d", completed_books)
         except Exception as exc:
-            logger.warning("embedding_index_cycle_failed error=%s", exc)
+            logger.warning("embedding_index_cycle_failed error_type=%s", type(exc).__name__)
         enqueue_due_agent_schedules()
         run_due_agent_jobs()
         _advance_exports()
