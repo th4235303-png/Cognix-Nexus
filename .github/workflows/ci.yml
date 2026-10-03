@@ -14,6 +14,21 @@ jobs:
     defaults:
       run:
         working-directory: web-platform/frontend
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
+    services:
+      postgres:
+        image: pgvector/pgvector:pg17
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: cognix_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d cognix_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -72,21 +87,6 @@ jobs:
       - run: python -m coverage report --fail-under=80
       - run: python -m pip install pip-audit
       - run: pip-audit -r requirements.lock
-    services:
-      postgres:
-        image: pgvector/pgvector:pg17
-        env:
-          POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: cognix_test
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U postgres -d cognix_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-      env:
-        DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
 
 
   mobile:
