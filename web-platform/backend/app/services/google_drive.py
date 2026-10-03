@@ -73,6 +73,8 @@ def upload_export(source: dict, package: ExportPackage) -> str:
     service = build("drive", "v3", credentials=credentials, cache_discovery=False)
     root_id = os.getenv("GOOGLE_DRIVE_ROOT_FOLDER_ID", "").strip() or None
     folder_id = _find_or_create_folder(service, source["id"], root_id)
+    # Every export object is upserted by name within the same folder, making
+    # retries idempotent even after a worker crash between files.
     for name, (content, mime_type) in build_file_contents(source).items():
         metadata = {"name": name, "parents": [folder_id]}
         media = MediaInMemoryUpload(content.encode("utf-8"), mimetype=mime_type, resumable=False)
