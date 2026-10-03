@@ -1,4 +1,6 @@
 import os
+import random
+import time
 
 import httpx
 import jwt
@@ -10,7 +12,39 @@ PUBLIC_PATHS = {"/", "/health", "/ready", "/docs", "/openapi.json", "/redoc", "/
 
 
 def auth_required() -> bool:
-    return os.getenv("COGNIX_AUTH_REQUIRED", "false").strip().lower() in {"1", "true", "yes", "on"}
+    """Authentication is fail-closed; dev mode must explicitly opt in."""
+    dev_mode = os.getenv("COGNIX_DEV_MODE", "false").strip().lower() in {"1", "true", "yes", "on"}
+    if dev_mode:
+        return False
+    return os.getenv("COGNIX_AUTH_REQUIRED", "true").strip().lower() in {"1", "true", "yes", "on"}
+
+
+def _http_get_with_retries(
+    url: str,
+    headers: dict[str, str],
+    timeout: float = 10.0,
+    attempts: int = 3,
+) -> httpx.Response:
+    """Bounded retry/backoff for external auth calls; never retries 401."""
+    last_error: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            response = httpx.get(url, headers=headers, timeout=timeout)
+            if response.status_code == 401:
+                return response
+            response.raise_for_status()
+            return response
+        except httpx.HTTPStatusError as exc:
+            last_error = exc
+            if exc.response.status_code == 401 or attempt == attempts - 1:
+                raise
+        except httpx.HTTPError as exc:
+            last_error = exc
+            if attempt == attempts - 1:
+                raise
+        if attempt < attempts - 1:
+            time.sleep((2 ** attempt) + random.random())
+    raise last_error or RuntimeError("Authentication request failed")
 
 
 def _decode_token(token: str) -> dict:
@@ -49,10 +83,11 @@ def _verify_with_supabase(token: str) -> dict:
         )
 
     try:
-        response = httpx.get(
+        response = _http_get_with_retries(
             f"{base_url}/auth/v1/user",
             headers={"apikey": publishable_key, "Authorization": f"Bearer {token}"},
             timeout=10.0,
+            attempts=3,
         )
         if response.status_code == 401:
             raise HTTPException(status_code=401, detail={"code": "INVALID_TOKEN", "message": "Invalid or expired bearer token"})
