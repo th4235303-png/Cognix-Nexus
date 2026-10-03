@@ -270,7 +270,10 @@ class Database:
                         file_type=EXCLUDED.file_type, source_url=EXCLUDED.source_url, status=EXCLUDED.status,
                         description=EXCLUDED.description, content_hash=EXCLUDED.content_hash,
                         binary_storage=EXCLUDED.binary_storage, binary_path=EXCLUDED.binary_path,
-                        binary_sha256=EXCLUDED.binary_sha256, updated_at=EXCLUDED.updated_at""",
+                        binary_sha256=EXCLUDED.binary_sha256, original_filename=EXCLUDED.original_filename,
+                        processing_stage=EXCLUDED.processing_stage, processing_attempts=EXCLUDED.processing_attempts,
+                        processing_error=EXCLUDED.processing_error, processing_started_at=EXCLUDED.processing_started_at,
+                        processed_at=EXCLUDED.processed_at, updated_at=EXCLUDED.updated_at""",
                     book_params,
                 )
                 cur.execute("DELETE FROM chunks WHERE chapter_id IN (SELECT id FROM chapters WHERE book_id = %s)", (book["id"],))
@@ -323,7 +326,13 @@ class Database:
                 "file_type": row["file_type"], "source_kind": row["source_kind"], "source_url": row.get("source_url"),
                 "status": row["status"], "description": row.get("description"), "content_hash": row.get("content_hash"),
                 "binary_storage": row.get("binary_storage"), "binary_path": row.get("binary_path"),
-                "binary_sha256": row.get("binary_sha256"), "created_at": row["created_at"].isoformat(),
+                "binary_sha256": row.get("binary_sha256"), "original_filename": row.get("original_filename"),
+                "processing_stage": row.get("processing_stage") or "queued",
+                "processing_attempts": row.get("processing_attempts") or 0,
+                "processing_error": row.get("processing_error"),
+                "processing_started_at": row.get("processing_started_at").isoformat() if row.get("processing_started_at") else None,
+                "processed_at": row.get("processed_at").isoformat() if row.get("processed_at") else None,
+                "created_at": row["created_at"].isoformat(),
                 "updated_at": row["updated_at"].isoformat(), "chapters": [], "chunk_count": 0}
 
     @staticmethod
