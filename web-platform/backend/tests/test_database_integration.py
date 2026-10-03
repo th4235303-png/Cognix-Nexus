@@ -7,6 +7,7 @@ import psycopg
 from app.persistence import Database
 
 
+@unittest.skipUnless(os.getenv("DATABASE_URL"), "DATABASE_URL required for integration tests")
 class DatabaseIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
