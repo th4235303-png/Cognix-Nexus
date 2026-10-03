@@ -55,6 +55,9 @@ class Database:
     def close(self) -> None:
         self._pool.close()
 
+    def close(self) -> None:
+        self._pool.close()
+
     def ping(self) -> bool:
         try:
             with self.connect() as conn:
