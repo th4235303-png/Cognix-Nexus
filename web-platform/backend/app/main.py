@@ -1,6 +1,8 @@
 import json
 import os
 import time
+import logging
+import re
 from collections import defaultdict, deque
 from uuid import uuid4
 
@@ -8,6 +10,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
+from pythonjsonlogger import jsonlogger
 
 try:
     import sentry_sdk
@@ -18,8 +21,23 @@ from app.auth import auth_required, authenticate_request
 from app.routers import activity, brain_advanced, brain_agent, brain_documents, brain_media, brain_vault, exports, integrations, intelligence, level_up, processing, reviews, sources, usage
 from app.store import store
 
-API_VERSION = "0.1.0"
+API_VERSION = "1.0.0"
 DEFAULT_CORS_ORIGINS = ("http://localhost:3000",)
+logger = logging.getLogger("cognix")
+if not logger.handlers:
+    _handler = logging.StreamHandler()
+    _handler.setFormatter(jsonlogger.JsonFormatter("%(asctime)s %(levelname)s %(name)s %(message)s"))
+    logger.addHandler(_handler)
+    logger.setLevel(os.getenv("COGNIX_LOG_LEVEL", "INFO"))
+    logger.propagate = False
+
+_SENSITIVE_QUERY = re.compile(r"(?i)(token|access_token|refresh_token|code|secret|key|password)=([^&]+)")
+
+
+def _safe_request_path(request: Request) -> str:
+    path = request.url.path[:500]
+    query = _SENSITIVE_QUERY.sub(r"\1=[REDACTED]", request.url.query[:500])
+    return f"{path}?{query}" if query else path
 RATE_LIMIT = int(os.getenv("COGNIX_RATE_LIMIT_PER_MINUTE", "120"))
 def _env_flag(name: str, default: str = "false") -> bool:
     return os.getenv(name, default).strip().lower() in {"1", "true", "yes", "on"}
@@ -32,8 +50,13 @@ _rate_windows: dict[str, deque[float]] = defaultdict(deque)
 
 
 def _cors_origins() -> list[str]:
-    raw = os.getenv("COGNIX_CORS_ORIGINS", "")
-    configured = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    raw = os.getenv("COGNIX_CORS_ORIGINS", "").strip()
+    configured = [origin.strip().rstrip("/") for origin in raw.split(",") if origin.strip()]
+    if os.getenv("COGNIX_ENV", "").strip().lower() == "production":
+        if not configured:
+            raise RuntimeError("COGNIX_CORS_ORIGINS is required in production")
+        if "*" in configured:
+            raise RuntimeError("Wildcard CORS origin is not allowed in production")
     return configured or list(DEFAULT_CORS_ORIGINS)
 
 
@@ -115,7 +138,7 @@ async def request_context(request: Request, call_next):
                             duration_ms,
                             json.dumps({
                                 "method": request.method,
-                                "path": request.url.path[:500],
+                                "path": _safe_request_path(request),
                                 "status_code": response.status_code,
                             }),
                         ),
@@ -164,34 +187,47 @@ allowed_hosts = [host.strip() for host in os.getenv("COGNIX_ALLOWED_HOSTS", "").
 if allowed_hosts:
     app.add_middleware(TrustedHostMiddleware, allowed_hosts=allowed_hosts)
 
+_cors_allowed_origins = _cors_origins()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=_cors_origins(),
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_origins=_cors_allowed_origins,
+    allow_credentials=bool(_cors_allowed_origins),
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID"],
 )
 
 
-app.include_router(sources.router, prefix="/sources", tags=["sources"])
-app.include_router(brain_vault.router)
-app.include_router(brain_documents.router)
-app.include_router(brain_media.router)
-app.include_router(brain_advanced.router)
-app.include_router(brain_agent.router)
-app.include_router(intelligence.router)
-app.include_router(level_up.router)
-app.include_router(processing.router, prefix="/processing", tags=["processing"])
-app.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
-app.include_router(exports.router, prefix="/exports", tags=["exports"])
-app.include_router(activity.router, prefix="/activity", tags=["activity"])
-app.include_router(usage.router, prefix="/usage", tags=["usage"])
-app.include_router(integrations.router)
+def _register_api_routes(target):
+    target.include_router(sources.router, prefix="/sources", tags=["sources"])
+    target.include_router(brain_vault.router)
+    target.include_router(brain_documents.router)
+    target.include_router(brain_media.router)
+    target.include_router(brain_advanced.router)
+    target.include_router(brain_agent.router)
+    target.include_router(intelligence.router)
+    target.include_router(level_up.router)
+    target.include_router(processing.router, prefix="/processing", tags=["processing"])
+    target.include_router(reviews.router, prefix="/reviews", tags=["reviews"])
+    target.include_router(exports.router, prefix="/exports", tags=["exports"])
+    target.include_router(activity.router, prefix="/activity", tags=["activity"])
+    target.include_router(usage.router, prefix="/usage", tags=["usage"])
+    target.include_router(integrations.router)
+
+
+_register_api_routes(app)
+
+v1_app = FastAPI(
+    title="Cognix Nexus API v1",
+    version="1.0.0",
+    description="Versioned Cognix Nexus API.",
+)
+_register_api_routes(v1_app)
+app.mount("/v1", v1_app)
 
 
 @app.get("/")
 def root() -> dict[str, str]:
-    return {"service": "cognix-nexus-api", "version": API_VERSION, "docs": "/docs"}
+    return {"service": "cognix-nexus-api", "version": API_VERSION, "docs": "/v1/docs", "openapi": "/v1/openapi.json"}
 
 
 @app.get("/health")
