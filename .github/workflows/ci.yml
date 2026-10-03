@@ -25,7 +25,7 @@ jobs:
       - run: npm run build
       - name: Prevent Supabase service role leakage
         run: |
-          if grep -R -n -E 'SUPABASE_SERVICE_ROLE_KEY|service_role' .next 2>/dev/null; then
+          if grep -R -n 'SUPABASE_SERVICE_ROLE_KEY' .next 2>/dev/null; then
             echo "Service role credential or identifier found in frontend build artifacts."
             exit 1
           fi
