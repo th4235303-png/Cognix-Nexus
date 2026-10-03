@@ -6,6 +6,7 @@ import re
 import socket
 import asyncio
 import json
+import time
 from dataclasses import dataclass
 from html.parser import HTMLParser
 from urllib.parse import quote, unquote, urljoin, urlparse
@@ -15,6 +16,7 @@ import httpx
 
 MAX_DOCUMENT_BYTES = int(os.getenv("COGNIX_MAX_DOCUMENT_BYTES", str(2 * 1024 * 1024)))
 MAX_REDIRECTS = 5
+FETCH_RETRY_ATTEMPTS = 3
 USER_AGENT = os.getenv("COGNIX_FETCH_USER_AGENT", "Cognix-Nexus/0.1 research-fetcher")
 
 
@@ -197,7 +199,30 @@ def fetch_source(url: str) -> str:
     ) as client:
         for _ in range(MAX_REDIRECTS + 1):
             _assert_public_url(current)
-            response = client.get(current)
+            try:
+                response = client.get(current)
+            except httpx.TimeoutException as exc:
+                raise ValueError("Source fetch timed out") from exc
+            except httpx.HTTPError as exc:
+                if _ + 1 >= FETCH_RETRY_ATTEMPTS:
+                    raise ValueError("Source fetch failed due to a network error") from exc
+                time.sleep(2 ** _)
+                continue
+            if response.status_code == 429:
+                if _ + 1 >= FETCH_RETRY_ATTEMPTS:
+                    raise ValueError("Source rate limited after bounded retries (HTTP 429)")
+                retry_after = response.headers.get("retry-after", "").strip()
+                try:
+                    delay = min(10.0, max(0.0, float(retry_after)))
+                except ValueError:
+                    delay = float(2 ** _)
+                time.sleep(delay)
+                continue
+            if 500 <= response.status_code <= 599:
+                if _ + 1 >= FETCH_RETRY_ATTEMPTS:
+                    raise ValueError(f"Source server error after bounded retries (HTTP {response.status_code})")
+                time.sleep(float(2 ** _))
+                continue
             if response.is_redirect:
                 location = response.headers.get("location")
                 if not location:
