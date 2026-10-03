@@ -4,7 +4,7 @@ import hashlib
 import os
 from pathlib import Path
 
-from app.services.object_storage import b2_storage, r2_storage
+from app.services.object_storage import b2_storage, r2_storage, supabase_storage
 
 
 class BookBinaryStorage:
@@ -21,6 +21,8 @@ class BookBinaryStorage:
             return b2_storage().configured
         if self.provider == "r2":
             return r2_storage().configured
+        if self.provider == "supabase":
+            return supabase_storage().configured
         return self.root is not None
 
     def _object_storage(self):
@@ -28,6 +30,8 @@ class BookBinaryStorage:
             return b2_storage()
         if self.provider == "r2":
             return r2_storage()
+        if self.provider == "supabase":
+            return supabase_storage()
         return None
 
     def put(self, book_id: str, filename: str, data: bytes) -> str:
