@@ -1,5 +1,7 @@
 from hashlib import sha256
 
+from fastapi import HTTPException
+
 from app.services.research_processor import ProcessingResult, process_stage
 from app.store import now_iso, store
 
@@ -55,6 +57,14 @@ def _fact_check(source: dict) -> None:
 def advance(task_id: str) -> dict:
     task = store.tasks[task_id]
     current_stage = task["stage"]
+    if current_stage == "needs_review":
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "REVIEW_REQUIRED",
+                "message": "Processing tasks must be approved through the review endpoint.",
+            },
+        )
     index = STAGES.index(current_stage)
     next_stage = STAGES[min(index + 1, len(STAGES) - 1)]
     source = store.sources.get(task["source_id"])

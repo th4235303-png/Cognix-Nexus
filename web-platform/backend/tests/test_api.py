@@ -117,6 +117,94 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(blocked.json()["detail"]["code"], "CRITICAL_WARNINGS")
         self.assertEqual(store.sources[source["id"]]["status"], "new")
 
+    def test_approval_requires_translation(self):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/missing-translation"}
+        ).json()["source"]
+        store.sources[source["id"]].update(
+            {"status": "needs_review", "processing_stage": "needs_review"}
+        )
+
+        blocked = self.client.post(f"/reviews/{source['id']}/approve", json={})
+
+        self.assertEqual(blocked.status_code, 409)
+        self.assertEqual(blocked.json()["detail"]["code"], "MISSING_TRANSLATION")
+        self.assertEqual(store.sources[source["id"]]["status"], "needs_review")
+        self.assertNotIn(source["id"], store.reviews)
+
+    def _create_task_at_review(self, critical_warnings=None, translation="Reviewed translation"):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/review-gate"}
+        ).json()["source"]
+        task = self.client.post(
+            "/processing", json={"source_id": source["id"]}
+        ).json()
+        store.sources[source["id"]].update(
+            {
+                "status": "needs_review",
+                "processing_stage": "needs_review",
+                "critical_warnings": critical_warnings or [],
+                "myanmar_translation": translation,
+            }
+        )
+        store.tasks[task["id"]].update(
+            {"stage": "needs_review", "status": "completed", "progress": 89}
+        )
+        return source["id"], task["id"]
+
+    def test_processing_advance_cannot_approve_task_at_review(self):
+        source_id, task_id = self._create_task_at_review()
+
+        response = self.client.post(f"/processing/{task_id}/advance")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["detail"]["code"], "REVIEW_REQUIRED")
+        self.assertEqual(store.tasks[task_id]["stage"], "needs_review")
+        self.assertEqual(store.sources[source_id]["status"], "needs_review")
+        self.assertNotIn(source_id, store.reviews)
+
+    def test_processing_advance_cannot_bypass_critical_review_warnings(self):
+        source_id, task_id = self._create_task_at_review(
+            critical_warnings=["Missing citation"]
+        )
+
+        response = self.client.post(f"/processing/{task_id}/advance")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(store.tasks[task_id]["stage"], "needs_review")
+        self.assertEqual(store.sources[source_id]["status"], "needs_review")
+        self.assertNotIn(source_id, store.reviews)
+
+    def test_processing_advance_cannot_bypass_missing_translation(self):
+        source_id, task_id = self._create_task_at_review(translation=None)
+
+        response = self.client.post(f"/processing/{task_id}/advance")
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(store.tasks[task_id]["stage"], "needs_review")
+        self.assertEqual(store.sources[source_id]["status"], "needs_review")
+        self.assertNotIn(source_id, store.reviews)
+
+    def test_review_endpoint_approves_task_at_review(self):
+        source_id, task_id = self._create_task_at_review()
+
+        response = self.client.post(f"/reviews/{source_id}/approve", json={})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["status"], "approved")
+        self.assertEqual(store.tasks[task_id]["stage"], "needs_review")
+        self.assertEqual(store.sources[source_id]["status"], "approved")
+        self.assertEqual(
+            store.sources[source_id]["approved_myanmar"], "Reviewed translation"
+        )
+        self.assertEqual(store.reviews[source_id]["status"], "approved")
+        self.assertTrue(
+            any(
+                event["action"] == "approved" and event["target"] == source_id
+                for event in store.activity
+            )
+        )
+
     def test_claims_and_trust_score_are_separate(self):
         source = self.client.post(
             "/sources", json={"url": "https://example.com/claims"}
