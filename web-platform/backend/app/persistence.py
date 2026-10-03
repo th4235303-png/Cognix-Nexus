@@ -121,12 +121,6 @@ class Database:
                 # Keep startup state bounded: chapters/chunks are loaded on demand by book APIs.
                 cur.execute("SELECT * FROM books ORDER BY created_at")
                 books = {row["id"]: self._book_row(row) for row in cur.fetchall()}
-                cur.execute(
-                    """SELECT book_id, count(*) AS chunk_count
-                       FROM chunks
-                       WHERE book_id IS NOT NULL
-                       GROUP BY book_id"""
-                ) if False else None
                 cur.execute("SELECT * FROM notes ORDER BY updated_at DESC")
                 notes = {row["id"]: self._note_row(row) for row in cur.fetchall()}
                 cur.execute("SELECT * FROM note_sources ORDER BY created_at")
