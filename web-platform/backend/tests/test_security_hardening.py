@@ -204,6 +204,30 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertEqual(getattr(ctx.exception, "status_code", None), 503)
 
 
+    def test_authenticate_request_public_path_bypasses_auth(self):
+        request = Request({"type": "http", "method": "GET", "path": "/health", "headers": [], "query_string": b"", "server": ("test", 80), "client": ("test", 1), "scheme": "http"})
+        with patch.dict(os.environ, {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"}, clear=True):
+            self.assertEqual(authenticate_request(request)["sub"], "anonymous")
+
+    def test_authenticate_request_with_valid_jwt(self):
+        import jwt
+        request = Request({"type": "http", "method": "GET", "path": "/sources", "headers": [(b"authorization", b"Bearer token")], "query_string": b"", "server": ("test", 80), "client": ("test", 1), "scheme": "http"})
+        with patch.dict(os.environ, {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false", "COGNIX_JWT_SECRET": "test-secret-key-012345678901234567890123"}, clear=True), patch("app.auth._decode_token", return_value={"sub": "user-4"}):
+            self.assertEqual(authenticate_request(request)["sub"], "user-4")
+
+    def test_decode_token_valid_issuer_and_audience(self):
+        import jwt
+        secret = "test-secret-key-012345678901234567890123"
+        with patch.dict(os.environ, {"COGNIX_JWT_SECRET": secret, "COGNIX_JWT_ISSUER": "cognix", "COGNIX_JWT_AUDIENCE": "web"}, clear=True):
+            token = jwt.encode({"sub": "user-5", "iss": "cognix", "aud": "web"}, secret, algorithm="HS256")
+            claims = _decode_token(token)
+        self.assertEqual(claims["sub"], "user-5")
+
+    def test_cors_accepts_multiple_explicit_origins(self):
+        with patch.dict(os.environ, {"COGNIX_ENV": "development", "COGNIX_CORS_ORIGINS": "https://a.example, https://b.example/"}, clear=True):
+            self.assertEqual(_cors_origins(), ["https://a.example", "https://b.example"])
+
+
 
 if __name__ == "__main__":
     unittest.main()
