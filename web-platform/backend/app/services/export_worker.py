@@ -22,6 +22,7 @@ def advance_export_job(export_id: str) -> dict:
         if job["status"] == "queued":
             previous = job["status"]
             job["status"] = "uploading"
+            store.save_export(job)
         elif job["status"] == "uploading":
             previous = job["status"]
             source = store.sources.get(job["source_id"])
