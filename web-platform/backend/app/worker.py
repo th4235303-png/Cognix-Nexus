@@ -142,31 +142,35 @@ def _start_health_server() -> None:
 def main() -> None:
     logging.basicConfig(level=os.getenv("COGNIX_WORKER_LOG_LEVEL", "INFO"))
     _start_health_server()
-    require_database = os.getenv("COGNIX_REQUIRE_DATABASE", "false").strip().lower() in {"1", "true", "yes", "on"}
+    require_database = os.getenv("COGNIX_REQUIRE_DATABASE", "true" if os.getenv("COGNIX_ENV", "").strip().lower() == "production" else "false").strip().lower() in {"1", "true", "yes", "on"}
     if require_database and store.database is None:
         raise RuntimeError("COGNIX_REQUIRE_DATABASE is enabled but DATABASE_URL is not configured")
     logger.info("worker_started persistence=%s database_configured=%s poll_seconds=%s", store.persistence_mode, bool(store.database), POLL_SECONDS)
-    while True:
-        run_once()
-        try:
-            books_processed = process_queued_books(limit=2)
-            if books_processed:
-                logger.info("book_processing_cycle processed=%d", books_processed)
-        except Exception as exc:
-            logger.warning("book_processing_cycle_failed error_type=%s", type(exc).__name__)
-        try:
-            indexed = asyncio.run(_index_unembedded_chunks())
-            if indexed:
-                logger.info("embedding_index_cycle indexed=%d model=%s", indexed, embedding_provider.model)
-            completed_books = finalize_indexed_books()
-            if completed_books:
-                logger.info("book_processing_finalize completed=%d", completed_books)
-        except Exception as exc:
-            logger.warning("embedding_index_cycle_failed error_type=%s", type(exc).__name__)
-        enqueue_due_agent_schedules()
-        run_due_agent_jobs()
-        _advance_exports()
-        time.sleep(POLL_SECONDS)
+    try:
+        while True:
+            run_once()
+            try:
+                books_processed = process_queued_books(limit=2)
+                if books_processed:
+                    logger.info("book_processing_cycle processed=%d", books_processed)
+            except Exception as exc:
+                logger.warning("book_processing_cycle_failed error_type=%s", type(exc).__name__)
+            try:
+                indexed = asyncio.run(_index_unembedded_chunks())
+                if indexed:
+                    logger.info("embedding_index_cycle indexed=%d model=%s", indexed, embedding_provider.model)
+                completed_books = finalize_indexed_books()
+                if completed_books:
+                    logger.info("book_processing_finalize completed=%d", completed_books)
+            except Exception as exc:
+                logger.warning("embedding_index_cycle_failed error_type=%s", type(exc).__name__)
+            enqueue_due_agent_schedules()
+            run_due_agent_jobs()
+            _advance_exports()
+            time.sleep(POLL_SECONDS)
+    finally:
+        if store.database:
+            store.database.close()
 
 
 if __name__ == "__main__":
