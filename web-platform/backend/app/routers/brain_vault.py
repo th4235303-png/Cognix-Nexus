@@ -7,7 +7,6 @@ from uuid import uuid4
 from fastapi import APIRouter, File, HTTPException, UploadFile
 from pydantic import BaseModel, Field
 
-from app.services.book_ingestion import extract_document
 from app.services.book_storage import BookBinaryStorage
 from app.store import now_iso, store
 
@@ -315,80 +314,81 @@ def create_concept_link(payload: ConceptLinkCreate) -> dict:
 
 @router.post("/books/upload", status_code=201)
 async def upload_book(file: UploadFile = File(...), language: str = "en", description: str | None = None) -> dict:
+    """Persist a PDF/EPUB and enqueue worker-owned extraction.
+
+    The API never performs document extraction. This keeps large uploads off the
+    request path and makes API/worker storage shared and retryable.
+    """
     filename = file.filename or "document"
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if suffix not in {"pdf", "epub"}:
         raise HTTPException(status_code=400, detail="Only PDF and EPUB uploads are supported")
+    if store.database is None:
+        raise HTTPException(status_code=503, detail="Persistent database is required for book uploads")
+
     data = await file.read()
     if not data:
         raise HTTPException(status_code=400, detail="Uploaded document is empty")
-    if len(data) > 25 * 1024 * 1024:
-        raise HTTPException(status_code=413, detail="Document exceeds the 25 MB upload limit")
-    try:
-        document = extract_document(data, filename, suffix)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Document extraction failed: {exc}") from exc
+    if len(data) > 50 * 1024 * 1024:
+        raise HTTPException(status_code=413, detail="Document exceeds the 50 MB upload limit")
+
+    content_hash = sha256(data).hexdigest()
+    with store.database.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT * FROM books WHERE content_hash=%s ORDER BY created_at LIMIT 1", (content_hash,))
+            existing = cur.fetchone()
+    if existing:
+        return {"id": existing["id"], "status": existing["status"], "processing_stage": existing.get("processing_stage") or "queued",
+                "content_hash": content_hash, "idempotent": True, "book": store._book_row(existing)}
 
     book_id = f"BOOK-{uuid4().hex[:8].upper()}"
+    binary_path = None
     try:
         binary_path = BookBinaryStorage().put(book_id, filename, data)
-    except RuntimeError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-
-    now = now_iso()
-    chapters = []
-    total_chunks = 0
-    for chapter_number, section in enumerate(document.sections, start=1):
-        section_text = section["text"]
-        chunks = []
-        for index, content in enumerate(_chunk_text(section_text), start=1):
-            chunk = {
-                "id": f"CHK-{uuid4().hex[:8].upper()}",
-                "chapter_id": "",
-                "sequence": index,
-                "content": content,
-                "page_number": section.get("page_number"),
-                "source_section": section.get("title"),
-                "start_offset": None,
-                "end_offset": None,
-                "token_count": max(1, len(content.split())),
-                "created_at": now,
-            }
-            chunks.append(chunk)
-        chapter_id = f"CH-{uuid4().hex[:8].upper()}"
-        for chunk in chunks:
-            chunk["chapter_id"] = chapter_id
-        chapters.append({
-            "id": chapter_id,
-            "book_id": book_id,
-            "chapter_number": chapter_number,
-            "title": section.get("title") or f"Section {chapter_number}",
+        now = now_iso()
+        book = {
+            "id": book_id,
+            "title": filename.rsplit(".", 1)[0] or "Untitled",
+            "author": None,
+            "language": language,
+            "file_type": suffix,
+            "source_kind": "upload",
+            "source_url": None,
+            "status": "queued",
+            "description": description,
+            "content_hash": content_hash,
             "created_at": now,
-            "chunks": chunks,
-        })
-        total_chunks += len(chunks)
-
-    book = {
-        "id": book_id,
-        "title": document.title,
-        "author": document.author,
-        "language": language,
-        "file_type": document.file_type,
-        "source_kind": "upload",
-        "source_url": None,
-        "status": "ready",
-        "description": description,
-        "content_hash": sha256(data).hexdigest(),
-        "created_at": now,
-        "updated_at": now,
-        "chapters": chapters,
-        "chunk_count": total_chunks,
-        "original_filename": filename,
-        "binary_storage": os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower(),
-        "binary_path": binary_path,
-        "binary_sha256": sha256(data).hexdigest(),
-    }
-    store.brain_books[book_id] = book
-    store.save_brain_book(book)
-    store.add_activity("brain_book_uploaded", book_id, "new", "ready")
-    return book
+            "updated_at": now,
+            "chapters": [],
+            "chunk_count": 0,
+            "original_filename": filename,
+            "binary_storage": os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower(),
+            "binary_path": binary_path,
+            "binary_sha256": content_hash,
+            "processing_stage": "queued",
+            "processing_attempts": 0,
+            "processing_error": None,
+            "processing_started_at": None,
+            "processed_at": None,
+        }
+        store.save_brain_book(book)
+        store.refresh()
+        saved = store.brain_books.get(book_id) or book
+        store.add_activity("brain_book_uploaded", book_id, "new", "queued")
+        return {"id": book_id, "status": "queued", "processing_stage": "queued", "content_hash": content_hash,
+                "idempotent": False, "book": saved}
+    except Exception as exc:
+        if binary_path:
+            try:
+                BookBinaryStorage().delete(book_id, filename)
+            except Exception:
+                pass
+        if "duplicate key" in str(exc).lower() and store.database:
+            with store.database.connect() as conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT * FROM books WHERE content_hash=%s ORDER BY created_at LIMIT 1", (content_hash,))
+                    existing = cur.fetchone()
+            if existing:
+                return {"id": existing["id"], "status": existing["status"], "processing_stage": existing.get("processing_stage") or "queued",
+                        "content_hash": content_hash, "idempotent": True, "book": store._book_row(existing)}
+        raise HTTPException(status_code=503, detail=f"Book upload could not be persisted: {exc}") from exc
