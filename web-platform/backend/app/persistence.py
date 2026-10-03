@@ -82,6 +82,7 @@ class Database:
                     "015_supabase_storage_bucket.sql",
                     "016_processing_idempotency.sql",
                     "017_lock_down_data_api_roles.sql",
+                    "018_book_processing_pipeline.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
