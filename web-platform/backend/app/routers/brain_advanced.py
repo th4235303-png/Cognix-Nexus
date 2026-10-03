@@ -401,11 +401,16 @@ def put_vault_item(payload: VaultItem) -> dict:
     with db.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO vault_items(id,label,ciphertext,nonce,kdf_salt,kdf_params) VALUES(%s,%s,%s,%s,%s,%s) RETURNING id,label,nonce,kdf_salt,kdf_params,created_at,updated_at",
+                """INSERT INTO vault_items(id,label,ciphertext,nonce,kdf_salt,kdf_params)
+                   VALUES(%s,%s,%s,%s,%s,%s)
+                   ON CONFLICT DO NOTHING
+                   RETURNING id,label,nonce,kdf_salt,kdf_params,created_at,updated_at""",
                 (item_id, payload.label, payload.ciphertext, payload.nonce, payload.kdf_salt, payload.kdf_params),
             )
             row = cur.fetchone()
         conn.commit()
+    if not row:
+        raise HTTPException(status_code=409, detail="Vault item could not be created")
     return row
 
 
