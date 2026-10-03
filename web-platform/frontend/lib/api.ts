@@ -1,6 +1,11 @@
 import { supabase } from '@/lib/supabase';
 
-const API_BASE_URL = (process.env.NEXT_PUBLIC_COGNIX_API_URL || 'http://localhost:8000').replace(/\/$/, '');
+const configuredApiUrl = (process.env.NEXT_PUBLIC_COGNIX_API_URL || '').trim();
+if (process.env.NODE_ENV === 'production' && !configuredApiUrl) {
+  throw new Error('NEXT_PUBLIC_COGNIX_API_URL must be set in production');
+}
+const API_BASE_URL = (configuredApiUrl || 'http://localhost:8000').replace(/\/$/, '');
+const API_PREFIX = '/v1';
 
 import type { Source, SourceStatus, SourceType, TrustLevel } from '@/lib/types/source';
 
@@ -28,7 +33,8 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     if (token) authHeaders.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+  const apiPath = path === '/health' || path === '/ready' || path.startsWith('/v1/') ? path : `${API_PREFIX}${path}`;
+  const response = await fetch(`${API_BASE_URL}${apiPath}`, {
     ...init,
     headers: {
       ...(init?.body instanceof FormData ? {} : { 'Content-Type': 'application/json' }),
