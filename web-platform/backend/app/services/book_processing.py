@@ -91,7 +91,16 @@ def process_book(book_id: str) -> bool:
     if not book:
         return False
     try:
-        filename = book.get("original_filename") or Path(book["binary_path"]).name
+        binary_path = book.get("binary_path")
+        binary_storage = book.get("binary_storage")
+        filename = (
+            book.get("original_filename")
+            or (Path(binary_path).name if binary_path else None)
+            or (Path(binary_storage).name if binary_storage else None)
+            or f"document.{str(book.get('file_type') or 'pdf').lstrip('.')}"
+        )
+        if not filename or filename == ".":
+            raise RuntimeError("Book binary metadata is incomplete: filename/path is missing")
         data = BookBinaryStorage().get(book_id, filename)
         import hashlib
         checksum = hashlib.sha256(data).hexdigest()
@@ -169,8 +178,7 @@ def process_queued_books(limit: int = 2) -> int:
             cur.execute(
                 """SELECT id FROM books
                    WHERE source_kind='upload'
-                     AND binary_path IS NOT NULL
-                     AND binary_storage IS NOT NULL
+                     AND (binary_path IS NOT NULL OR binary_storage IS NOT NULL OR original_filename IS NOT NULL)
                      AND status IN ('queued','processing','failed')
                      AND processing_attempts < 3
                      AND (
