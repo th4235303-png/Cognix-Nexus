@@ -6,7 +6,7 @@ import httpx
 from fastapi import Request
 
 from app.auth import _decode_token, _http_get_with_retries, _verify_with_supabase, auth_required, authenticate_request
-from app.main import _cors_origins, global_exception_handler, validate_production_configuration, v1_app, rate_limit
+from app.main import _cors_origins, app, global_exception_handler, validate_production_configuration, v1_app, rate_limit
 
 
 class SecurityHardeningTests(unittest.TestCase):
