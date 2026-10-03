@@ -93,13 +93,14 @@ def validate_production_configuration() -> None:
 async def global_exception_handler(request: Request, exc: Exception):
     if sentry_sdk:
         sentry_sdk.capture_exception(exc)
-    import logging
-    logging.getLogger("cognix").error(
-        "Unhandled exception request_id=%s method=%s path=%s error_type=%s",
-        getattr(request.state, "request_id", "unknown"),
-        request.method,
-        request.url.path[:500],
-        type(exc).__name__,
+    logger.error(
+        "Unhandled request",
+        extra={
+            "request_id": getattr(request.state, "request_id", "unknown"),
+            "method": request.method,
+            "path": _safe_request_path(request),
+            "error_type": type(exc).__name__,
+        },
     )
     return JSONResponse(
         status_code=500,
