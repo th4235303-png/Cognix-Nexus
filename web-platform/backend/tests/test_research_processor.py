@@ -1,8 +1,8 @@
 import os
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
-from app.services.research_processor import _wikipedia_core_api_url, _wikipedia_rest_url, clean_text, mock_key_points, mock_summary, process_stage
+from app.services.research_processor import _wikipedia_core_api_url, _wikipedia_rest_url, clean_text, fetch_source, mock_key_points, mock_summary, process_stage
 
 
 class ResearchProcessorTests(unittest.TestCase):
@@ -39,3 +39,48 @@ class ResearchProcessorTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+def _response(status: int, text: str = "ok", headers: dict | None = None):
+    item = Mock()
+    item.status_code = status
+    item.text = text
+    item.content = text.encode()
+    item.headers = headers or {"content-type": "text/plain"}
+    item.is_redirect = False
+    item.raise_for_status.side_effect = None
+    return item
+
+
+class SourceFetchRetryTests(unittest.TestCase):
+    @patch("app.services.research_processor.time.sleep")
+    @patch("app.services.research_processor.httpx.Client")
+    def test_retries_rate_limit_then_succeeds(self, client_cls, sleep):
+        client = client_cls.return_value.__enter__.return_value
+        client.get.side_effect = [
+            _response(429, headers={"content-type": "text/plain", "retry-after": "0"}),
+            _response(200, "retry success"),
+        ]
+        self.assertEqual(fetch_source("https://example.com/test"), "retry success")
+        self.assertEqual(client.get.call_count, 2)
+        sleep.assert_called_once()
+
+    @patch("app.services.research_processor.time.sleep")
+    @patch("app.services.research_processor.httpx.Client")
+    def test_retries_server_error_then_succeeds(self, client_cls, sleep):
+        client = client_cls.return_value.__enter__.return_value
+        client.get.side_effect = [_response(503), _response(200, "server recovered")]
+        self.assertEqual(fetch_source("https://example.com/test"), "server recovered")
+        self.assertEqual(client.get.call_count, 2)
+        sleep.assert_called_once()
+
+    @patch("app.services.research_processor.time.sleep")
+    @patch("app.services.research_processor.httpx.Client")
+    def test_timeout_is_retried(self, client_cls, sleep):
+        import httpx
+
+        client = client_cls.return_value.__enter__.return_value
+        client.get.side_effect = [httpx.ReadTimeout("temporary timeout"), _response(200, "timeout recovered")]
+        self.assertEqual(fetch_source("https://example.com/test"), "timeout recovered")
+        self.assertEqual(client.get.call_count, 2)
+        sleep.assert_called_once()
