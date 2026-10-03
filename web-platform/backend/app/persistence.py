@@ -253,18 +253,32 @@ class Database:
             conn.commit()
 
     def save_brain_book(self, book: dict[str, Any]) -> None:
-        book_params = {**book, "binary_storage": book.get("binary_storage"), "binary_path": book.get("binary_path"),
-                       "binary_sha256": book.get("binary_sha256") or book.get("content_hash")}
+        book_params = {
+            **book,
+            "binary_storage": book.get("binary_storage"),
+            "binary_path": book.get("binary_path"),
+            "binary_sha256": book.get("binary_sha256") or book.get("content_hash"),
+            "original_filename": book.get("original_filename"),
+            "processing_stage": book.get("processing_stage") or "queued",
+            "processing_attempts": book.get("processing_attempts") or 0,
+            "processing_error": book.get("processing_error"),
+            "processing_started_at": book.get("processing_started_at"),
+            "processed_at": book.get("processed_at"),
+        }
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
                     """INSERT INTO books (
                         id, title, author, language, file_type, source_kind, source_url, status,
-                        description, content_hash, binary_storage, binary_path, binary_sha256, created_at, updated_at
+                        description, content_hash, binary_storage, binary_path, binary_sha256,
+                        original_filename, processing_stage, processing_attempts, processing_error,
+                        processing_started_at, processed_at, created_at, updated_at
                     ) VALUES (
                         %(id)s, %(title)s, %(author)s, %(language)s, %(file_type)s, %(source_kind)s,
                         %(source_url)s, %(status)s, %(description)s, %(content_hash)s,
-                        %(binary_storage)s, %(binary_path)s, %(binary_sha256)s, %(created_at)s, %(updated_at)s)
+                        %(binary_storage)s, %(binary_path)s, %(binary_sha256)s,
+                        %(original_filename)s, %(processing_stage)s, %(processing_attempts)s, %(processing_error)s,
+                        %(processing_started_at)s, %(processed_at)s, %(created_at)s, %(updated_at)s)
                     ON CONFLICT (id) DO UPDATE SET
                         title=EXCLUDED.title, author=EXCLUDED.author, language=EXCLUDED.language,
                         file_type=EXCLUDED.file_type, source_url=EXCLUDED.source_url, status=EXCLUDED.status,
