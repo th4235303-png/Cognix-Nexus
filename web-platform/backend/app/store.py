@@ -117,4 +117,3 @@ class Store:
 
 
 store = Store(database=configured_database())
-store.initialize()
