@@ -10,6 +10,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from app.services.embeddings import embedding_provider
 from app.services.agent import enqueue_due_agent_schedules, run_due_agent_jobs
 from app.services.export_worker import advance_export_job
+from app.services.book_processing import process_queued_books, finalize_indexed_books
 
 from app.services.processing import STAGES, advance
 from app.store import store
@@ -148,9 +149,18 @@ def main() -> None:
     while True:
         run_once()
         try:
+            books_processed = process_queued_books(limit=2)
+            if books_processed:
+                logger.info("book_processing_cycle processed=%d", books_processed)
+        except Exception as exc:
+            logger.warning("book_processing_cycle_failed error=%s", exc)
+        try:
             indexed = asyncio.run(_index_unembedded_chunks())
             if indexed:
                 logger.info("embedding_index_cycle indexed=%d model=%s", indexed, embedding_provider.model)
+            completed_books = finalize_indexed_books()
+            if completed_books:
+                logger.info("book_processing_finalize completed=%d", completed_books)
         except Exception as exc:
             logger.warning("embedding_index_cycle_failed error=%s", exc)
         enqueue_due_agent_schedules()
