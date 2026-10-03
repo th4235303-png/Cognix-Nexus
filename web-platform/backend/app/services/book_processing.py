@@ -43,6 +43,7 @@ def _claim_book(book_id: str) -> dict | None:
                     return None
                 attempts = int(book.get("processing_attempts") or 0)
                 if book["status"] == "ready" or attempts >= 3:
+                    db.release_task(f"book:{book_id}")
                     return None
                 now = datetime.now(timezone.utc)
                 cur.execute(
