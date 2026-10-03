@@ -71,10 +71,12 @@ def _book_from_store(book_id: str) -> dict:
 
 
 @router.get("/books")
-def list_books() -> dict:
-    store.refresh()
-    items = sorted(store.brain_books.values(), key=lambda item: item["updated_at"], reverse=True)
-    return {"items": items, "total": len(items)}
+def list_books(limit: int = 50, offset: int = 0) -> dict:
+    if store.database is None:
+        items = sorted(store.brain_books.values(), key=lambda item: item["updated_at"], reverse=True)
+        return {"items": items[offset:offset + min(limit, 100)], "total": len(items)}
+    items, total = store.database.list_books(limit=limit, offset=offset)
+    return {"items": items, "total": total, "limit": min(max(limit, 1), 100), "offset": max(offset, 0)}
 
 
 @router.post("/books", status_code=201)
@@ -128,20 +130,24 @@ def create_book(payload: BookCreate) -> dict:
 
 @router.get("/books/{book_id}")
 def get_book(book_id: str) -> dict:
-    store.refresh()
+    if store.database is not None:
+        book = store.database.get_book(book_id)
+        if not book:
+            raise HTTPException(status_code=404, detail="Book not found")
+        return book
     return _book_from_store(book_id)
 
 
 @router.get("/books/{book_id}/chapters")
 def list_chapters(book_id: str) -> dict:
-    book = _book_from_store(book_id)
+    book = get_book(book_id)
     chapters = [{k: v for k, v in chapter.items() if k != "chunks"} for chapter in book["chapters"]]
     return {"items": chapters, "total": len(chapters)}
 
 
 @router.get("/books/{book_id}/chapters/{chapter_id}")
 def get_chapter(book_id: str, chapter_id: str) -> dict:
-    book = _book_from_store(book_id)
+    book = get_book(book_id)
     chapter = next((item for item in book["chapters"] if item["id"] == chapter_id), None)
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")
@@ -150,6 +156,11 @@ def get_chapter(book_id: str, chapter_id: str) -> dict:
 
 @router.get("/books/{book_id}/search")
 def search_book(book_id: str, q: str) -> dict:
+    if store.database is not None:
+        if not store.database.get_book(book_id):
+            raise HTTPException(status_code=404, detail="Book not found")
+        matches, total = store.database.search_book(book_id, q)
+        return {"query": q, "items": matches, "total": total}
     book = _book_from_store(book_id)
     query = q.strip().lower()
     if not query:
@@ -161,14 +172,7 @@ def search_book(book_id: str, q: str) -> dict:
             haystack = chunk["content"].lower()
             score = sum(haystack.count(term) for term in terms)
             if score:
-                matches.append({
-                    "chunk_id": chunk["id"],
-                    "chapter_id": chapter["id"],
-                    "chapter_title": chapter["title"],
-                    "sequence": chunk["sequence"],
-                    "score": score,
-                    "content": chunk["content"],
-                })
+                matches.append({"chunk_id": chunk["id"], "chapter_id": chapter["id"], "chapter_title": chapter["title"], "sequence": chunk["sequence"], "score": score, "content": chunk["content"]})
     matches.sort(key=lambda item: item["score"], reverse=True)
     return {"query": q, "items": matches[:20], "total": len(matches)}
 
