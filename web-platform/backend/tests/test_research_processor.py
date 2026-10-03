@@ -55,6 +55,7 @@ def _response(status: int, text: str = "ok", headers: dict | None = None):
 class SourceFetchRetryTests(unittest.TestCase):
     @patch("app.services.research_processor.time.sleep")
     @patch("app.services.research_processor.httpx.Client")
+    @patch("app.services.research_processor._assert_public_url")
     def test_retries_rate_limit_then_succeeds(self, client_cls, sleep):
         client = client_cls.return_value.__enter__.return_value
         client.get.side_effect = [
@@ -67,6 +68,7 @@ class SourceFetchRetryTests(unittest.TestCase):
 
     @patch("app.services.research_processor.time.sleep")
     @patch("app.services.research_processor.httpx.Client")
+    @patch("app.services.research_processor._assert_public_url")
     def test_retries_server_error_then_succeeds(self, client_cls, sleep):
         client = client_cls.return_value.__enter__.return_value
         client.get.side_effect = [_response(503), _response(200, "server recovered")]
@@ -76,6 +78,7 @@ class SourceFetchRetryTests(unittest.TestCase):
 
     @patch("app.services.research_processor.time.sleep")
     @patch("app.services.research_processor.httpx.Client")
+    @patch("app.services.research_processor._assert_public_url")
     def test_timeout_is_retried(self, client_cls, sleep):
         import httpx
 
