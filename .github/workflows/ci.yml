@@ -9,6 +9,8 @@ on:
 jobs:
   frontend:
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_COGNIX_API_URL: https://cognix-core-ypak.onrender.com
     defaults:
       run:
         working-directory: web-platform/frontend
