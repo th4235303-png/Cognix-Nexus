@@ -12,6 +12,8 @@ from app.routers.brain_advanced import _schedule
 
 class CognixApiTests(unittest.TestCase):
     def setUp(self):
+        self.env_patch = patch.dict("os.environ", {"COGNIX_DEV_MODE": "true"}, clear=False)
+        self.env_patch.start()
         self.processing_patch = patch(
             "app.services.processing.process_stage",
             side_effect=lambda stage, source: ProcessingResult(
@@ -201,6 +203,7 @@ class CognixApiTests(unittest.TestCase):
 
     def tearDown(self):
         self.processing_patch.stop()
+        self.env_patch.stop()
 
     def test_brain_vault_book_note_concept_and_query(self):
         book = self.client.post(
@@ -259,7 +262,7 @@ class CognixApiTests(unittest.TestCase):
     def test_authentication_boundary_can_be_enabled(self):
         with patch.dict(
             "os.environ",
-            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_JWT_SECRET": ""},
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false", "COGNIX_JWT_SECRET": ""},
             clear=False,
         ):
             response = self.client.get("/sources")
