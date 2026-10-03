@@ -71,11 +71,12 @@ async def global_exception_handler(request: Request, exc: Exception):
     if sentry_sdk:
         sentry_sdk.capture_exception(exc)
     import logging
-    logging.getLogger("cognix").exception(
-        "Unhandled exception request_id=%s method=%s path=%s",
+    logging.getLogger("cognix").error(
+        "Unhandled exception request_id=%s method=%s path=%s error_type=%s",
         getattr(request.state, "request_id", "unknown"),
         request.method,
         request.url.path[:500],
+        type(exc).__name__,
     )
     return JSONResponse(
         status_code=500,
