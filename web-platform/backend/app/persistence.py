@@ -118,25 +118,15 @@ class Database:
                 export_keys = {row["idempotency_key"]: row["id"] for row in exports.values()}
                 cur.execute("SELECT * FROM activity_events ORDER BY created_at DESC")
                 activity = [self._activity_row(row) for row in cur.fetchall()]
+                # Keep startup state bounded: chapters/chunks are loaded on demand by book APIs.
                 cur.execute("SELECT * FROM books ORDER BY created_at")
                 books = {row["id"]: self._book_row(row) for row in cur.fetchall()}
-                cur.execute("SELECT * FROM chapters ORDER BY book_id, chapter_number")
-                for row in cur.fetchall():
-                    book = books.get(row["book_id"])
-                    if book is not None:
-                        book["chapters"].append(self._chapter_row(row))
-                cur.execute("SELECT * FROM chunks ORDER BY chapter_id, sequence")
-                chapter_index = {
-                    chapter["id"]: (book, chapter)
-                    for book in books.values()
-                    for chapter in book["chapters"]
-                }
-                for row in cur.fetchall():
-                    target = chapter_index.get(row["chapter_id"])
-                    if target is not None:
-                        book, chapter = target
-                        chapter["chunks"].append(self._chunk_row(row))
-                        book["chunk_count"] += 1
+                cur.execute(
+                    """SELECT book_id, count(*) AS chunk_count
+                       FROM chunks
+                       WHERE book_id IS NOT NULL
+                       GROUP BY book_id"""
+                ) if False else None
                 cur.execute("SELECT * FROM notes ORDER BY updated_at DESC")
                 notes = {row["id"]: self._note_row(row) for row in cur.fetchall()}
                 cur.execute("SELECT * FROM note_sources ORDER BY created_at")
@@ -153,6 +143,87 @@ class Database:
             "activity": activity, "export_keys": export_keys, "brain_books": books,
             "brain_notes": notes, "brain_concepts": concepts, "brain_concept_links": concept_links,
         }
+
+    def list_books(self, limit: int = 50, offset: int = 0) -> tuple[list[dict[str, Any]], int]:
+        limit = max(1, min(limit, 100))
+        offset = max(0, offset)
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT count(*) AS total FROM books")
+                total = int(cur.fetchone()["total"])
+                cur.execute(
+                    """SELECT b.*, count(c.id) AS chunk_count
+                       FROM books b
+                       LEFT JOIN chapters ch ON ch.book_id=b.id
+                       LEFT JOIN chunks c ON c.chapter_id=ch.id
+                       GROUP BY b.id
+                       ORDER BY b.updated_at DESC
+                       LIMIT %s OFFSET %s""",
+                    (limit, offset),
+                )
+                items = []
+                for row in cur.fetchall():
+                    item = self._book_row(row)
+                    item["chunk_count"] = int(row.get("chunk_count") or 0)
+                    items.append(item)
+        return items, total
+
+    def get_book(self, book_id: str) -> dict[str, Any] | None:
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT * FROM books WHERE id=%s", (book_id,))
+                row = cur.fetchone()
+                if row is None:
+                    return None
+                book = self._book_row(row)
+                cur.execute("SELECT * FROM chapters WHERE book_id=%s ORDER BY chapter_number", (book_id,))
+                chapters = [self._chapter_row(item) for item in cur.fetchall()]
+                chapter_index = {chapter["id"]: chapter for chapter in chapters}
+                cur.execute(
+                    """SELECT * FROM chunks
+                       WHERE chapter_id IN (SELECT id FROM chapters WHERE book_id=%s)
+                       ORDER BY chapter_id, sequence""",
+                    (book_id,),
+                )
+                for item in cur.fetchall():
+                    chapter = chapter_index.get(item["chapter_id"])
+                    if chapter is not None:
+                        chapter["chunks"].append(self._chunk_row(item))
+                        book["chunk_count"] += 1
+                book["chapters"] = chapters
+                return book
+
+    def search_book(self, book_id: str, query: str, limit: int = 20) -> tuple[list[dict[str, Any]], int]:
+        query = query.strip()
+        if not query:
+            return [], 0
+        limit = max(1, min(limit, 100))
+        terms = [term for term in query.lower().split() if term]
+        pattern = "%" + "%".join(terms) + "%"
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """SELECT c.id AS chunk_id, c.chapter_id, ch.title AS chapter_title,
+                              c.sequence, c.content
+                       FROM chunks c
+                       JOIN chapters ch ON ch.id=c.chapter_id
+                       WHERE ch.book_id=%s AND lower(c.content) LIKE %s
+                       ORDER BY c.sequence
+                       LIMIT %s""",
+                    (book_id, pattern, limit),
+                )
+                rows = cur.fetchall()
+        matches = []
+        for row in rows:
+            haystack = row["content"].lower()
+            score = sum(haystack.count(term) for term in terms)
+            matches.append({
+                "chunk_id": row["chunk_id"], "chapter_id": row["chapter_id"],
+                "chapter_title": row["chapter_title"], "sequence": row["sequence"],
+                "score": score, "content": row["content"],
+            })
+        matches.sort(key=lambda item: item["score"], reverse=True)
+        return matches, len(matches)
 
     def save_source(self, source: dict[str, Any]) -> None:
         with self.connect() as conn:
