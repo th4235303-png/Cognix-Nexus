@@ -152,12 +152,13 @@ class SecurityHardeningTests(unittest.TestCase):
 
     def test_rate_limit_returns_429_after_limit(self):
         import asyncio
+        from collections import defaultdict, deque
         from app import main as main_module
         async def call_next(request):
             from fastapi.responses import JSONResponse
             return JSONResponse({"ok": True})
         request = Request({"type": "http", "method": "GET", "path": "/sources", "headers": [], "query_string": b"", "server": ("test", 80), "client": ("test", 1), "scheme": "http"})
-        with patch.object(main_module, "RATE_LIMIT", 1), patch.object(main_module, "_rate_windows", {}):
+        with patch.object(main_module, "RATE_LIMIT", 1), patch.object(main_module, "_rate_windows", defaultdict(deque)):
             first = asyncio.run(rate_limit(request, call_next))
             second = asyncio.run(rate_limit(request, call_next))
         self.assertEqual(first.status_code, 200)
