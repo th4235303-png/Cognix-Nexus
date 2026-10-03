@@ -26,7 +26,10 @@ def export_to_google_drive(payload: DriveExportRequest) -> dict:
         raise HTTPException(status_code=409, detail="Only approved sources can be exported")
     existing_id = store.export_keys.get(payload.idempotency_key)
     if existing_id:
-        return store.exports[existing_id]
+        existing = store.exports[existing_id]
+        if existing.get("status") == "failed":
+            return existing
+        return existing
     export_id = f"EXP-{uuid4().hex[:8].upper()}"
     package = build_export_package(payload.source_id, date.today().isoformat())
     job = {
