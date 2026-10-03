@@ -198,7 +198,7 @@ _cors_allowed_origins = _cors_origins()
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_allowed_origins,
-    allow_credentials=bool(_cors_allowed_origins),
+    allow_credentials=len(_cors_allowed_origins) == 1,
     allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "Accept", "X-Request-ID"],
 )
