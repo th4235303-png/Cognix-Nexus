@@ -57,6 +57,18 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertEqual(result.status_code, 401)
         self.assertEqual(get.call_count, 1)
 
+    def test_production_cors_requires_explicit_non_wildcard_origins(self):
+        with patch.dict("os.environ", {"COGNIX_ENV": "production", "COGNIX_CORS_ORIGINS": ""}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "COGNIX_CORS_ORIGINS"):
+                _cors_origins()
+        with patch.dict("os.environ", {"COGNIX_ENV": "production", "COGNIX_CORS_ORIGINS": "*"}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "Wildcard CORS"):
+                _cors_origins()
+
+    def test_versioned_openapi_is_mounted(self):
+        paths = {route.path for route in app.routes}
+        self.assertIn("/v1", paths)
+
     def test_global_exception_handler_returns_safe_error(self):
         scope = {
             "type": "http",
