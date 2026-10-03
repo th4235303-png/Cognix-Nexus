@@ -177,6 +177,33 @@ class SecurityHardeningTests(unittest.TestCase):
         self.assertEqual(second.status_code, 429)
 
 
+    def test_authenticate_request_dev_mode_is_anonymous(self):
+        request = Request({"type": "http", "method": "GET", "path": "/sources", "headers": [], "query_string": b"", "server": ("test", 80), "client": ("test", 1), "scheme": "http"})
+        with patch.dict(os.environ, {"COGNIX_DEV_MODE": "true"}, clear=True):
+            self.assertEqual(authenticate_request(request)["sub"], "anonymous")
+
+    def test_decode_token_requires_verifier_configuration(self):
+        with patch.dict(os.environ, {}, clear=True):
+            with self.assertRaisesRegex(RuntimeError, "JWT verification"):
+                _decode_token("token")
+
+    def test_auth_provider_retries_http_500(self):
+        request = httpx.Request("GET", "https://example.test/auth/v1/user")
+        responses = [httpx.Response(500, request=request), httpx.Response(500, request=request), httpx.Response(200, request=request, json={"id": "user-3"})]
+        with patch("app.auth.httpx.get", side_effect=responses) as get, patch("app.auth.time.sleep"):
+            result = _http_get_with_retries("https://example.test/auth/v1/user", {"apikey": "public"}, attempts=3)
+        self.assertEqual(result.status_code, 200)
+        self.assertEqual(get.call_count, 3)
+
+    def test_supabase_auth_invalid_json_maps_to_503(self):
+        request = httpx.Request("GET", "https://example.test/auth/v1/user")
+        response = httpx.Response(200, request=request, content=b"not-json", headers={"content-type": "application/json"})
+        with patch.dict(os.environ, {"COGNIX_SUPABASE_URL": "https://example.test", "COGNIX_SUPABASE_PUBLISHABLE_KEY": "public"}, clear=True), patch("app.auth._http_get_with_retries", return_value=response):
+            with self.assertRaises(Exception) as ctx:
+                _verify_with_supabase("token")
+        self.assertEqual(getattr(ctx.exception, "status_code", None), 503)
+
+
 
 if __name__ == "__main__":
     unittest.main()
