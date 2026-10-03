@@ -40,6 +40,7 @@ def _claim_book(book_id: str) -> dict | None:
                 cur.execute("SELECT * FROM books WHERE id=%s FOR UPDATE", (book_id,))
                 book = cur.fetchone()
                 if not book:
+                    db.release_task(f"book:{book_id}")
                     return None
                 attempts = int(book.get("processing_attempts") or 0)
                 if book["status"] == "ready" or attempts >= 3:
