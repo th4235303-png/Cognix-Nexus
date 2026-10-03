@@ -19,7 +19,7 @@ class ExportPackage:
     files: tuple[str, ...]
 
 def build_export_package(source_id: str, date: str) -> ExportPackage:
-    return ExportPackage(source_id, f"/cognix-core/{date}/{source_id}/", ("source.json", "original-reference.txt", "summary.md", "myanmar-summary.md", "claims.json", "review.json"))
+    return ExportPackage(source_id, f"/cognix-nexus/{date}/{source_id}/", ("source.json", "original-reference.txt", "summary.md", "myanmar-summary.md", "claims.json", "review.json"))
 
 def google_configured() -> bool:
     return all(os.getenv(name, "").strip() for name in ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "GOOGLE_REFRESH_TOKEN"))
@@ -63,7 +63,7 @@ def exchange_code(code: str) -> dict[str, str]:
 def upload_export(source: dict, package: ExportPackage) -> str:
     provider = os.getenv("COGNIX_DRIVE_PROVIDER", "mock").strip().lower()
     if provider == "mock":
-        return f"mock-drive://cognix-core/{source['id']}"
+        return f"mock-drive://cognix-nexus/{source['id']}"
     if provider != "google" or not google_configured():
         raise RuntimeError("Google Drive OAuth is not configured")
     from google.oauth2.credentials import Credentials
