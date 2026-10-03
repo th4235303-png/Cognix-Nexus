@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from io import BytesIO
 from pathlib import Path
+import os
 import re
 import zipfile
 import xml.etree.ElementTree as ET
@@ -29,8 +30,27 @@ def _clean_text(value: str) -> str:
 def extract_pdf(data: bytes, filename: str) -> ExtractedDocument:
     reader = PdfReader(BytesIO(data))
     pages = []
+    ocr_enabled = os.getenv("COGNIX_BOOK_OCR_ENABLED", "true").strip().lower() in {"1", "true", "yes", "on"}
+    ocr_language = os.getenv("COGNIX_BOOK_OCR_LANGUAGE", "eng+mya").strip() or "eng"
     for index, page in enumerate(reader.pages, start=1):
         text = _clean_text(page.extract_text() or "")
+        if not text and ocr_enabled:
+            try:
+                import fitz
+                from PIL import Image
+                import pytesseract
+                pdf = fitz.open(stream=data, filetype="pdf")
+                try:
+                    rendered = pdf[index - 1].get_pixmap(matrix=fitz.Matrix(1.6, 1.6), alpha=False)
+                    image = Image.open(BytesIO(rendered.tobytes("png"))).convert("RGB")
+                    try:
+                        text = _clean_text(pytesseract.image_to_string(image, lang=ocr_language, config="--psm 3"))
+                    except Exception:
+                        text = _clean_text(pytesseract.image_to_string(image, lang="eng", config="--psm 3"))
+                finally:
+                    pdf.close()
+            except Exception:
+                text = ""
         if text:
             pages.append({"page_number": index, "title": f"Page {index}", "text": text})
     text = "\n\n".join(item["text"] for item in pages)
