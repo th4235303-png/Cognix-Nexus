@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Any
 
 import psycopg
+from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
@@ -12,39 +13,44 @@ from psycopg.types.json import Jsonb
 class Database:
     def __init__(self, dsn: str):
         self.dsn = dsn
-        self._task_lock_connections: dict[str, Any] = {}
+        self.worker_id = os.getenv("COGNIX_WORKER_ID") or f"worker-{os.getpid()}"
+        self._pool = ConnectionPool(
+            conninfo=self.dsn,
+            min_size=max(1, int(os.getenv("COGNIX_DB_POOL_MIN", "1"))),
+            max_size=max(1, int(os.getenv("COGNIX_DB_POOL_MAX", "10"))),
+            kwargs={"row_factory": dict_row, "options": "-c search_path=public,extensions"},
+            open=False,
+        )
+        self._pool.open(wait=True)
 
     def try_claim_task(self, task_id: str) -> bool:
-        """Claim a task with a PostgreSQL advisory lock across worker processes."""
-        if task_id in self._task_lock_connections:
-            return True
-        conn = self.connect()
-        try:
+        """Atomically claim a task without holding a pooled connection open."""
+        with self.connect() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT pg_try_advisory_lock(hashtext(%s)) AS locked", (task_id,))
-                locked = bool(cur.fetchone()["locked"])
-            if locked:
-                self._task_lock_connections[task_id] = conn
-                return True
-        except Exception:
-            conn.close()
-            raise
-        conn.close()
-        return False
+                cur.execute(
+                    """UPDATE processing_tasks
+                       SET claimed_by=%s, claimed_at=now()
+                       WHERE id=%s
+                         AND (claimed_by IS NULL OR claimed_at IS NULL
+                              OR claimed_at < now() - interval '30 minutes')
+                       RETURNING id""",
+                    (self.worker_id, task_id),
+                )
+                row = cur.fetchone()
+            conn.commit()
+        return row is not None
 
     def release_task(self, task_id: str) -> None:
-        conn = self._task_lock_connections.pop(task_id, None)
-        if conn is None:
-            return
-        try:
+        with self.connect() as conn:
             with conn.cursor() as cur:
-                cur.execute("SELECT pg_advisory_unlock(hashtext(%s))", (task_id,))
+                cur.execute(
+                    "UPDATE processing_tasks SET claimed_by=NULL, claimed_at=NULL WHERE id=%s AND claimed_by=%s",
+                    (task_id, self.worker_id),
+                )
             conn.commit()
-        finally:
-            conn.close()
 
     def connect(self):
-        return psycopg.connect(self.dsn, row_factory=dict_row, options='-c search_path=public,extensions')
+        return self._pool.connection()
 
     def ping(self) -> bool:
         try:
@@ -83,6 +89,7 @@ class Database:
                     "016_processing_idempotency.sql",
                     "017_lock_down_data_api_roles.sql",
                     "018_book_processing_pipeline.sql",
+                    "019_processing_task_claims.sql",
                 ):
                     migration = migrations_dir / migration_name
                     if migration.exists():
