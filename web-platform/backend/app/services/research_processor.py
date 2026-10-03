@@ -99,6 +99,19 @@ def _wikipedia_api_url(url: str) -> tuple[str, str] | None:
     )
 
 
+def _wikipedia_core_api_url(url: str) -> tuple[str, str, str] | None:
+    parsed = urlparse(url)
+    hostname = (parsed.hostname or "").lower()
+    match = re.fullmatch(r"([a-z-]+)\.wikipedia\.org", hostname)
+    if not match or not parsed.path.startswith("/wiki/"):
+        return None
+    language = match.group(1)
+    title = unquote(parsed.path[len("/wiki/"):]).strip("/")
+    if not title:
+        return None
+    return ("https://api.wikimedia.org", language, title)
+
+
 def _extract_html_text(html: str) -> str:
     parser = _TextExtractor()
     parser.feed(html)
@@ -140,18 +153,36 @@ def _fetch_wikipedia_fallback(client: httpx.Client, url: str) -> str | None:
             "Api-User-Agent": USER_AGENT,
         },
     )
+    if response.is_success:
+        if len(response.content) > MAX_DOCUMENT_BYTES:
+            raise ValueError("Source document exceeds the configured size limit")
+        try:
+            body = response.json()
+            html = body["parse"]["text"]
+        except (json.JSONDecodeError, KeyError, TypeError):
+            html = ""
+        if isinstance(html, str) and html.strip():
+            return _extract_html_text(html)
+
+    core = _wikipedia_core_api_url(url)
+    if not core:
+        return None
+    base_url, language, title = core
+    core_url = f"{base_url}/core/v1/wikipedia/{language}/page/{quote(title, safe='')}/html"
+    _assert_public_url(core_url)
+    response = client.get(
+        core_url,
+        headers={
+            "Accept": "text/html",
+            "User-Agent": USER_AGENT,
+            "Api-User-Agent": USER_AGENT,
+        },
+    )
     if not response.is_success:
         return None
     if len(response.content) > MAX_DOCUMENT_BYTES:
         raise ValueError("Source document exceeds the configured size limit")
-    try:
-        body = response.json()
-        html = body["parse"]["text"]
-    except (json.JSONDecodeError, KeyError, TypeError):
-        return None
-    if not isinstance(html, str) or not html.strip():
-        return None
-    return _extract_html_text(html)
+    return _extract_html_text(response.text)
 
 
 def fetch_source(url: str) -> str:
