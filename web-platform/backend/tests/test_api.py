@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import patch
 
 from fastapi.testclient import TestClient
@@ -7,7 +8,242 @@ from app.main import app
 from app.store import store
 from app.worker import run_once
 from app.services.research_processor import ProcessingResult
+from app.services.processing import TaskLeaseLost, advance
+from app.services.task_retry import retry_delay_seconds, retry_ready
 from app.routers.brain_advanced import _schedule
+
+
+class MemoryOwnershipDatabase:
+    def __init__(self):
+        self.sources = {}
+        self.source_owners = {}
+        self.books = {}
+        self.book_owners = {}
+        self.tasks = {}
+        self.reviews = {}
+        self.exports = {}
+        self.export_keys = {}
+        self.brain_notes = {}
+        self.brain_note_owners = {}
+        self.brain_concepts = {}
+        self.brain_concept_owners = {}
+        self.brain_concept_links = {}
+        self.language_cards = {}
+
+    def load_state(self):
+        return {
+            "sources": dict(self.sources),
+            "source_owners": dict(self.source_owners),
+            "tasks": dict(self.tasks),
+            "reviews": dict(self.reviews),
+            "exports": dict(self.exports),
+            "export_keys": dict(self.export_keys),
+            "activity": [],
+            "brain_books": dict(self.books),
+            "brain_book_owners": dict(self.book_owners),
+            "brain_notes": dict(self.brain_notes),
+            "brain_note_owners": dict(self.brain_note_owners),
+            "brain_concepts": dict(self.brain_concepts),
+            "brain_concept_owners": dict(self.brain_concept_owners),
+            "brain_concept_links": dict(self.brain_concept_links),
+        }
+
+    def save_source(self, source, owner_id=None):
+        self.sources[source["id"]] = source
+        self.source_owners.setdefault(source["id"], owner_id)
+
+    def get_source_for_owner(self, source_id, owner_id):
+        if source_id not in self.sources:
+            return None
+        if owner_id is not None and self.source_owners.get(source_id) != owner_id:
+            return None
+        return self.sources[source_id]
+
+    def list_sources_for_owner(self, owner_id):
+        return [
+            source for source_id, source in self.sources.items()
+            if owner_id is None or self.source_owners.get(source_id) == owner_id
+        ]
+
+    def save_task(self, task):
+        self.tasks[task["id"]] = task
+
+    def save_processing_transition(
+        self, task, source, expected_status, expected_stage, claim_token=None
+    ):
+        self.tasks[task["id"]] = task
+        self.sources[source["id"]] = source
+        return True
+
+    def get_task_for_owner(self, task_id, owner_id):
+        task = self.tasks.get(task_id)
+        if task is None or self.get_source_for_owner(task["source_id"], owner_id) is None:
+            return None
+        return task
+
+    def list_tasks_for_owner(self, owner_id):
+        return [
+            task for task in self.tasks.values()
+            if self.get_source_for_owner(task["source_id"], owner_id) is not None
+        ]
+
+    def save_brain_book(self, book, owner_id=None):
+        self.books[book["id"]] = book
+        self.book_owners.setdefault(book["id"], owner_id)
+
+    def get_book(self, book_id, owner_id=None):
+        if owner_id is not None and self.book_owners.get(book_id) != owner_id:
+            return None
+        return self.books.get(book_id)
+
+    def list_books(self, limit=50, offset=0, owner_id=None):
+        books = [
+            book for book_id, book in self.books.items()
+            if owner_id is None or self.book_owners.get(book_id) == owner_id
+        ]
+        return books[offset:offset + limit], len(books)
+
+    def search_book(self, book_id, query, limit=20, owner_id=None):
+        book = self.get_book(book_id, owner_id)
+        if book is None:
+            return [], 0
+        matches = []
+        for chapter in book["chapters"]:
+            for chunk in chapter["chunks"]:
+                if query.lower() in chunk["content"].lower():
+                    matches.append({
+                        "chunk_id": chunk["id"],
+                        "chapter_id": chapter["id"],
+                        "chapter_title": chapter["title"],
+                        "sequence": chunk["sequence"],
+                        "score": 1,
+                        "content": chunk["content"],
+                    })
+        return matches[:limit], len(matches)
+
+    def get_book_by_content_hash(self, content_hash, owner_id):
+        return next(
+            (
+                book for book_id, book in self.books.items()
+                if book.get("content_hash") == content_hash
+                and (owner_id is None or self.book_owners.get(book_id) == owner_id)
+            ),
+            None,
+        )
+
+    def save_review(self, review):
+        self.reviews[review["source_id"]] = review
+
+    def add_activity(self, event):
+        pass
+
+    def list_brain_notes_for_owner(self, owner_id):
+        return [
+            note for note_id, note in self.brain_notes.items()
+            if owner_id is None or self.brain_note_owners.get(note_id) == owner_id
+        ]
+
+    def get_brain_note_for_owner(self, note_id, owner_id):
+        if owner_id is not None and self.brain_note_owners.get(note_id) != owner_id:
+            return None
+        return self.brain_notes.get(note_id)
+
+    def list_note_backlinks_for_owner(self, note_id, owner_id):
+        if self.get_brain_note_for_owner(note_id, owner_id) is None:
+            return None
+        return [
+            note for note in self.list_brain_notes_for_owner(owner_id)
+            if any(
+                source.get("source_type") == "note" and source.get("source_id") == note_id
+                for source in note.get("sources", [])
+            )
+        ]
+
+    def save_brain_note(self, note, owner_id):
+        self.brain_notes[note["id"]] = note
+        if owner_id is not None:
+            self.brain_note_owners.setdefault(note["id"], owner_id)
+        note["sources"] = (
+            [{"source_type": note["source_type"], "source_id": note["source_id"]}]
+            if note.get("source_type") and note.get("source_id") else []
+        )
+
+    def list_brain_concepts_for_owner(self, owner_id):
+        return [
+            concept for concept_id, concept in self.brain_concepts.items()
+            if owner_id is None or self.brain_concept_owners.get(concept_id) == owner_id
+        ]
+
+    def get_brain_concept_for_owner(self, concept_id, owner_id):
+        if owner_id is not None and self.brain_concept_owners.get(concept_id) != owner_id:
+            return None
+        return self.brain_concepts.get(concept_id)
+
+    def get_brain_concept_by_name_for_owner(self, name, owner_id):
+        normalized_name = name.lower()
+        return next(
+            (
+                concept for concept_id, concept in self.brain_concepts.items()
+                if (owner_id is None or self.brain_concept_owners.get(concept_id) == owner_id)
+                and concept["name"].lower() == normalized_name
+            ),
+            None,
+        )
+
+    def list_concept_links_for_owner(self, owner_id):
+        return [
+            link for link in self.brain_concept_links.values()
+            if self.get_brain_concept_for_owner(link["from_concept_id"], owner_id) is not None
+            and self.get_brain_concept_for_owner(link["to_concept_id"], owner_id) is not None
+        ]
+
+    def save_brain_concept(self, concept, owner_id):
+        self.brain_concepts[concept["id"]] = concept
+        if owner_id is not None:
+            self.brain_concept_owners.setdefault(concept["id"], owner_id)
+
+    def save_brain_concept_link(self, link, owner_id):
+        if (
+            self.get_brain_concept_for_owner(link["from_concept_id"], owner_id) is None
+            or self.get_brain_concept_for_owner(link["to_concept_id"], owner_id) is None
+        ):
+            raise RuntimeError("Concept link ownership mismatch")
+        self.brain_concept_links[link["id"]] = link
+
+    def create_language_card(self, card, owner_id):
+        row = {
+            **card,
+            "owner_id": owner_id,
+            "due_at": "2000-01-01T00:00:00+00:00",
+            "stability": 0,
+            "difficulty": 5,
+            "reps": 0,
+            "lapses": 0,
+            "state": "learning",
+        }
+        self.language_cards[card["id"]] = row
+        return row
+
+    def list_language_cards_due_for_owner(self, owner_id, limit):
+        return [
+            card for card in self.language_cards.values()
+            if owner_id is None or card["owner_id"] == owner_id
+        ][:limit]
+
+    def review_language_card(self, card_id, owner_id, rating, schedule):
+        card = self.language_cards.get(card_id)
+        if card is None or (owner_id is not None and card["owner_id"] != owner_id):
+            return None
+        stability, difficulty, reps, lapses, state, due = schedule(card, rating)
+        card.update({
+            "stability": stability,
+            "difficulty": difficulty,
+            "reps": reps,
+            "lapses": lapses,
+            "state": state,
+            "due_at": due.isoformat(),
+        })
+        return card
 
 
 class CognixApiTests(unittest.TestCase):
@@ -26,14 +262,18 @@ class CognixApiTests(unittest.TestCase):
         )
         self.processing_patch.start()
         store.sources.clear()
+        store.source_owners.clear()
         store.tasks.clear()
         store.reviews.clear()
         store.exports.clear()
         store.activity.clear()
         store.export_keys.clear()
         store.brain_books.clear()
+        store.brain_book_owners.clear()
         store.brain_notes.clear()
+        store.brain_note_owners.clear()
         store.brain_concepts.clear()
+        store.brain_concept_owners.clear()
         store.brain_concept_links.clear()
         self.client = TestClient(app)
 
@@ -75,6 +315,67 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(retried.status_code, 200)
         self.assertEqual(retried.json()["retry_count"], 1)
         self.assertEqual(retried.json()["stage"], "queued")
+
+    def test_processing_retries_are_bounded(self):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/retry-limit"}
+        ).json()["source"]
+        task = self.client.post("/processing", json={"source_id": source["id"]}).json()
+        task_id = task["id"]
+
+        for expected_retry_count in range(1, 6):
+            store.tasks[task_id]["status"] = "failed"
+            retry = self.client.post(f"/processing/{task_id}/retry")
+            self.assertEqual(retry.status_code, 200)
+            self.assertEqual(retry.json()["retry_count"], expected_retry_count)
+
+        store.tasks[task_id]["status"] = "failed"
+        rejected = self.client.post(f"/processing/{task_id}/retry")
+        self.assertEqual(rejected.status_code, 409)
+        self.assertEqual(rejected.json()["detail"]["code"], "RETRY_LIMIT_REACHED")
+
+    def test_retry_backoff_is_exponential_and_bounded(self):
+        self.assertEqual(
+            [retry_delay_seconds(count) for count in range(7)],
+            [0, 5, 10, 20, 40, 80, 160],
+        )
+        self.assertEqual(retry_delay_seconds(20), 300)
+
+    def test_retry_backoff_uses_injected_time_and_only_delays_queued_retries(self):
+        task = {
+            "status": "queued",
+            "retry_count": 2,
+            "updated_at": "2026-01-01T00:00:00+00:00",
+        }
+        start = datetime(2026, 1, 1, tzinfo=timezone.utc)
+        self.assertFalse(retry_ready(task, start.replace(second=9)))
+        self.assertTrue(retry_ready(task, start.replace(second=10)))
+        self.assertTrue(retry_ready({**task, "status": "running"}, start))
+
+    def test_lost_lease_does_not_persist_processing_results(self):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/lost-lease"}
+        ).json()["source"]
+        task = self.client.post("/processing", json={"source_id": source["id"]}).json()
+
+        with self.assertRaises(TaskLeaseLost):
+            advance(task["id"], claim_token="stale-token", lease_is_valid=lambda: False)
+
+        self.assertEqual(store.tasks[task["id"]]["stage"], "queued")
+        self.assertEqual(store.sources[source["id"]]["processing_stage"], "queued")
+        self.assertIsNone(store.sources[source["id"]]["original_text"])
+
+    def test_completed_task_cannot_be_advanced_retried_or_reclaimed(self):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/completed-task"}
+        ).json()["source"]
+        task = self.client.post("/processing", json={"source_id": source["id"]}).json()
+        store.tasks[task["id"]].update({"status": "completed", "stage": "needs_review"})
+
+        self.assertEqual(self.client.post(f"/processing/{task['id']}/advance").status_code, 409)
+        self.assertEqual(self.client.post(f"/processing/{task['id']}/retry").status_code, 409)
+        self.assertEqual(run_once(), 0)
+        self.assertEqual(store.tasks[task["id"]]["stage"], "needs_review")
 
     def test_approved_only_export_and_idempotency(self):
         source = self.client.post(
@@ -354,8 +655,505 @@ class CognixApiTests(unittest.TestCase):
             clear=False,
         ):
             response = self.client.get("/sources")
+            book_response = self.client.get("/brain/books")
         self.assertEqual(response.status_code, 401)
         self.assertEqual(response.json()["detail"]["code"], "AUTH_REQUIRED")
+        self.assertEqual(book_response.status_code, 401)
+        self.assertEqual(book_response.json()["detail"]["code"], "AUTH_REQUIRED")
+
+    def test_database_backed_ownership_scopes_sources_books_and_tasks(self):
+        database = MemoryOwnershipDatabase()
+        identity_patch = patch(
+            "app.main.authenticate_request",
+            side_effect=lambda request: {"sub": request.headers.get("x-test-user", "")},
+        )
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"},
+            clear=False,
+        ), patch.object(store, "database", database), identity_patch:
+            source_response = self.client.post(
+                "/sources",
+                json={"url": "https://example.com/persistent-owner"},
+                headers={"x-test-user": "user-a"},
+            )
+            self.assertEqual(source_response.status_code, 201)
+            source_id = source_response.json()["source"]["id"]
+            self.assertEqual(database.source_owners[source_id], "user-a")
+            self.assertEqual(
+                self.client.get(f"/sources/{source_id}", headers={"x-test-user": "user-a"}).status_code,
+                200,
+            )
+            self.assertEqual(
+                self.client.get(f"/sources/{source_id}", headers={"x-test-user": "user-b"}).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.client.post(
+                    "/processing",
+                    json={"source_id": source_id},
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+
+            task_response = self.client.post(
+                "/processing",
+                json={"source_id": source_id},
+                headers={"x-test-user": "user-a"},
+            )
+            task_id = task_response.json()["id"]
+            self.assertEqual(task_response.status_code, 202)
+            self.assertEqual(
+                self.client.post(
+                    f"/processing/{task_id}/advance",
+                    headers={"x-test-user": "user-a"},
+                ).status_code,
+                200,
+            )
+            self.assertEqual(
+                self.client.get(f"/processing/{task_id}", headers={"x-test-user": "user-b"}).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.client.post(
+                    f"/processing/{task_id}/advance",
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.client.post(
+                    f"/processing/{task_id}/retry",
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.client.post(
+                    f"/reviews/{source_id}/revision",
+                    json={},
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.client.post(
+                    "/exports/google-drive",
+                    json={"source_id": source_id, "idempotency_key": "foreign-source"},
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+
+            book_response = self.client.post(
+                "/brain/books",
+                json={"title": "Persistent book", "text": "private persistent ownership"},
+                headers={"x-test-user": "user-a"},
+            )
+            self.assertEqual(book_response.status_code, 201)
+            book_id = book_response.json()["id"]
+            self.assertEqual(database.book_owners[book_id], "user-a")
+            self.assertEqual(
+                self.client.get(f"/brain/books/{book_id}", headers={"x-test-user": "user-a"}).status_code,
+                200,
+            )
+            self.assertEqual(
+                self.client.get(f"/brain/books/{book_id}", headers={"x-test-user": "user-b"}).status_code,
+                404,
+            )
+            other_user_search = self.client.get(
+                f"/brain/books/{book_id}/search",
+                params={"q": "persistent"},
+                headers={"x-test-user": "user-b"},
+            )
+            self.assertEqual(other_user_search.status_code, 200)
+            self.assertEqual(other_user_search.json()["total"], 0)
+            self.assertEqual(
+                self.client.get("/brain/books", headers={"x-test-user": "user-b"}).json()["total"],
+                0,
+            )
+            self.assertEqual(
+                self.client.get(
+                    f"/brain/books/{book_id}/search",
+                    params={"q": "persistent"},
+                    headers={"x-test-user": "user-a"},
+                ).json()["total"],
+                1,
+            )
+
+    def test_unowned_database_records_remain_inaccessible(self):
+        database = MemoryOwnershipDatabase()
+        database.sources["legacy-source"] = {
+            "id": "legacy-source", "url": "https://example.com/legacy", "claims": [],
+        }
+        database.books["legacy-book"] = {
+            "id": "legacy-book", "title": "Legacy", "chapters": [], "updated_at": "2026-01-01",
+        }
+        identity_patch = patch(
+            "app.main.authenticate_request",
+            return_value={"sub": "user-a"},
+        )
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"},
+            clear=False,
+        ), patch.object(store, "database", database), identity_patch:
+            self.assertEqual(self.client.get("/sources/legacy-source").status_code, 404)
+            self.assertEqual(self.client.get("/brain/books/legacy-book").status_code, 404)
+            self.assertEqual(self.client.get("/sources").json()["total"], 0)
+            self.assertEqual(self.client.get("/brain/books").json()["total"], 0)
+        self.assertNotIn("legacy-source", database.source_owners)
+        self.assertNotIn("legacy-book", database.book_owners)
+
+    def test_brain_notes_concepts_and_graph_are_owner_scoped(self):
+        database = MemoryOwnershipDatabase()
+        identity_patch = patch(
+            "app.main.authenticate_request",
+            side_effect=lambda request: {"sub": request.headers.get("x-test-user", "")},
+        )
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"},
+            clear=False,
+        ), patch.object(store, "database", database), identity_patch:
+            headers_a = {"x-test-user": "user-a"}
+            headers_b = {"x-test-user": "user-b"}
+            created = self.client.post(
+                "/brain/notes", json={"title": "Private note", "content": "owner A"}, headers=headers_a,
+            )
+            self.assertEqual(created.status_code, 201)
+            note_id = created.json()["id"]
+            self.assertEqual(database.brain_note_owners[note_id], "user-a")
+            self.assertEqual(self.client.get("/brain/notes", headers=headers_a).json()["total"], 1)
+            self.assertEqual(self.client.get("/brain/notes", headers=headers_b).json()["total"], 0)
+            database.brain_notes["foreign-backlink"] = {
+                "id": "foreign-backlink", "title": "Foreign backlink", "content": "private",
+                "note_type": "note", "status": "draft", "updated_at": "2026-01-01",
+                "sources": [{"source_type": "note", "source_id": note_id}],
+            }
+            database.brain_note_owners["foreign-backlink"] = "user-b"
+
+            child = self.client.post(
+                "/brain/notes",
+                json={
+                    "title": "Private backlink",
+                    "content": "same-owner edge",
+                    "source_type": "note",
+                    "source_id": note_id,
+                },
+                headers=headers_a,
+            )
+            self.assertEqual(child.status_code, 201)
+            self.assertEqual(
+                self.client.get(f"/brain/notes/{note_id}/backlinks", headers=headers_a).json()["total"],
+                1,
+            )
+            self.assertEqual(
+                self.client.get(f"/brain/notes/{note_id}/backlinks", headers=headers_b).status_code,
+                404,
+            )
+            cross_owner_note = self.client.post(
+                "/brain/notes",
+                json={
+                    "title": "Invalid backlink",
+                    "content": "must not link cross-owner",
+                    "source_type": "note",
+                    "source_id": note_id,
+                },
+                headers=headers_b,
+            )
+            self.assertEqual(cross_owner_note.status_code, 404)
+
+            concept_a = self.client.post(
+                "/brain/concepts", json={"name": "Private concept A"}, headers=headers_a,
+            )
+            concept_b = self.client.post(
+                "/brain/concepts", json={"name": "Private concept B"}, headers=headers_a,
+            )
+            self.assertEqual(concept_a.status_code, 201)
+            self.assertEqual(concept_b.status_code, 201)
+            self.assertEqual(database.brain_concept_owners[concept_a.json()["id"]], "user-a")
+            case_duplicate = self.client.post(
+                "/brain/concepts", json={"name": "private CONCEPT a"}, headers=headers_a,
+            )
+            self.assertEqual(case_duplicate.status_code, 201)
+            self.assertEqual(case_duplicate.json()["id"], concept_a.json()["id"])
+            concept_b_user = self.client.post(
+                "/brain/concepts", json={"name": "PRIVATE CONCEPT A"}, headers=headers_b,
+            )
+            self.assertEqual(concept_b_user.status_code, 201)
+            self.assertNotEqual(concept_b_user.json()["id"], concept_a.json()["id"])
+            link = self.client.post(
+                "/brain/concept-links",
+                json={
+                    "from_concept_id": concept_a.json()["id"],
+                    "to_concept_id": concept_b.json()["id"],
+                    "relation": "related",
+                },
+                headers=headers_a,
+            )
+            self.assertEqual(link.status_code, 201)
+            graph_a = self.client.get("/brain/graph", headers=headers_a).json()
+            graph_b = self.client.get("/brain/graph", headers=headers_b).json()
+            self.assertEqual(len(graph_a["nodes"]), 2)
+            self.assertEqual(len(graph_a["edges"]), 1)
+            self.assertEqual([node["id"] for node in graph_b["nodes"]], [concept_b_user.json()["id"]])
+            self.assertEqual(graph_b["edges"], [])
+            database.brain_concept_links["foreign-link"] = {
+                "id": "foreign-link",
+                "from_concept_id": concept_a.json()["id"],
+                "to_concept_id": concept_b_user.json()["id"],
+                "relation": "invalid-cross-owner",
+                "weight": 1,
+                "created_at": "2026-01-01",
+            }
+            self.assertEqual(len(self.client.get("/brain/graph", headers=headers_a).json()["edges"]), 1)
+            self.assertEqual(len(self.client.get("/brain/graph", headers=headers_b).json()["edges"]), 0)
+            self.assertEqual(self.client.get("/brain/concepts", headers=headers_b).json()["total"], 1)
+            self.assertEqual(
+                self.client.post(
+                    "/brain/concept-links",
+                    json={
+                        "from_concept_id": concept_a.json()["id"],
+                        "to_concept_id": concept_b.json()["id"],
+                        "relation": "private",
+                    },
+                    headers=headers_b,
+                ).status_code,
+                404,
+            )
+
+    def test_legacy_unowned_brain_records_remain_inaccessible(self):
+        database = MemoryOwnershipDatabase()
+        database.brain_notes["legacy-note"] = {
+            "id": "legacy-note", "title": "Legacy", "content": "private",
+            "note_type": "note", "status": "draft", "updated_at": "2026-01-01", "sources": [],
+        }
+        database.brain_concepts["legacy-concept"] = {
+            "id": "legacy-concept", "name": "Legacy", "description": None,
+            "created_at": "2026-01-01", "updated_at": "2026-01-01",
+        }
+        database.language_cards["legacy-card"] = {
+            "id": "legacy-card", "front": "legacy", "back": "private",
+            "owner_id": None, "due_at": "2000-01-01T00:00:00+00:00",
+            "stability": 0, "difficulty": 5, "reps": 0, "lapses": 0, "state": "learning",
+        }
+        identity_patch = patch("app.main.authenticate_request", return_value={"sub": "user-a"})
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"},
+            clear=False,
+        ), patch.object(store, "database", database), identity_patch:
+            self.assertEqual(self.client.get("/brain/notes").json()["total"], 0)
+            self.assertEqual(self.client.get("/brain/concepts").json()["total"], 0)
+            self.assertEqual(self.client.get("/brain/graph").json(), {"nodes": [], "edges": []})
+            self.assertEqual(self.client.get("/brain/notes/legacy-note/backlinks").status_code, 404)
+            self.assertEqual(self.client.get("/brain/language/due").json()["total"], 0)
+            self.assertEqual(
+                self.client.post(
+                    "/brain/language/cards/legacy-card/review",
+                    json={"rating": 4},
+                ).status_code,
+                404,
+            )
+
+    def test_language_cards_are_owner_scoped_for_create_due_and_review(self):
+        database = MemoryOwnershipDatabase()
+        identity_patch = patch(
+            "app.main.authenticate_request",
+            side_effect=lambda request: {"sub": request.headers.get("x-test-user", "")},
+        )
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"},
+            clear=False,
+        ), patch.object(store, "database", database), identity_patch:
+            headers_a = {"x-test-user": "user-a"}
+            headers_b = {"x-test-user": "user-b"}
+            created = self.client.post(
+                "/brain/language/cards",
+                json={"front": "hello", "back": "greeting", "language": "en"},
+                headers=headers_a,
+            )
+            self.assertEqual(created.status_code, 201)
+            card_id = created.json()["id"]
+            self.assertEqual(database.language_cards[card_id]["owner_id"], "user-a")
+            self.assertEqual(self.client.get("/brain/language/due", headers=headers_a).json()["total"], 1)
+            self.assertEqual(self.client.get("/brain/language/due", headers=headers_b).json()["total"], 0)
+            self.assertEqual(
+                self.client.post(
+                    f"/brain/language/cards/{card_id}/review",
+                    json={"rating": 4},
+                    headers=headers_b,
+                ).status_code,
+                404,
+            )
+            self.assertEqual(database.language_cards[card_id]["reps"], 0)
+            reviewed = self.client.post(
+                f"/brain/language/cards/{card_id}/review",
+                json={"rating": 4},
+                headers=headers_a,
+            )
+            self.assertEqual(reviewed.status_code, 200)
+            self.assertEqual(database.language_cards[card_id]["reps"], 1)
+
+    def test_brain_ownership_endpoints_reject_unauthenticated_requests(self):
+        identity_patch = patch("app.main.authenticate_request", return_value={})
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"},
+            clear=False,
+        ), identity_patch:
+            self.assertEqual(self.client.get("/brain/notes").status_code, 401)
+            self.assertEqual(self.client.get("/brain/concepts").status_code, 401)
+            self.assertEqual(self.client.get("/brain/graph").status_code, 401)
+            self.assertEqual(self.client.get("/brain/language/due").status_code, 401)
+
+    def test_source_access_is_scoped_to_authenticated_owner(self):
+        identity_patch = patch(
+            "app.main.authenticate_request",
+            side_effect=lambda request: {"sub": request.headers.get("x-test-user", "")},
+        )
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"},
+            clear=False,
+        ), identity_patch:
+            created = self.client.post(
+                "/sources",
+                json={"url": "https://example.com/user-owned-source"},
+                headers={"x-test-user": "user-a"},
+            )
+            self.assertEqual(created.status_code, 201)
+            source_id = created.json()["source"]["id"]
+
+            self.assertEqual(
+                self.client.get(f"/sources/{source_id}", headers={"x-test-user": "user-a"}).status_code,
+                200,
+            )
+            self.assertEqual(
+                self.client.get(f"/sources/{source_id}", headers={"x-test-user": "user-b"}).status_code,
+                404,
+            )
+            user_b_sources = self.client.get("/sources", headers={"x-test-user": "user-b"})
+            self.assertEqual(user_b_sources.json()["total"], 0)
+            self.assertEqual(
+                self.client.patch(
+                    f"/sources/{source_id}/translation",
+                    json={"human_edited_myanmar": "Unauthorized edit"},
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+
+    def test_book_access_and_book_search_are_scoped_to_authenticated_owner(self):
+        identity_patch = patch(
+            "app.main.authenticate_request",
+            side_effect=lambda request: {"sub": request.headers.get("x-test-user", "")},
+        )
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"},
+            clear=False,
+        ), identity_patch:
+            created = self.client.post(
+                "/brain/books",
+                json={"title": "Private book", "text": "private zebra ownership phrase"},
+                headers={"x-test-user": "user-a"},
+            )
+            self.assertEqual(created.status_code, 201)
+            book_id = created.json()["id"]
+
+            self.assertEqual(
+                self.client.get(f"/brain/books/{book_id}", headers={"x-test-user": "user-a"}).status_code,
+                200,
+            )
+            self.assertEqual(
+                self.client.get(f"/brain/books/{book_id}", headers={"x-test-user": "user-b"}).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.client.get(
+                    f"/brain/books/{book_id}/search",
+                    params={"q": "zebra"},
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+            user_b_books = self.client.get("/brain/books", headers={"x-test-user": "user-b"})
+            self.assertEqual(user_b_books.json()["total"], 0)
+            self.assertEqual(
+                self.client.get(
+                    "/brain/query",
+                    params={"q": "zebra"},
+                    headers={"x-test-user": "user-b"},
+                ).json()["total"],
+                0,
+            )
+
+    def test_processing_task_access_is_scoped_through_its_source(self):
+        identity_patch = patch(
+            "app.main.authenticate_request",
+            side_effect=lambda request: {"sub": request.headers.get("x-test-user", "")},
+        )
+        with patch.dict(
+            "os.environ",
+            {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"},
+            clear=False,
+        ), identity_patch:
+            source_response = self.client.post(
+                "/sources",
+                json={"url": "https://example.com/user-owned-task-source"},
+                headers={"x-test-user": "user-a"},
+            )
+            source_id = source_response.json()["source"]["id"]
+            task_response = self.client.post(
+                "/processing",
+                json={"source_id": source_id},
+                headers={"x-test-user": "user-a"},
+            )
+            self.assertEqual(task_response.status_code, 202)
+            task_id = task_response.json()["id"]
+
+            advanced = self.client.post(
+                f"/processing/{task_id}/advance",
+                headers={"x-test-user": "user-a"},
+            )
+            self.assertEqual(advanced.status_code, 200)
+            self.assertEqual(advanced.json()["stage"], "extracting")
+
+            self.assertEqual(
+                self.client.get(f"/processing/{task_id}", headers={"x-test-user": "user-a"}).status_code,
+                200,
+            )
+            self.assertEqual(
+                self.client.get(f"/processing/{task_id}", headers={"x-test-user": "user-b"}).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.client.post(
+                    "/processing",
+                    json={"source_id": source_id},
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.client.post(
+                    f"/processing/{task_id}/advance",
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+            self.assertEqual(
+                self.client.post(
+                    f"/processing/{task_id}/retry",
+                    headers={"x-test-user": "user-b"},
+                ).status_code,
+                404,
+            )
+            self.assertEqual(store.tasks[task_id]["stage"], "extracting")
 
     def test_language_schedule_handles_learning_and_lapse(self):
         card = {

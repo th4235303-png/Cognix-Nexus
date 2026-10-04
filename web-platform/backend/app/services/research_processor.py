@@ -1,9 +1,7 @@
 from __future__ import annotations
 
-import ipaddress
 import os
 import re
-import socket
 import asyncio
 import json
 import time
@@ -12,6 +10,8 @@ from html.parser import HTMLParser
 from urllib.parse import quote, unquote, urljoin, urlparse
 
 import httpx
+
+from app.services.ssrf import PinnedHTTPTransport, assert_public_url
 
 
 MAX_DOCUMENT_BYTES = int(os.getenv("COGNIX_MAX_DOCUMENT_BYTES", str(2 * 1024 * 1024)))
@@ -53,26 +53,7 @@ class ProcessingResult:
 
 
 def _assert_public_url(url: str) -> None:
-    parsed = urlparse(url)
-    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
-        raise ValueError("Only public HTTP(S) source URLs are allowed")
-    if parsed.username or parsed.password:
-        raise ValueError("Source URLs must not contain credentials")
-    try:
-        addresses = {
-            info[4][0]
-            for info in socket.getaddrinfo(
-                parsed.hostname,
-                parsed.port or (443 if parsed.scheme == "https" else 80),
-                type=socket.SOCK_STREAM,
-            )
-        }
-    except socket.gaierror as exc:
-        raise ValueError("Source hostname could not be resolved") from exc
-    for address in addresses:
-        ip = ipaddress.ip_address(address)
-        if not ip.is_global:
-            raise ValueError("Source URL resolves to a non-public network address")
+    assert_public_url(url)
 
 
 def _wikipedia_rest_url(url: str) -> str | None:
@@ -192,6 +173,8 @@ def fetch_source(url: str) -> str:
     with httpx.Client(
         timeout=20.0,
         follow_redirects=False,
+        trust_env=False,
+        transport=PinnedHTTPTransport(),
         headers={
             "User-Agent": USER_AGENT,
             "Accept": "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.1",

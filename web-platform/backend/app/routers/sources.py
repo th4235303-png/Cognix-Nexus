@@ -1,8 +1,10 @@
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+import psycopg
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field, HttpUrl
 
+from app.ownership import get_source_for_request, owner_for_request
 from app.services.trust import calculate_trust
 from app.store import now_iso, store
 
@@ -31,11 +33,15 @@ class TranslationUpdate(BaseModel):
 
 
 @router.post("", status_code=201)
-def create_source(payload: SourceCreate) -> dict:
+def create_source(payload: SourceCreate, request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
     normalized_url = str(payload.url).rstrip("/")
     duplicate = next(
-        (source for source in store.sources.values() if source["url"].rstrip("/") == normalized_url),
+        (
+            source for source in store.list_sources_for_owner(owner_id)
+            if source["url"].rstrip("/") == normalized_url
+        ),
         None,
     )
     if duplicate:
@@ -60,34 +66,37 @@ def create_source(payload: SourceCreate) -> dict:
         "critical_warnings": [],
         "key_points": [],
     }
+    store.set_source_owner(source_id, owner_id)
+    try:
+        store.save_source(source)
+    except psycopg.errors.UniqueViolation as exc:
+        store.source_owners.pop(source_id, None)
+        raise HTTPException(status_code=409, detail="Source URL already exists") from exc
     store.sources[source_id] = source
-    store.save_source(source)
     store.add_activity("source_added", source_id, "—", "new")
     return {"status": "queued", "source": source}
 
 
 @router.get("")
-def list_sources() -> dict:
+def list_sources(request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
-    items = list(store.sources.values())
+    items = store.list_sources_for_owner(owner_id)
     return {"items": items, "total": len(items)}
 
 
 @router.get("/{source_id}")
-def get_source(source_id: str) -> dict:
+def get_source(source_id: str, request: Request) -> dict:
+    owner_for_request(request)
     store.refresh()
-    source = store.sources.get(source_id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
-    return source
+    return get_source_for_request(request, source_id)
 
 
 @router.post("/{source_id}/claims", status_code=201)
-def add_claim(source_id: str, payload: ClaimCreate) -> dict:
+def add_claim(source_id: str, payload: ClaimCreate, request: Request) -> dict:
+    owner_for_request(request)
     store.refresh()
-    source = store.sources.get(source_id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
+    source = get_source_for_request(request, source_id)
     claim = {
         "id": f"CLM-{uuid4().hex[:8].upper()}",
         "text": payload.text,
@@ -110,11 +119,10 @@ def add_claim(source_id: str, payload: ClaimCreate) -> dict:
 
 
 @router.patch("/{source_id}/translation")
-def update_translation(source_id: str, payload: TranslationUpdate) -> dict:
+def update_translation(source_id: str, payload: TranslationUpdate, request: Request) -> dict:
+    owner_for_request(request)
     store.refresh()
-    source = store.sources.get(source_id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
+    source = get_source_for_request(request, source_id)
     previous = source.get("human_edited_myanmar")
     source["human_edited_myanmar"] = payload.human_edited_myanmar
     source["updated_at"] = now_iso()
@@ -124,19 +132,16 @@ def update_translation(source_id: str, payload: TranslationUpdate) -> dict:
 
 
 @router.get("/{source_id}/trust-score")
-def get_trust_score(source_id: str) -> dict:
-    source = store.sources.get(source_id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
+def get_trust_score(source_id: str, request: Request) -> dict:
+    source = get_source_for_request(request, source_id)
     return calculate_trust(source)
 
 
 @router.patch("/{source_id}/trust")
-def update_source_trust(source_id: str, payload: SourceTrustUpdate) -> dict:
+def update_source_trust(source_id: str, payload: SourceTrustUpdate, request: Request) -> dict:
+    owner_for_request(request)
     store.refresh()
-    source = store.sources.get(source_id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
+    source = get_source_for_request(request, source_id)
     previous = source.get("source_trust", "unverified")
     source["source_trust"] = payload.source_trust
     source["updated_at"] = now_iso()

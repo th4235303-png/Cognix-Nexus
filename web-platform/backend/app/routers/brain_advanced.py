@@ -5,9 +5,10 @@ from hashlib import sha256
 from uuid import uuid4
 import json
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
+from app.ownership import get_book_for_request, owner_for_request
 from app.services.embeddings import embedding_provider
 from app.services.llm import llm_provider
 from app.store import store
@@ -21,6 +22,19 @@ def _db():
     return store.database
 
 
+def _require_unscoped_book_access(request: Request) -> None:
+    owner_id = owner_for_request(request)
+    if owner_id is None or store.database is None:
+        return
+    raise HTTPException(
+        status_code=503,
+        detail={
+            "code": "OWNERSHIP_UNAVAILABLE",
+            "message": "This book-wide feature is not scoped to an authenticated owner",
+        },
+    )
+
+
 class SummaryCreate(BaseModel):
     book_id: str
     level: str = Field(pattern=r"^L[1-7]$")
@@ -31,11 +45,21 @@ class SummaryCreate(BaseModel):
 
 
 @router.post("/summaries", status_code=201)
-def create_summary(payload: SummaryCreate) -> dict:
+def create_summary(payload: SummaryCreate, request: Request) -> dict:
+    get_book_for_request(request, payload.book_id)
     db = _db()
     summary_id = f"SUM-{uuid4().hex[:8].upper()}"
     with db.connect() as conn:
         with conn.cursor() as cur:
+            if payload.source_ids:
+                cur.execute(
+                    """SELECT count(*) AS total FROM chunks
+                       WHERE id = ANY(%s)
+                         AND chapter_id IN (SELECT id FROM chapters WHERE book_id=%s)""",
+                    (payload.source_ids, payload.book_id),
+                )
+                if int(cur.fetchone()["total"]) != len(set(payload.source_ids)):
+                    raise HTTPException(status_code=404, detail="Book evidence not found")
             cur.execute("SELECT COALESCE(MAX(version), 0) + 1 AS version FROM book_summaries WHERE book_id=%s AND level=%s", (payload.book_id, payload.level))
             version = int(cur.fetchone()["version"])
             cur.execute(
@@ -52,7 +76,8 @@ def create_summary(payload: SummaryCreate) -> dict:
 
 
 @router.get("/books/{book_id}/summaries")
-def list_summaries(book_id: str) -> dict:
+def list_summaries(book_id: str, request: Request) -> dict:
+    get_book_for_request(request, book_id)
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:
@@ -66,7 +91,8 @@ class SummaryGenerationRequest(BaseModel):
 
 
 @router.post("/books/{book_id}/summaries/generate")
-async def generate_book_summaries(book_id: str, payload: SummaryGenerationRequest) -> dict:
+async def generate_book_summaries(book_id: str, payload: SummaryGenerationRequest, request: Request) -> dict:
+    get_book_for_request(request, book_id)
     db = _db()
     levels = []
     for level in payload.levels:
@@ -182,51 +208,38 @@ def _schedule(card: dict, rating: int) -> tuple[float, float, int, int, str, dat
 
 
 @router.post("/language/cards", status_code=201)
-def create_language_card(payload: LanguageCardCreate) -> dict:
+def create_language_card(payload: LanguageCardCreate, request: Request) -> dict:
+    owner_id = owner_for_request(request)
     db = _db()
     card_id = f"CARD-{uuid4().hex[:8].upper()}"
-    with db.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "INSERT INTO language_cards(id,front,back,language,source_note) VALUES(%s,%s,%s,%s,%s) RETURNING *",
-                (card_id, payload.front, payload.back, payload.language, payload.source_note),
-            )
-            row = cur.fetchone()
-        conn.commit()
-    return row
+    return db.create_language_card(
+        {
+            "id": card_id,
+            "front": payload.front,
+            "back": payload.back,
+            "language": payload.language,
+            "source_note": payload.source_note,
+        },
+        owner_id,
+    )
 
 
 @router.get("/language/due")
-def due_language_cards(limit: int = 20) -> dict:
+def due_language_cards(request: Request, limit: int = 20) -> dict:
+    owner_id = owner_for_request(request)
     db = _db()
     limit = max(1, min(limit, 100))
-    with db.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM language_cards WHERE due_at <= now() ORDER BY due_at LIMIT %s", (limit,))
-            items = cur.fetchall()
+    items = db.list_language_cards_due_for_owner(owner_id, limit)
     return {"items": items, "total": len(items)}
 
 
 @router.post("/language/cards/{card_id}/review")
-def review_language_card(card_id: str, payload: LanguageReview) -> dict:
+def review_language_card(card_id: str, payload: LanguageReview, request: Request) -> dict:
+    owner_id = owner_for_request(request)
     db = _db()
-    with db.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM language_cards WHERE id=%s FOR UPDATE", (card_id,))
-            card = cur.fetchone()
-            if not card:
-                raise HTTPException(status_code=404, detail="Language card not found")
-            stability, difficulty, reps, lapses, state, due = _schedule(card, payload.rating)
-            cur.execute(
-                "UPDATE language_cards SET stability=%s,difficulty=%s,reps=%s,lapses=%s,state=%s,due_at=%s,updated_at=now() WHERE id=%s RETURNING *",
-                (stability, difficulty, reps, lapses, state, due, card_id),
-            )
-            updated = cur.fetchone()
-            cur.execute(
-                "INSERT INTO language_reviews(id,card_id,rating,scheduled_for) VALUES(%s,%s,%s,%s)",
-                (f"REV-{uuid4().hex[:8].upper()}", card_id, payload.rating, due),
-            )
-        conn.commit()
+    updated = db.review_language_card(card_id, owner_id, payload.rating, _schedule)
+    if updated is None:
+        raise HTTPException(status_code=404, detail="Language card not found")
     return updated
 
 
@@ -237,7 +250,8 @@ class RetrievalRequest(BaseModel):
 
 
 @router.post("/retrieval")
-async def hybrid_retrieval(payload: RetrievalRequest) -> dict:
+async def hybrid_retrieval(payload: RetrievalRequest, request: Request) -> dict:
+    _require_unscoped_book_access(request)
     db = _db()
     if not embedding_provider.configured:
         raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
@@ -316,7 +330,8 @@ class SynthesisCreate(BaseModel):
 
 
 @router.post("/synthesis", status_code=201)
-def create_synthesis(payload: SynthesisCreate) -> dict:
+def create_synthesis(payload: SynthesisCreate, request: Request) -> dict:
+    _require_unscoped_book_access(request)
     # Evidence collection is deliberately separated from generation. No AI text
     # is invented here; a later model provider may consume this evidence package.
     db = _db()
@@ -333,7 +348,8 @@ def create_synthesis(payload: SynthesisCreate) -> dict:
 
 
 @router.get("/synthesis/{run_id}")
-def get_synthesis(run_id: str) -> dict:
+def get_synthesis(run_id: str, request: Request) -> dict:
+    _require_unscoped_book_access(request)
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:
@@ -350,7 +366,8 @@ class SynthesisGenerateRequest(BaseModel):
 
 
 @router.post("/synthesis/{run_id}/generate")
-async def generate_synthesis(run_id: str, payload: SynthesisGenerateRequest) -> dict:
+async def generate_synthesis(run_id: str, payload: SynthesisGenerateRequest, request: Request) -> dict:
+    _require_unscoped_book_access(request)
     db = _db()
     if not llm_provider.configured:
         raise HTTPException(status_code=503, detail="LLM synthesis is not configured")
@@ -395,48 +412,39 @@ class VaultItem(BaseModel):
 
 
 @router.post("/vault/items", status_code=201)
-def put_vault_item(payload: VaultItem) -> dict:
+def put_vault_item(payload: VaultItem, request: Request) -> dict:
     db = _db()
     item_id = f"VAULT-{uuid4().hex[:8].upper()}"
-    with db.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """INSERT INTO vault_items(id,label,ciphertext,nonce,kdf_salt,kdf_params)
-                   VALUES(%s,%s,%s,%s,%s,%s)
-                   ON CONFLICT DO NOTHING
-                   RETURNING id,label,nonce,kdf_salt,kdf_params,created_at,updated_at""",
-                (item_id, payload.label, payload.ciphertext, payload.nonce, payload.kdf_salt, payload.kdf_params),
-            )
-            row = cur.fetchone()
-        conn.commit()
+    owner_id = owner_for_request(request)
+    item = {
+        "id": item_id,
+        "label": payload.label,
+        "ciphertext": payload.ciphertext,
+        "nonce": payload.nonce,
+        "kdf_salt": payload.kdf_salt,
+        "kdf_params": payload.kdf_params,
+    }
+    row = db.save_vault_item(item, owner_id)
     if not row:
         raise HTTPException(status_code=409, detail="Vault item could not be created")
     return row
 
 
 @router.get("/vault/items/{item_id}")
-def get_vault_item(item_id: str) -> dict:
+def get_vault_item(item_id: str, request: Request) -> dict:
     db = _db()
-    with db.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id,label,ciphertext,nonce,kdf_salt,kdf_params,created_at,updated_at "
-                "FROM vault_items WHERE id=%s",
-                (item_id,),
-            )
-            item = cur.fetchone()
+    owner_id = owner_for_request(request)
+    item = db.get_vault_item_for_owner(item_id, owner_id)
     if not item:
         raise HTTPException(status_code=404, detail="Vault item not found")
     return item
 
 
 @router.get("/vault/items")
-def list_vault_items() -> dict:
+def list_vault_items(request: Request) -> dict:
     db = _db()
-    with db.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT id,label,nonce,kdf_salt,kdf_params,created_at,updated_at FROM vault_items ORDER BY updated_at DESC")
-            items = cur.fetchall()
+    owner_id = owner_for_request(request)
+    items = db.list_vault_items_for_owner(owner_id)
     return {"items": items, "total": len(items)}
 
 
@@ -446,7 +454,8 @@ class EmbedRequest(BaseModel):
 
 
 @router.post("/embeddings/index")
-async def index_embeddings(payload: EmbedRequest) -> dict:
+async def index_embeddings(payload: EmbedRequest, request: Request) -> dict:
+    _require_unscoped_book_access(request)
     db = _db()
     if not embedding_provider.configured:
         raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
@@ -487,7 +496,8 @@ class SemanticQuery(BaseModel):
 
 
 @router.post("/query/semantic")
-async def semantic_query(payload: SemanticQuery) -> dict:
+async def semantic_query(payload: SemanticQuery, request: Request) -> dict:
+    _require_unscoped_book_access(request)
     db = _db()
     if not embedding_provider.configured:
         raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
@@ -576,7 +586,8 @@ async def semantic_query(payload: SemanticQuery) -> dict:
 
 
 @router.get("/export")
-def export_brain_vault() -> dict:
+def export_brain_vault(request: Request) -> dict:
+    _require_unscoped_book_access(request)
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:
@@ -606,7 +617,8 @@ def export_brain_vault() -> dict:
 
 
 @router.get("/contradictions/candidates")
-def contradiction_candidates(limit: int = 50) -> dict:
+def contradiction_candidates(request: Request, limit: int = 50) -> dict:
+    _require_unscoped_book_access(request)
     db = _db()
     limit = max(1, min(limit, 100))
     with db.connect() as conn:
@@ -660,7 +672,8 @@ class ContradictionReview(BaseModel):
 
 
 @router.post("/contradictions/{contradiction_id}/review")
-def review_contradiction(contradiction_id: str, payload: ContradictionReview) -> dict:
+def review_contradiction(contradiction_id: str, payload: ContradictionReview, request: Request) -> dict:
+    _require_unscoped_book_access(request)
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:

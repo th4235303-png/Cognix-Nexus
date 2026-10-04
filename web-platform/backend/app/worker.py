@@ -12,13 +12,51 @@ from app.services.agent import enqueue_due_agent_schedules, run_due_agent_jobs
 from app.services.export_worker import advance_export_job
 from app.services.book_processing import process_queued_books, finalize_indexed_books
 
-from app.services.processing import STAGES, advance
+from app.services.processing import STAGES, TaskLeaseLost, advance
+from app.services.task_retry import task_is_runnable
 from app.store import store
 
 
 logger = logging.getLogger("cognix.worker")
 
 POLL_SECONDS = float(os.getenv("COGNIX_WORKER_POLL_SECONDS", "2"))
+LEASE_HEARTBEAT_SECONDS = 5 * 60
+
+
+def _advance_with_lease(task_id: str, claim_token: str) -> dict:
+    database = store.database
+    if database is None:
+        raise RuntimeError("A database connection is required for a claimed task")
+    lost = threading.Event()
+    stop = threading.Event()
+
+    def renew_lease() -> None:
+        while not stop.wait(LEASE_HEARTBEAT_SECONDS):
+            try:
+                if not database.renew_task_claim(task_id, claim_token):
+                    lost.set()
+                    logger.warning("task_lease_renewal_lost task_id=%s", task_id)
+                    return
+            except Exception as exc:
+                lost.set()
+                logger.exception(
+                    "task_lease_renewal_failed task_id=%s error_type=%s",
+                    task_id,
+                    type(exc).__name__,
+                )
+                return
+
+    heartbeat = threading.Thread(target=renew_lease, daemon=True)
+    heartbeat.start()
+    try:
+        return advance(
+            task_id,
+            claim_token=claim_token,
+            lease_is_valid=lambda: not lost.is_set(),
+        )
+    finally:
+        stop.set()
+        heartbeat.join()
 
 
 def _advance_exports(limit: int = 5) -> int:
@@ -30,9 +68,15 @@ def _advance_exports(limit: int = 5) -> int:
         if job["status"] not in {"queued", "uploading"}:
             continue
         try:
-            advance_export_job(job["id"])
-            processed += 1
-        except Exception:
+            advanced = advance_export_job(job["id"])
+            if advanced.get("status") != job["status"]:
+                processed += 1
+        except Exception as exc:
+            logger.exception(
+                "export_job_processing_failed export_id=%s error_type=%s",
+                job["id"],
+                type(exc).__name__,
+            )
             continue
     return processed
 
@@ -92,20 +136,37 @@ def run_once() -> int:
     candidates = [
         task
         for task in store.tasks.values()
-        if task["status"] in {"queued", "running"}
-        and task["stage"] in STAGES
-        and task["stage"] not in {"needs_review", "approved"}
+        if task["stage"] in STAGES and task_is_runnable(task)
     ]
     processed = 0
     for task in sorted(candidates, key=lambda item: item["created_at"]):
-        if store.database and not store.database.try_claim_task(task["id"]):
-            continue
+        claim_token = None
+        if store.database:
+            claim_token = store.database.claim_task(task["id"])
+            if claim_token is None:
+                logger.info("task_claim_skipped task_id=%s", task["id"])
+                continue
+            logger.info("task_claimed task_id=%s", task["id"])
+        release_claim = False
         try:
-            advance(task["id"])
+            if claim_token is None:
+                advance(task["id"])
+            else:
+                _advance_with_lease(task["id"], claim_token)
             processed += 1
+            release_claim = True
+            logger.info("task_processed task_id=%s", task["id"])
+        except TaskLeaseLost:
+            release_claim = True
+            logger.warning("task_lease_lost task_id=%s", task["id"])
+        except Exception as exc:
+            logger.exception("task_processing_unhandled task_id=%s error_type=%s", task["id"], type(exc).__name__)
         finally:
-            if store.database:
-                store.database.release_task(task["id"])
+            if store.database and claim_token is not None and release_claim:
+                released = store.database.release_task(task["id"], claim_token)
+                logger.info("task_lease_released task_id=%s released=%s", task["id"], released)
+            elif store.database and claim_token is not None:
+                logger.warning("task_lease_retained_for_recovery task_id=%s", task["id"])
     if candidates:
         logger.info("worker_cycle candidates=%d processed=%d persistence=%s", len(candidates), processed, store.persistence_mode)
     return processed

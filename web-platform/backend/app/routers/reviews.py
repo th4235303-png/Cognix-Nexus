@@ -1,6 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
+from app.ownership import get_source_for_request, owner_for_request
 from app.store import now_iso, store
 
 router = APIRouter()
@@ -11,18 +12,21 @@ class ReviewAction(BaseModel):
 
 
 @router.get("")
-def list_reviews() -> dict:
+def list_reviews(request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
-    items = list(store.reviews.values())
+    source_ids = {
+        source["id"] for source in store.list_sources_for_owner(owner_id)
+    }
+    items = [review for source_id, review in store.reviews.items() if source_id in source_ids]
     return {"items": items, "total": len(items)}
 
 
 @router.post("/{source_id}/approve")
-def approve_review(source_id: str, action: ReviewAction) -> dict:
+def approve_review(source_id: str, action: ReviewAction, request: Request) -> dict:
+    owner_for_request(request)
     store.refresh()
-    source = store.sources.get(source_id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
+    source = get_source_for_request(request, source_id)
     critical = source.get("critical_warnings", [])
     if critical:
         raise HTTPException(status_code=409, detail={"code": "CRITICAL_WARNINGS", "warnings": critical})
@@ -44,11 +48,10 @@ def approve_review(source_id: str, action: ReviewAction) -> dict:
 
 
 @router.post("/{source_id}/revision")
-def request_revision(source_id: str, action: ReviewAction) -> dict:
+def request_revision(source_id: str, action: ReviewAction, request: Request) -> dict:
+    owner_for_request(request)
     store.refresh()
-    source = store.sources.get(source_id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
+    source = get_source_for_request(request, source_id)
     review = {"source_id": source_id, "status": "revision_requested", "note": action.note}
     review["created_at"] = now_iso()
     store.reviews[source_id] = review

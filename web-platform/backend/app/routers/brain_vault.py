@@ -4,9 +4,11 @@ from hashlib import sha256
 import os
 from uuid import uuid4
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+import psycopg
+from fastapi import APIRouter, File, HTTPException, Request, UploadFile
 from pydantic import BaseModel, Field
 
+from app.ownership import get_book_for_request, owner_for_request
 from app.services.book_storage import BookBinaryStorage
 from app.services.upload_limits import UploadTooLargeError, read_upload_limited
 from app.store import now_iso, store
@@ -64,24 +66,19 @@ def _chunk_text(text: str, size: int = 1800) -> list[str]:
     return chunks
 
 
-def _book_from_store(book_id: str) -> dict:
-    book = store.brain_books.get(book_id)
-    if not book:
-        raise HTTPException(status_code=404, detail="Book not found")
-    return book
-
-
 @router.get("/books")
-def list_books(limit: int = 50, offset: int = 0) -> dict:
+def list_books(request: Request, limit: int = 50, offset: int = 0) -> dict:
+    owner_id = owner_for_request(request)
     if store.database is None:
-        items = sorted(store.brain_books.values(), key=lambda item: item["updated_at"], reverse=True)
+        items = sorted(store.list_brain_books_for_owner(owner_id), key=lambda item: item["updated_at"], reverse=True)
         return {"items": items[offset:offset + min(limit, 100)], "total": len(items)}
-    items, total = store.database.list_books(limit=limit, offset=offset)
+    items, total = store.database.list_books(limit=limit, offset=offset, owner_id=owner_id)
     return {"items": items, "total": total, "limit": min(max(limit, 1), 100), "offset": max(offset, 0)}
 
 
 @router.post("/books", status_code=201)
-def create_book(payload: BookCreate) -> dict:
+def create_book(payload: BookCreate, request: Request) -> dict:
+    owner_id = owner_for_request(request)
     now = now_iso()
     book_id = f"BOOK-{uuid4().hex[:8].upper()}"
     paragraphs = _chunk_text(payload.text)
@@ -123,32 +120,28 @@ def create_book(payload: BookCreate) -> dict:
         "chapters": chapters,
         "chunk_count": len(chunks),
     }
-    store.brain_books[book_id] = book
+    store.set_brain_book_owner(book_id, owner_id)
     store.save_brain_book(book)
+    store.brain_books[book_id] = book
     store.add_activity("brain_book_created", book_id, "new", "ready")
     return book
 
 
 @router.get("/books/{book_id}")
-def get_book(book_id: str) -> dict:
-    if store.database is not None:
-        book = store.database.get_book(book_id)
-        if not book:
-            raise HTTPException(status_code=404, detail="Book not found")
-        return book
-    return _book_from_store(book_id)
+def get_book(book_id: str, request: Request) -> dict:
+    return get_book_for_request(request, book_id)
 
 
 @router.get("/books/{book_id}/chapters")
-def list_chapters(book_id: str) -> dict:
-    book = get_book(book_id)
+def list_chapters(book_id: str, request: Request) -> dict:
+    book = get_book_for_request(request, book_id)
     chapters = [{k: v for k, v in chapter.items() if k != "chunks"} for chapter in book["chapters"]]
     return {"items": chapters, "total": len(chapters)}
 
 
 @router.get("/books/{book_id}/chapters/{chapter_id}")
-def get_chapter(book_id: str, chapter_id: str) -> dict:
-    book = get_book(book_id)
+def get_chapter(book_id: str, chapter_id: str, request: Request) -> dict:
+    book = get_book_for_request(request, book_id)
     chapter = next((item for item in book["chapters"] if item["id"] == chapter_id), None)
     if not chapter:
         raise HTTPException(status_code=404, detail="Chapter not found")
@@ -156,13 +149,13 @@ def get_chapter(book_id: str, chapter_id: str) -> dict:
 
 
 @router.get("/books/{book_id}/search")
-def search_book(book_id: str, q: str) -> dict:
+def search_book(book_id: str, q: str, request: Request) -> dict:
+    owner_for_request(request)
     if store.database is not None:
-        if not store.database.get_book(book_id):
-            raise HTTPException(status_code=404, detail="Book not found")
-        matches, total = store.database.search_book(book_id, q)
+        owner_id = owner_for_request(request)
+        matches, total = store.database.search_book(book_id, q, owner_id=owner_id)
         return {"query": q, "items": matches, "total": total}
-    book = _book_from_store(book_id)
+    book = get_book_for_request(request, book_id)
     query = q.strip().lower()
     if not query:
         raise HTTPException(status_code=400, detail="Query is required")
@@ -179,14 +172,29 @@ def search_book(book_id: str, q: str) -> dict:
 
 
 @router.get("/notes")
-def list_notes() -> dict:
+def list_notes(request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
-    items = sorted(store.brain_notes.values(), key=lambda item: item["updated_at"], reverse=True)
+    items = sorted(store.list_brain_notes_for_owner(owner_id), key=lambda item: item["updated_at"], reverse=True)
     return {"items": items, "total": len(items)}
 
 
 @router.post("/notes", status_code=201)
-def create_note(payload: NoteCreate) -> dict:
+def create_note(payload: NoteCreate, request: Request) -> dict:
+    owner_id = owner_for_request(request)
+    if payload.source_type and payload.source_id and owner_id is not None:
+        if payload.source_type == "note":
+            reference = store.get_brain_note_for_owner(payload.source_id, owner_id)
+        elif payload.source_type == "concept":
+            reference = store.get_brain_concept_for_owner(payload.source_id, owner_id)
+        elif payload.source_type == "source":
+            reference = store.get_source_for_owner(payload.source_id, owner_id)
+        elif payload.source_type == "book":
+            reference = store.get_brain_book_for_owner(payload.source_id, owner_id)
+        else:
+            reference = None
+        if reference is None:
+            raise HTTPException(status_code=404, detail="Referenced record not found")
     now = now_iso()
     note_id = f"NOTE-{uuid4().hex[:8].upper()}"
     note = {
@@ -200,37 +208,36 @@ def create_note(payload: NoteCreate) -> dict:
         "source_type": payload.source_type,
         "source_id": payload.source_id,
     }
-    store.brain_notes[note_id] = note
-    store.save_brain_note(note)
+    if store.database is None:
+        store.brain_notes[note_id] = note
+    store.save_brain_note(note, owner_id)
     store.add_activity("brain_note_created", note_id, "new", payload.status)
     return note
 
 
 @router.get("/notes/{note_id}/backlinks")
-def note_backlinks(note_id: str) -> dict:
+def note_backlinks(note_id: str, request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
-    if note_id not in store.brain_notes:
+    items = store.list_note_backlinks_for_owner(note_id, owner_id)
+    if items is None:
         raise HTTPException(status_code=404, detail="Note not found")
-    items = []
-    for note in store.brain_notes.values():
-        for source in note.get("sources", []):
-            if source["source_type"] == "note" and source["source_id"] == note_id:
-                items.append(note)
-                break
     return {"items": items, "total": len(items)}
 
 
 @router.get("/concepts")
-def list_concepts() -> dict:
+def list_concepts(request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
-    items = sorted(store.brain_concepts.values(), key=lambda item: item["name"].lower())
+    items = sorted(store.list_brain_concepts_for_owner(owner_id), key=lambda item: item["name"].lower())
     return {"items": items, "total": len(items)}
 
 
 @router.post("/concepts", status_code=201)
-def create_concept(payload: ConceptCreate) -> dict:
+def create_concept(payload: ConceptCreate, request: Request) -> dict:
+    owner_id = owner_for_request(request)
     now = now_iso()
-    existing = next((item for item in store.brain_concepts.values() if item["name"].casefold() == payload.name.casefold()), None)
+    existing = store.get_brain_concept_by_name_for_owner(payload.name, owner_id)
     if existing:
         return existing
     concept_id = f"CON-{uuid4().hex[:8].upper()}"
@@ -241,23 +248,29 @@ def create_concept(payload: ConceptCreate) -> dict:
         "created_at": now,
         "updated_at": now,
     }
-    store.brain_concepts[concept_id] = concept
-    store.save_brain_concept(concept)
+    if store.database is None:
+        store.brain_concepts[concept_id] = concept
+    try:
+        store.save_brain_concept(concept, owner_id)
+    except psycopg.errors.UniqueViolation as exc:
+        raise HTTPException(status_code=409, detail="Concept name conflict") from exc
     store.add_activity("brain_concept_created", concept_id, "new", "active")
     return concept
 
 
 @router.get("/graph")
-def get_graph() -> dict:
+def get_graph(request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
     return {
-        "nodes": list(store.brain_concepts.values()),
-        "edges": list(store.brain_concept_links.values()),
+        "nodes": store.list_brain_concepts_for_owner(owner_id),
+        "edges": store.list_concept_links_for_owner(owner_id),
     }
 
 
 @router.get("/query")
-def query_brain(q: str, limit: int = 12) -> dict:
+def query_brain(q: str, request: Request, limit: int = 12) -> dict:
+    owner_id = owner_for_request(request)
     query = q.strip()
     if not query:
         raise HTTPException(status_code=400, detail="Query is required")
@@ -267,18 +280,32 @@ def query_brain(q: str, limit: int = 12) -> dict:
         pattern = "%" + "%".join(terms) + "%"
         with store.database.connect() as conn:
             with conn.cursor() as cur:
-                cur.execute(
-                    """SELECT b.id AS book_id, b.title AS book_title,
-                              ch.id AS chapter_id, c.id AS chunk_id,
-                              ch.title AS chapter_title, c.sequence, c.content
-                       FROM chunks c
-                       JOIN chapters ch ON ch.id=c.chapter_id
-                       JOIN books b ON b.id=ch.book_id
-                       WHERE lower(c.content) LIKE %s
-                       ORDER BY c.created_at DESC
-                       LIMIT %s""",
-                    (pattern, limit),
-                )
+                if owner_id is None:
+                    cur.execute(
+                        """SELECT b.id AS book_id, b.title AS book_title,
+                                  ch.id AS chapter_id, c.id AS chunk_id,
+                                  ch.title AS chapter_title, c.sequence, c.content
+                           FROM chunks c
+                           JOIN chapters ch ON ch.id=c.chapter_id
+                           JOIN books b ON b.id=ch.book_id
+                           WHERE lower(c.content) LIKE %s
+                           ORDER BY c.created_at DESC
+                           LIMIT %s""",
+                        (pattern, limit),
+                    )
+                else:
+                    cur.execute(
+                        """SELECT b.id AS book_id, b.title AS book_title,
+                                  ch.id AS chapter_id, c.id AS chunk_id,
+                                  ch.title AS chapter_title, c.sequence, c.content
+                           FROM chunks c
+                           JOIN chapters ch ON ch.id=c.chapter_id
+                           JOIN books b ON b.id=ch.book_id
+                           WHERE b.owner_id=%s AND lower(c.content) LIKE %s
+                           ORDER BY c.created_at DESC
+                           LIMIT %s""",
+                        (owner_id, pattern, limit),
+                    )
                 rows = cur.fetchall()
         items = []
         for row in rows:
@@ -299,7 +326,7 @@ def query_brain(q: str, limit: int = 12) -> dict:
     query = query.lower()
     terms = [term for term in query.split() if term]
     evidence = []
-    for book in store.brain_books.values():
+    for book in store.list_brain_books_for_owner(owner_id):
         for chapter in book["chapters"]:
             for chunk in chapter["chunks"]:
                 score = sum(chunk["content"].lower().count(term) for term in terms)
@@ -311,13 +338,17 @@ def query_brain(q: str, limit: int = 12) -> dict:
 
 
 @router.post("/concept-links", status_code=201)
-def create_concept_link(payload: ConceptLinkCreate) -> dict:
+def create_concept_link(payload: ConceptLinkCreate, request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
-    if payload.from_concept_id not in store.brain_concepts or payload.to_concept_id not in store.brain_concepts:
+    if (
+        store.get_brain_concept_for_owner(payload.from_concept_id, owner_id) is None
+        or store.get_brain_concept_for_owner(payload.to_concept_id, owner_id) is None
+    ):
         raise HTTPException(status_code=404, detail="Concept not found")
     existing = next(
         (
-            link for link in store.brain_concept_links.values()
+            link for link in store.list_concept_links_for_owner(owner_id)
             if link["from_concept_id"] == payload.from_concept_id
             and link["to_concept_id"] == payload.to_concept_id
             and link["relation"] == payload.relation
@@ -334,19 +365,26 @@ def create_concept_link(payload: ConceptLinkCreate) -> dict:
         "weight": payload.weight,
         "created_at": now_iso(),
     }
-    store.brain_concept_links[link["id"]] = link
-    store.save_brain_concept_link(link)
+    if store.database is None:
+        store.brain_concept_links[link["id"]] = link
+    store.save_brain_concept_link(link, owner_id)
     store.add_activity("brain_concept_linked", link["id"], "new", "active")
     return link
 
 
 @router.post("/books/upload", status_code=201)
-async def upload_book(file: UploadFile = File(...), language: str = "en", description: str | None = None) -> dict:
+async def upload_book(
+    request: Request,
+    file: UploadFile = File(...),
+    language: str = "en",
+    description: str | None = None,
+) -> dict:
     """Persist a PDF/EPUB and enqueue worker-owned extraction.
 
     The API never performs document extraction. This keeps large uploads off the
     request path and makes API/worker storage shared and retryable.
     """
+    owner_id = owner_for_request(request)
     filename = file.filename or "document"
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
     if suffix not in {"pdf", "epub"}:
@@ -363,13 +401,10 @@ async def upload_book(file: UploadFile = File(...), language: str = "en", descri
         raise HTTPException(status_code=400, detail="Uploaded document is empty")
 
     content_hash = sha256(data).hexdigest()
-    with store.database.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute("SELECT * FROM books WHERE content_hash=%s ORDER BY created_at LIMIT 1", (content_hash,))
-            existing = cur.fetchone()
+    existing = store.database.get_book_by_content_hash(content_hash, owner_id)
     if existing:
         return {"id": existing["id"], "status": existing["status"], "processing_stage": existing.get("processing_stage") or "queued",
-                "content_hash": content_hash, "idempotent": True, "book": store._book_row(existing)}
+                "content_hash": content_hash, "idempotent": True, "book": existing}
 
     book_id = f"BOOK-{uuid4().hex[:8].upper()}"
     binary_path = None
@@ -401,6 +436,7 @@ async def upload_book(file: UploadFile = File(...), language: str = "en", descri
             "processing_started_at": None,
             "processed_at": None,
         }
+        store.set_brain_book_owner(book_id, owner_id)
         store.save_brain_book(book)
         store.refresh()
         saved = store.brain_books.get(book_id) or book
@@ -414,11 +450,9 @@ async def upload_book(file: UploadFile = File(...), language: str = "en", descri
             except Exception:
                 pass
         if "duplicate key" in str(exc).lower() and store.database:
-            with store.database.connect() as conn:
-                with conn.cursor() as cur:
-                    cur.execute("SELECT * FROM books WHERE content_hash=%s ORDER BY created_at LIMIT 1", (content_hash,))
-                    existing = cur.fetchone()
+            existing = store.database.get_book_by_content_hash(content_hash, owner_id)
             if existing:
                 return {"id": existing["id"], "status": existing["status"], "processing_stage": existing.get("processing_stage") or "queued",
-                        "content_hash": content_hash, "idempotent": True, "book": store._book_row(existing)}
+                        "content_hash": content_hash, "idempotent": True, "book": existing}
+            raise HTTPException(status_code=409, detail="An identical book already exists") from exc
         raise HTTPException(status_code=503, detail=f"Book upload could not be persisted: {exc}") from exc

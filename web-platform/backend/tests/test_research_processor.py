@@ -1,8 +1,10 @@
 import os
+import socket
 import unittest
 from unittest.mock import Mock, patch
 
 from app.services.research_processor import _wikipedia_core_api_url, _wikipedia_rest_url, clean_text, fetch_source, mock_key_points, mock_summary, process_stage
+from app.services.ssrf import UnsafeDestination
 
 
 class ResearchProcessorTests(unittest.TestCase):
@@ -49,6 +51,16 @@ def _response(status: int, text: str = "ok", headers: dict | None = None):
     return item
 
 
+def _redirect(location: str):
+    response = _response(302, headers={"location": location})
+    response.is_redirect = True
+    return response
+
+
+def _public_dns(_hostname, port, type):
+    return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("93.184.216.34", port))]
+
+
 class SourceFetchRetryTests(unittest.TestCase):
     @patch("app.services.research_processor.time.sleep")
     @patch("app.services.research_processor.httpx.Client")
@@ -84,6 +96,82 @@ class SourceFetchRetryTests(unittest.TestCase):
         self.assertEqual(fetch_source("https://example.com/test"), "timeout recovered")
         self.assertEqual(client.get.call_count, 2)
         sleep.assert_called_once()
+
+    @patch("app.services.research_processor.httpx.Client")
+    @patch("app.services.ssrf.socket.getaddrinfo", side_effect=[
+        _public_dns("unused", 443, socket.SOCK_STREAM),
+        [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("10.0.0.2", 443))],
+    ])
+    def test_redirect_to_private_address_is_rejected(self, getaddrinfo, client_cls):
+        client = client_cls.return_value.__enter__.return_value
+        client.get.return_value = _redirect("http://internal.example/private")
+        with self.assertRaisesRegex(UnsafeDestination, "not public"):
+            fetch_source("https://public.example/article")
+        self.assertEqual(client.get.call_count, 1)
+
+    @patch("app.services.research_processor.httpx.Client")
+    def test_redirect_to_localhost_is_rejected(self, client_cls):
+        client = client_cls.return_value.__enter__.return_value
+        client.get.return_value = _redirect("http://localhost/private")
+        with patch("app.services.ssrf.socket.getaddrinfo", side_effect=_public_dns):
+            with self.assertRaises(UnsafeDestination):
+                fetch_source("https://public.example/article")
+        self.assertEqual(client.get.call_count, 1)
+
+    @patch("app.services.research_processor.httpx.Client")
+    @patch("app.services.ssrf.socket.getaddrinfo", side_effect=[
+        _public_dns("unused", 443, socket.SOCK_STREAM),
+        [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("127.0.0.1", 80))],
+    ])
+    def test_redirect_to_noncanonical_loopback_address_is_rejected(self, getaddrinfo, client_cls):
+        client = client_cls.return_value.__enter__.return_value
+        client.get.return_value = _redirect("http://2130706433/private")
+        with self.assertRaises(UnsafeDestination):
+            fetch_source("https://public.example/article")
+        self.assertEqual(client.get.call_count, 1)
+
+    @patch("app.services.research_processor.httpx.Client")
+    def test_redirect_to_another_public_hostname_is_allowed(self, client_cls):
+        client = client_cls.return_value.__enter__.return_value
+        client.get.side_effect = [
+            _redirect("https://other-public.example/article"),
+            _response(200, "public redirect worked"),
+        ]
+        with patch("app.services.ssrf.socket.getaddrinfo", side_effect=_public_dns):
+            self.assertEqual(
+                fetch_source("https://public.example/start"),
+                "public redirect worked",
+            )
+        self.assertEqual(client.get.call_count, 2)
+
+    @patch("app.services.research_processor.time.sleep")
+    @patch("app.services.research_processor.httpx.Client")
+    def test_ssrf_rejection_from_transport_is_not_retried(self, client_cls, sleep):
+        client = client_cls.return_value.__enter__.return_value
+        client.get.side_effect = UnsafeDestination("Source destination is not public")
+        with (
+            patch("app.services.ssrf.socket.getaddrinfo", side_effect=_public_dns),
+            self.assertRaises(UnsafeDestination),
+        ):
+            fetch_source("https://public.example/article")
+        self.assertEqual(client.get.call_count, 1)
+        sleep.assert_not_called()
+
+    @patch("app.services.research_processor.httpx.Client")
+    def test_wikipedia_403_still_uses_public_api_fallback(self, client_cls):
+        client = client_cls.return_value.__enter__.return_value
+        client.get.side_effect = [
+            _response(403, "denied"),
+            _response(200, "<html><body>Wikipedia fallback text</body></html>", {
+                "content-type": "text/html",
+            }),
+        ]
+        with patch("app.services.ssrf.socket.getaddrinfo", side_effect=_public_dns):
+            self.assertEqual(
+                fetch_source("https://en.wikipedia.org/wiki/Logistics"),
+                "Wikipedia fallback text",
+            )
+        self.assertEqual(client.get.call_count, 2)
 
 
 if __name__ == "__main__":

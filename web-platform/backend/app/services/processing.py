@@ -1,14 +1,20 @@
 from hashlib import sha256
+from copy import deepcopy
+from collections.abc import Callable
 
 from fastapi import HTTPException
 
 from app.services.research_processor import ProcessingResult, process_stage
+from app.services.task_retry import MAX_PROCESSING_RETRIES
 from app.store import now_iso, store
 
 STAGES = (
     "queued", "extracting", "cleaning", "translating", "summarizing",
     "key_points", "fact_check", "trust_scoring", "needs_review", "approved",
 )
+class TaskLeaseLost(RuntimeError):
+    """Raised when a worker no longer owns the task lease at persistence time."""
+
 
 
 def _apply_result(source: dict, result: ProcessingResult) -> None:
@@ -54,9 +60,14 @@ def _fact_check(source: dict) -> None:
             warnings.append(warning)
 
 
-def advance(task_id: str) -> dict:
-    task = store.tasks[task_id]
+def advance(
+    task_id: str,
+    claim_token: str | None = None,
+    lease_is_valid: Callable[[], bool] | None = None,
+) -> dict:
+    task = deepcopy(store.tasks[task_id])
     current_stage = task["stage"]
+    current_status = task["status"]
     if current_stage == "needs_review":
         raise HTTPException(
             status_code=409,
@@ -65,11 +76,16 @@ def advance(task_id: str) -> dict:
                 "message": "Processing tasks must be approved through the review endpoint.",
             },
         )
+    if task["status"] == "completed":
+        raise HTTPException(status_code=409, detail="Completed processing tasks cannot be advanced")
+    if task["status"] == "failed":
+        raise HTTPException(status_code=409, detail="Failed processing tasks must be retried")
     index = STAGES.index(current_stage)
     next_stage = STAGES[min(index + 1, len(STAGES) - 1)]
     source = store.sources.get(task["source_id"])
     if source is None:
         raise KeyError(f"Source {task['source_id']} not found")
+    source = deepcopy(source)
 
     try:
         if next_stage in {"extracting", "cleaning", "summarizing", "translating", "key_points"}:
@@ -86,10 +102,14 @@ def advance(task_id: str) -> dict:
         task["error"] = str(exc)
         task["status"] = "failed"
         task["updated_at"] = now_iso()
-        store.save_task(task)
         source["status"] = "failed"
         source["updated_at"] = now_iso()
-        store.save_source(source)
+        if lease_is_valid is not None and not lease_is_valid():
+            raise TaskLeaseLost(f"Lease lost while processing task {task_id}") from exc
+        if not store.save_processing_transition(
+            task, source, current_status, current_stage, claim_token
+        ):
+            raise TaskLeaseLost(f"Lease lost while persisting task {task_id}") from exc
         store.add_activity("processing_failed", task["source_id"], current_stage, "failed")
         return task
 
@@ -97,7 +117,6 @@ def advance(task_id: str) -> dict:
     task["progress"] = round((STAGES.index(next_stage) / (len(STAGES) - 1)) * 100)
     task["status"] = "completed" if next_stage in {"needs_review", "approved"} else "running"
     task["updated_at"] = now_iso()
-    store.save_task(task)
 
     previous = source.get("processing_stage", current_stage)
     source["processing_stage"] = next_stage
@@ -106,6 +125,11 @@ def advance(task_id: str) -> dict:
     elif next_stage == "approved":
         source["status"] = "approved"
     source["updated_at"] = now_iso()
-    store.save_source(source)
+    if lease_is_valid is not None and not lease_is_valid():
+        raise TaskLeaseLost(f"Lease lost while processing task {task_id}")
+    if not store.save_processing_transition(
+        task, source, current_status, current_stage, claim_token
+    ):
+        raise TaskLeaseLost(f"Lease lost while persisting task {task_id}")
     store.add_activity("processing_stage_advanced", task["source_id"], previous, next_stage)
     return task

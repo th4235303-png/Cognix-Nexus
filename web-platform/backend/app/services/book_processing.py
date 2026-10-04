@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import logging
 import os
 from datetime import datetime, timezone
 from pathlib import Path
 
 from app.services.book_ingestion import extract_document
 from app.services.book_storage import BookBinaryStorage
+from app.services.lease_runner import LeaseLostError, run_with_lease_heartbeat
 from app.store import store
+
+logger = logging.getLogger("cognix.worker")
 
 
 def _chunk_text(text: str, size: int = 1800) -> list[str]:
@@ -30,143 +34,109 @@ def _chunk_text(text: str, size: int = 1800) -> list[str]:
     return chunks
 
 
-def _claim_book(book_id: str) -> dict | None:
-    db = store.database
-    if db is None or not db.try_claim_task(f"book:{book_id}"):
-        return None
-    try:
-        with db.connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute("SELECT * FROM books WHERE id=%s FOR UPDATE", (book_id,))
-                book = cur.fetchone()
-                if not book:
-                    db.release_task(f"book:{book_id}")
-                    return None
-                attempts = int(book.get("processing_attempts") or 0)
-                if book["status"] == "ready" or attempts >= 3:
-                    db.release_task(f"book:{book_id}")
-                    return None
-                now = datetime.now(timezone.utc)
-                cur.execute(
-                    """UPDATE books
-                       SET status='processing',
-                           processing_stage='extracting',
-                           processing_attempts=%s,
-                           processing_error=NULL,
-                           processing_started_at=%s,
-                           updated_at=now()
-                       WHERE id=%s""",
-                    (attempts + 1, now, book_id),
-                )
-            conn.commit()
-        return {**book, "processing_attempts": attempts + 1}
-    except Exception:
-        db.release_task(f"book:{book_id}")
-        raise
-
-
-def _mark_failed(book_id: str, error: str) -> None:
+def _claim_book(book_id: str) -> tuple[dict, str] | None:
     db = store.database
     if db is None:
-        return
-    with db.connect() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                """UPDATE books
-                   SET status='failed',
-                       processing_stage='failed',
-                       processing_error=%s,
-                       updated_at=now()
-                   WHERE id=%s""",
-                (error[:4000], book_id),
-            )
-        conn.commit()
+        return None
+    return db.claim_book_processing(book_id)
+
+
+def _mark_failed(book_id: str, token: str, error: str) -> bool:
+    db = store.database
+    if db is None:
+        return False
+    return db.fail_book_processing(book_id, token, error)
 
 
 def process_book(book_id: str) -> bool:
     db = store.database
     if db is None:
         return False
-    book = _claim_book(book_id)
-    if not book:
+    claimed = _claim_book(book_id)
+    if claimed is None:
+        logger.info("book_processing_claim_skipped book_id=%s", book_id)
         return False
-    try:
-        binary_path = book.get("binary_path")
-        binary_storage = book.get("binary_storage")
-        filename = (
-            book.get("original_filename")
-            or (Path(binary_path).name if binary_path else None)
-            or (Path(binary_storage).name if binary_storage else None)
-            or f"document.{str(book.get('file_type') or 'pdf').lstrip('.')}"
-        )
-        if not filename or filename == ".":
-            raise RuntimeError("Book binary metadata is incomplete: filename/path is missing")
-        data = BookBinaryStorage().get(book_id, filename)
-        import hashlib
-        checksum = hashlib.sha256(data).hexdigest()
-        if checksum.lower() != str(book.get("binary_sha256") or book.get("content_hash")).lower():
-            raise RuntimeError("Book binary checksum mismatch")
+    book, token = claimed
+    logger.info(
+        "book_processing_claimed book_id=%s attempt=%s",
+        book_id,
+        book["processing_attempts"],
+    )
 
-        document = extract_document(data, filename, book["file_type"])
-        if not document.sections:
-            raise RuntimeError("No extractable pages or sections were found")
+    def process_claimed(lease_is_valid) -> bool:
+        try:
+            binary_path = book.get("binary_path")
+            binary_storage = book.get("binary_storage")
+            filename = (
+                book.get("original_filename")
+                or (Path(binary_path).name if binary_path else None)
+                or (Path(binary_storage).name if binary_storage else None)
+                or f"document.{str(book.get('file_type') or 'pdf').lstrip('.')}"
+            )
+            if not filename or filename == ".":
+                raise RuntimeError("Book binary metadata is incomplete: filename/path is missing")
+            data = BookBinaryStorage().get(book_id, filename)
+            import hashlib
+            checksum = hashlib.sha256(data).hexdigest()
+            if checksum.lower() != str(book.get("binary_sha256") or book.get("content_hash")).lower():
+                raise RuntimeError("Book binary checksum mismatch")
 
-        now = datetime.now(timezone.utc)
-        chapters: list[tuple] = []
-        chunks: list[tuple] = []
-        for chapter_number, section in enumerate(document.sections, start=1):
-            chapter_id = f"CH-{book_id}-{chapter_number:04d}"
-            title = section.get("title") or f"Section {chapter_number}"
-            chapters.append((chapter_id, book_id, chapter_number, title, now))
-            for sequence, content in enumerate(_chunk_text(section.get("text", "")), start=1):
-                if not content.strip():
-                    continue
-                chunk_id = f"CHK-{book_id}-{chapter_number:04d}-{sequence:04d}"
-                chunks.append(
-                    (
-                        chunk_id, chapter_id, sequence, content.strip(),
-                        section.get("page_number"), None, None,
-                        max(1, len(content.split())), now,
+            document = extract_document(data, filename, book["file_type"])
+            if not document.sections:
+                raise RuntimeError("No extractable pages or sections were found")
+
+            now = datetime.now(timezone.utc)
+            chapters: list[tuple] = []
+            chunks: list[tuple] = []
+            for chapter_number, section in enumerate(document.sections, start=1):
+                chapter_id = f"CH-{book_id}-{chapter_number:04d}"
+                title = section.get("title") or f"Section {chapter_number}"
+                chapters.append((chapter_id, book_id, chapter_number, title, now))
+                for sequence, content in enumerate(_chunk_text(section.get("text", "")), start=1):
+                    if not content.strip():
+                        continue
+                    chunk_id = f"CHK-{book_id}-{chapter_number:04d}-{sequence:04d}"
+                    chunks.append(
+                        (
+                            chunk_id, chapter_id, sequence, content.strip(),
+                            section.get("page_number"), None, None,
+                            max(1, len(content.split())), now,
+                        )
                     )
-                )
-        if not chunks:
-            raise RuntimeError("Extraction produced no chunks")
+            if not chunks:
+                raise RuntimeError("Extraction produced no chunks")
+            if not lease_is_valid():
+                raise LeaseLostError(f"Book processing lease lost for {book_id}")
+            if not db.complete_book_extraction(
+                book_id, token, document.title, document.author, chapters, chunks
+            ):
+                raise LeaseLostError(f"Book processing lease lost before persistence for {book_id}")
+            logger.info("book_processing_extraction_completed book_id=%s", book_id)
+            return True
+        except LeaseLostError:
+            raise
+        except Exception as exc:
+            if not lease_is_valid():
+                raise LeaseLostError(f"Book processing lease lost for {book_id}") from exc
+            if not _mark_failed(book_id, token, str(exc)):
+                raise LeaseLostError(f"Book processing lease lost before failure persistence for {book_id}") from exc
+            logger.warning(
+                "book_processing_failed book_id=%s error_type=%s",
+                book_id,
+                type(exc).__name__,
+            )
+            return False
 
-        with db.connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "DELETE FROM embeddings WHERE owner_type='chunk' AND owner_id IN "
-                    "(SELECT c.id FROM chunks c JOIN chapters ch ON ch.id=c.chapter_id WHERE ch.book_id=%s)",
-                    (book_id,),
-                )
-                cur.execute("DELETE FROM chunks WHERE chapter_id IN (SELECT id FROM chapters WHERE book_id=%s)", (book_id,))
-                cur.execute("DELETE FROM chapters WHERE book_id=%s", (book_id,))
-                cur.executemany(
-                    "INSERT INTO chapters(id,book_id,chapter_number,title,created_at) VALUES(%s,%s,%s,%s,%s)",
-                    chapters,
-                )
-                cur.executemany(
-                    """INSERT INTO chunks(
-                        id,chapter_id,sequence,content,page_number,start_offset,end_offset,token_count,created_at
-                    ) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
-                    chunks,
-                )
-                cur.execute(
-                    """UPDATE books
-                       SET title=%s, author=%s, status='processing',
-                           processing_stage='embedding',
-                           processing_error=NULL,
-                           updated_at=now()
-                       WHERE id=%s""",
-                    (document.title, document.author, book_id),
-                )
-            conn.commit()
-        return True
-    except Exception as exc:
-        _mark_failed(book_id, str(exc))
+    try:
+        return run_with_lease_heartbeat(
+            "book_processing",
+            book_id,
+            lambda: db.renew_book_processing_claim(book_id, token),
+            process_claimed,
+        )
+    except LeaseLostError:
+        logger.warning("book_processing_lease_lost book_id=%s", book_id)
         return False
-    finally:
-        db.release_task(f"book:{book_id}")
 
 
 def process_queued_books(limit: int = 2) -> int:
@@ -217,13 +187,19 @@ def finalize_indexed_books() -> int:
                      )"""
             )
             ids = [row["id"] for row in cur.fetchall()]
-            if ids:
-                cur.execute(
-                    """UPDATE books
-                       SET status='ready', processing_stage='completed',
-                           processing_error=NULL, processed_at=now(), updated_at=now()
-                       WHERE id = ANY(%s)""",
-                    (ids,),
-                )
-        conn.commit()
-    return len(ids)
+    completed = 0
+    for book_id in ids:
+        token = db.claim_book_finalization(book_id)
+        if token is None:
+            continue
+        try:
+            if db.complete_book_finalization(book_id, token):
+                completed += 1
+                logger.info("book_processing_completed book_id=%s", book_id)
+            else:
+                db.release_book_claim(book_id, token)
+                logger.info("book_processing_finalization_deferred book_id=%s", book_id)
+        except Exception:
+            db.release_book_claim(book_id, token)
+            raise
+    return completed

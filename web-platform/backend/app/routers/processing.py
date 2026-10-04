@@ -1,10 +1,13 @@
 from uuid import uuid4
+from copy import deepcopy
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 import psycopg
 
-from app.services.processing import advance
+from app.ownership import get_source_for_request, get_task_for_request, owner_for_request
+from app.services.processing import TaskLeaseLost, advance
+from app.services.task_retry import MAX_PROCESSING_RETRIES
 from app.store import now_iso, store
 
 router = APIRouter()
@@ -15,13 +18,12 @@ class ProcessingCreate(BaseModel):
 
 
 @router.post("", status_code=202)
-def create_processing_task(payload: ProcessingCreate) -> dict:
+def create_processing_task(payload: ProcessingCreate, request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
-    source = store.sources.get(payload.source_id)
-    if not source:
-        raise HTTPException(status_code=404, detail="Source not found")
+    source = get_source_for_request(request, payload.source_id)
     existing = next(
-        (task for task in store.tasks.values()
+        (task for task in store.list_tasks_for_owner(owner_id)
          if task["source_id"] == payload.source_id and task["status"] in {"queued", "running"}),
         None,
     )
@@ -46,7 +48,7 @@ def create_processing_task(payload: ProcessingCreate) -> dict:
     except psycopg.errors.UniqueViolation:
         store.refresh()
         existing = next(
-            (item for item in store.tasks.values()
+            (item for item in store.list_tasks_for_owner(owner_id)
              if item["source_id"] == payload.source_id and item["status"] in {"queued", "running"}),
             None,
         )
@@ -63,37 +65,56 @@ def create_processing_task(payload: ProcessingCreate) -> dict:
 
 
 @router.get("")
-def list_processing_tasks() -> dict:
+def list_processing_tasks(request: Request) -> dict:
+    owner_id = owner_for_request(request)
     store.refresh()
-    items = list(store.tasks.values())
+    items = store.list_tasks_for_owner(owner_id)
     return {"items": items, "total": len(items)}
 
 
 @router.get("/{task_id}")
-def get_processing_task(task_id: str) -> dict:
+def get_processing_task(task_id: str, request: Request) -> dict:
+    owner_for_request(request)
     store.refresh()
-    task = store.tasks.get(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Processing task not found")
-    return task
+    return get_task_for_request(request, task_id)
 
 
 @router.post("/{task_id}/advance")
-def advance_processing_task(task_id: str) -> dict:
+def advance_processing_task(task_id: str, request: Request) -> dict:
+    owner_for_request(request)
     store.refresh()
-    if task_id not in store.tasks:
-        raise HTTPException(status_code=404, detail="Processing task not found")
-    return advance(task_id)
+    task = get_task_for_request(request, task_id)
+    if task["status"] in {"completed", "failed"} or task["stage"] == "needs_review":
+        return advance(task_id)
+    if store.database is None:
+        return advance(task_id)
+    claim_token = store.database.claim_task(task_id)
+    if claim_token is None:
+        raise HTTPException(status_code=409, detail="Processing task is not currently claimable")
+    try:
+        return advance(task_id, claim_token=claim_token)
+    except TaskLeaseLost as exc:
+        raise HTTPException(status_code=409, detail="Processing task is currently leased by a worker") from exc
+    finally:
+        store.database.release_task(task_id, claim_token)
 
 
 @router.post("/{task_id}/retry")
-def retry_processing_task(task_id: str) -> dict:
+def retry_processing_task(task_id: str, request: Request) -> dict:
+    owner_for_request(request)
     store.refresh()
-    task = store.tasks.get(task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Processing task not found")
+    task = get_task_for_request(request, task_id)
+    if task["status"] == "completed":
+        raise HTTPException(status_code=409, detail="Completed processing tasks cannot be retried")
+    if task["retry_count"] >= MAX_PROCESSING_RETRIES:
+        raise HTTPException(
+            status_code=409,
+            detail={"code": "RETRY_LIMIT_REACHED", "message": "Processing task retry limit has been reached"},
+        )
 
     previous = task["stage"]
+    previous_status = task["status"]
+    task = deepcopy(task)
     task.update(
         {
             "retry_count": task["retry_count"] + 1,
@@ -106,10 +127,15 @@ def retry_processing_task(task_id: str) -> dict:
     )
     source = store.sources.get(task["source_id"])
     if source:
+        source = deepcopy(source)
         source["status"] = "processing"
         source["processing_stage"] = "queued"
         source["updated_at"] = now_iso()
-        store.save_source(source)
-    store.save_task(task)
+        if not store.save_processing_transition(
+            task, source, previous_status, previous
+        ):
+            raise HTTPException(status_code=409, detail="Processing task is currently leased by a worker")
+    else:
+        raise HTTPException(status_code=404, detail="Source not found")
     store.add_activity("processing_retry", task["source_id"], previous, "queued")
     return task
