@@ -233,7 +233,7 @@ async def run(run_id: str) -> dict:
                     """INSERT INTO books(
                        id,title,language,file_type,source_kind,status,content_hash,
                        created_at,updated_at,owner_id
-                    ) VALUES(%s,'Other owner','en','text','e2e','ready',%s,now(),%s)""",
+                    ) VALUES(%s,'Other owner','en','text','e2e','ready',%s,now(),now(),%s)""",
                     (other_book_id, "other-" + run_id, "OTHER-OWNER"),
                 )
                 cur.execute(
