@@ -7,6 +7,8 @@ from dataclasses import dataclass
 import boto3
 import httpx
 from botocore.config import Config
+import time
+import urllib.parse
 
 
 @dataclass(frozen=True)
@@ -94,6 +96,90 @@ class B2ObjectStorage(S3ObjectStorage):
         super().__init__(label="Backblaze B2", endpoint_env="COGNIX_B2_ENDPOINT", bucket_env="COGNIX_B2_BUCKET", access_env="COGNIX_B2_KEY_ID", secret_env="COGNIX_B2_APPLICATION_KEY", region_env="COGNIX_B2_REGION", default_region="us-east-005")
 
 
+class CloudinaryObjectStorage:
+    """Private/authenticated Cloudinary storage for primary originals and media."""
+
+    def __init__(self) -> None:
+        self.cloud_name = os.getenv("CLOUDINARY_CLOUD_NAME", "").strip()
+        self.api_key = os.getenv("CLOUDINARY_API_KEY", "").strip()
+        self.api_secret = os.getenv("CLOUDINARY_API_SECRET", "").strip()
+        self.resource_type = os.getenv("CLOUDINARY_RESOURCE_TYPE", "raw").strip() or "raw"
+        self.delivery_type = os.getenv("CLOUDINARY_DELIVERY_TYPE", "authenticated").strip() or "authenticated"
+
+    @property
+    def configured(self) -> bool:
+        return all((self.cloud_name, self.api_key, self.api_secret))
+
+    def _sign(self, params: dict[str, object]) -> str:
+        pairs = []
+        for key in sorted(params):
+            value = params[key]
+            if value is None or value == "":
+                continue
+            pairs.append(f"{key}={value}")
+        return hashlib.sha1(("&".join(pairs) + self.api_secret).encode("utf-8")).hexdigest()
+
+    def _upload_url(self) -> str:
+        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/{self.resource_type}/upload"
+
+    def _download_url(self) -> str:
+        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/asset/download"
+
+    def _destroy_url(self) -> str:
+        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/{self.resource_type}/destroy"
+
+    def put_bytes(self, key: str, data: bytes, content_type: str | None = None) -> StoredObject:
+        if not self.configured:
+            raise RuntimeError("Cloudinary is not configured")
+        key = S3ObjectStorage._safe_key(key)
+        public_id = key if Path(key).suffix else f"{key}.bin"
+        timestamp = int(time.time())
+        signed = {"public_id": public_id, "timestamp": timestamp, "type": self.delivery_type}
+        payload = {**signed, "api_key": self.api_key, "signature": self._sign(signed)}
+        files = {"file": (Path(public_id).name, data, content_type or "application/octet-stream")}
+        response = httpx.post(self._upload_url(), data=payload, files=files, timeout=120)
+        response.raise_for_status()
+        result = response.json()
+        asset_id = str(result.get("asset_id", "")).strip()
+        if not asset_id:
+            raise RuntimeError("Cloudinary upload response did not contain asset_id")
+        return StoredObject(
+            key=f"cloudinary://{asset_id}",
+            checksum=hashlib.sha256(data).hexdigest(),
+            size=len(data),
+        )
+
+    def get_bytes(self, key: str) -> bytes:
+        if not self.configured or not key.startswith("cloudinary://"):
+            raise ValueError("Invalid or unconfigured Cloudinary object key")
+        asset_id = key.removeprefix("cloudinary://").strip()
+        timestamp = int(time.time())
+        signed = {"asset_id": asset_id, "timestamp": timestamp}
+        response = httpx.get(
+            self._download_url(),
+            params={**signed, "api_key": self.api_key, "signature": self._sign(signed)},
+            timeout=120,
+        )
+        response.raise_for_status()
+        return response.content
+
+    def delete(self, key: str) -> None:
+        if not self.configured or not key.startswith("cloudinary://"):
+            raise ValueError("Invalid or unconfigured Cloudinary object key")
+        asset_id = key.removeprefix("cloudinary://").strip()
+        timestamp = int(time.time())
+        signed = {"asset_id": asset_id, "timestamp": timestamp}
+        response = httpx.post(
+            self._destroy_url(),
+            data={**signed, "api_key": self.api_key, "signature": self._sign(signed)},
+            timeout=60,
+        )
+        response.raise_for_status()
+
+    def verify(self, key: str, expected_sha256: str) -> bool:
+        return hashlib.sha256(self.get_bytes(key)).hexdigest().lower() == expected_sha256.lower()
+
+
 class SupabaseObjectStorage:
     """Supabase Storage adapter using a backend-only service-role key."""
 
@@ -141,6 +227,9 @@ class SupabaseObjectStorage:
     def verify(self, key: str, expected_sha256: str) -> bool:
         return hashlib.sha256(self.get_bytes(key)).hexdigest().lower() == expected_sha256.lower()
 
+
+def cloudinary_storage() -> CloudinaryObjectStorage:
+    return CloudinaryObjectStorage()
 
 def r2_storage() -> R2ObjectStorage:
     return R2ObjectStorage()
