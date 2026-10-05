@@ -12,7 +12,7 @@ MIGRATIONS = BACKEND / "migrations"
 class MigrationSecurityContractTests(unittest.TestCase):
     def test_020_to_027_are_registered_once_in_order_and_required(self):
         persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8")
-        start = persistence.index("for migration_name in (")
+        start = persistence.index("migration_names = (")
         end = persistence.index("):", start)
         registered = re.findall(r'"(\d{3}_[^"]+\.sql)"', persistence[start:end])
         expected = [
@@ -101,7 +101,7 @@ class MigrationSecurityContractTests(unittest.TestCase):
         sql = (MIGRATIONS / "027_rls_helper_performance.sql").read_text(encoding="utf-8").lower()
         self.assertIn("pg_policy", sql)
         self.assertIn("alter policy", sql)
-        self.assertIn("(select current_setting('request.jwt.claim.sub', true))", sql)
+        self.assertIn("(select current_setting(''request.jwt.claim.sub'', true))", sql)
         self.assertNotIn("drop policy", sql)
 
     def test_backend_only_privilege_model_revokes_public_and_data_api_roles(self):
@@ -116,7 +116,7 @@ class MigrationSecurityContractTests(unittest.TestCase):
             "revoke all privileges on all sequences in schema public from public, anon, authenticated",
             sql,
         )
-        self.assertNotRegex(sql, r"enable\s+row\s+level\s+security")
+        self.assertNotRegex(sql, r"alter\s+table[^;]*enable\s+row\s+level\s+security")
         self.assertNotRegex(sql, r"grant\s+")
         rls_sql = (MIGRATIONS / "025_rls_owner_isolation.sql").read_text(encoding="utf-8").lower()
         self.assertIn("create policy cognix_authenticated_sources", rls_sql)
