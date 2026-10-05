@@ -101,7 +101,7 @@ class MigrationSecurityContractTests(unittest.TestCase):
         sql = (MIGRATIONS / "027_rls_helper_performance.sql").read_text(encoding="utf-8").lower()
         self.assertIn("pg_policy", sql)
         self.assertIn("alter policy", sql)
-        self.assertIn("(select current_setting('request.jwt.claim.sub'::text, true))", sql)
+        self.assertIn("(select current_setting('request.jwt.claim.sub', true))", sql)
         self.assertNotIn("drop policy", sql)
 
     def test_backend_only_privilege_model_revokes_public_and_data_api_roles(self):
