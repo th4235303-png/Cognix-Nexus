@@ -193,7 +193,8 @@ class CloudinaryObjectStorage:
         if not self.configured or not key.startswith("cloudinary://"):
             raise ValueError("Invalid or unconfigured Cloudinary object key")
         asset_id = key.removeprefix("cloudinary://").strip()
-        response = httpx.delete(
+        response = httpx.request(
+            "DELETE",
             self._destroy_url(),
             data={"asset_ids[]": asset_id},
             auth=(self.api_key, self.api_secret),
