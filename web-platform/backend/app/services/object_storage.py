@@ -137,7 +137,7 @@ class CloudinaryObjectStorage:
         return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/asset/download"
 
     def _destroy_url(self) -> str:
-        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/destroy"
+        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/resources"
 
     def put_bytes(self, key: str, data: bytes, content_type: str | None = None) -> StoredObject:
         if not self.configured:
@@ -193,11 +193,10 @@ class CloudinaryObjectStorage:
         if not self.configured or not key.startswith("cloudinary://"):
             raise ValueError("Invalid or unconfigured Cloudinary object key")
         asset_id = key.removeprefix("cloudinary://").strip()
-        timestamp = int(time.time())
-        signed = {"asset_id": asset_id, "timestamp": timestamp}
-        response = httpx.post(
+        response = httpx.delete(
             self._destroy_url(),
-            data={**signed, "api_key": self.api_key, "signature": self._sign(signed)},
+            data={"asset_ids[]": asset_id},
+            auth=(self.api_key, self.api_secret),
             timeout=60,
         )
         response.raise_for_status()
