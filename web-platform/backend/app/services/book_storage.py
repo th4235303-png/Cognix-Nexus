@@ -4,11 +4,11 @@ import hashlib
 import os
 from pathlib import Path
 
-from app.services.object_storage import b2_storage, r2_storage, supabase_storage
+from app.services.object_storage import b2_storage, cloudinary_storage, r2_storage, supabase_storage
 
 
 class BookBinaryStorage:
-    """Original-binary storage with local, Backblaze B2, or legacy R2 backends."""
+    """Original-binary storage with Cloudinary primary and legacy fallbacks."""
 
     def __init__(self, root: str | None = None):
         self.provider = os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower()
@@ -17,6 +17,10 @@ class BookBinaryStorage:
 
     @property
     def configured(self) -> bool:
+        if self.provider == "cloudinary":
+            return cloudinary_storage().configured
+        if self.provider == "cloudinary":
+            return cloudinary_storage()
         if self.provider == "b2":
             return b2_storage().configured
         if self.provider == "r2":
