@@ -10,7 +10,7 @@ MIGRATIONS = BACKEND / "migrations"
 
 
 class MigrationSecurityContractTests(unittest.TestCase):
-    def test_020_to_025_are_registered_once_in_order_and_required(self):
+    def test_020_to_027_are_registered_once_in_order_and_required(self):
         persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8")
         start = persistence.index("for migration_name in (")
         end = persistence.index("):", start)
@@ -22,6 +22,8 @@ class MigrationSecurityContractTests(unittest.TestCase):
             "023_concepts_owner_unique.sql",
             "024_book_export_job_leases.sql",
             "025_rls_owner_isolation.sql",
+            "026_level_up_owner_isolation.sql",
+            "027_rls_helper_performance.sql",
         ]
         tail = registered[-len(expected):]
         self.assertEqual(tail, expected)
@@ -94,6 +96,13 @@ class MigrationSecurityContractTests(unittest.TestCase):
         self.assertIn("attribute.atthasdef", sql)
         self.assertIn("must be nullable", sql)
         self.assertNotRegex(sql, r"\b(update|delete|truncate|drop)\b")
+
+    def test_027_wraps_owner_claim_lookup_in_scalar_subqueries(self):
+        sql = (MIGRATIONS / "027_rls_helper_performance.sql").read_text(encoding="utf-8").lower()
+        self.assertIn("pg_policy", sql)
+        self.assertIn("alter policy", sql)
+        self.assertIn("(select current_setting('request.jwt.claim.sub'::text, true))", sql)
+        self.assertNotIn("drop policy", sql)
 
     def test_backend_only_privilege_model_revokes_public_and_data_api_roles(self):
         migration_paths = sorted(MIGRATIONS.glob("*.sql"))
