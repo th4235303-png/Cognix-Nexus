@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import date
 
 from app.services.google_drive import build_export_package, upload_export
 from app.services.lease_runner import LeaseLostError, run_with_lease_heartbeat
@@ -62,8 +63,8 @@ def advance_export_job(export_id: str) -> dict:
                 if not lease_is_valid():
                     raise LeaseLostError(f"Export lease lost before upload: {export_id}")
                 package = build_export_package(
-                    export_id,
-                    str((job or {}).get("created_at") or "")[:10] or __import__("datetime").date.today().isoformat(),
+                    source["id"],
+                    str((job or {}).get("created_at") or "")[:10] or date.today().isoformat(),
                 )
                 result_url = upload_export(source, package)
                 changed = db.transition_export_job(
