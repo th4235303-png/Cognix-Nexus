@@ -79,10 +79,19 @@ class MemoryOwnershipDatabase:
         return token
 
     def save_processing_transition(
-        self, task, source, expected_status, expected_stage, claim_token=None
+        self, task, source, owner_id, expected_status, expected_stage, claim_token=None
     ):
         self.tasks[task["id"]] = task
         self.sources[source["id"]] = source
+        return True
+
+    def release_task(self, task_id, claim_token=None):
+        task = self.tasks.get(task_id)
+        if task is None:
+            return False
+        task["claimed_by"] = None
+        task["claimed_at"] = None
+        task["claim_token"] = None
         return True
 
     def get_task_for_owner(self, task_id, owner_id):
