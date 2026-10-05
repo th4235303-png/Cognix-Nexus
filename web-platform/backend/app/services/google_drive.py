@@ -47,7 +47,7 @@ def verify_oauth_state(state: str, max_age_seconds: int = 600) -> bool:
 
 def authorization_url() -> str:
     from google_auth_oauthlib.flow import Flow
-    flow = Flow.from_client_config({"web": {"client_id": os.environ["GOOGLE_CLIENT_ID"], "client_secret": os.environ["GOOGLE_CLIENT_SECRET"], "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token", "redirect_uris": [os.environ["GOOGLE_REDIRECT_URI"]]}})
+    flow = Flow.from_client_config({"web": {"client_id": os.environ["GOOGLE_CLIENT_ID"], "client_secret": os.environ["GOOGLE_CLIENT_SECRET"], "auth_uri": "https://accounts.google.com/o/oauth2/auth", "token_uri": "https://oauth2.googleapis.com/token", "redirect_uris": [os.environ["GOOGLE_REDIRECT_URI"]]}}, scopes=SCOPES)
     flow.redirect_uri = os.environ["GOOGLE_REDIRECT_URI"]
     return flow.authorization_url(access_type="offline", prompt="consent", include_granted_scopes="true", state=_oauth_state())[0]
 
@@ -69,7 +69,7 @@ def upload_export(source: dict, package: ExportPackage) -> str:
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
     from googleapiclient.http import MediaInMemoryUpload
-    credentials = Credentials(token=None, refresh_token=os.environ["GOOGLE_REFRESH_TOKEN"], token_uri="https://oauth2.googleapis.com/token", client_id=os.environ["GOOGLE_CLIENT_ID"], client_secret=os.environ["GOOGLE_CLIENT_SECRET"], scopes=SCOPES)
+    credentials = Credentials(token=None, refresh_token=os.environ["GOOGLE_REFRESH_TOKEN"], token_uri="https://oauth2.googleapis.com/token", client_id=os.environ["GOOGLE_CLIENT_ID"], client_secret=os.environ["GOOGLE_CLIENT_SECRET"])
     service = build("drive", "v3", credentials=credentials, cache_discovery=False)
     root_id = os.getenv("GOOGLE_DRIVE_ROOT_FOLDER_ID", "").strip() or None
     folder_id = _find_or_create_folder(service, source["id"], root_id)
