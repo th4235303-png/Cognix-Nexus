@@ -13,6 +13,9 @@ class DatabaseIntegrationTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.dsn = os.environ["DATABASE_URL"]
+        database = Database(cls.dsn)
+        database.ensure_schema()
+        database.close()
         with psycopg.connect(cls.dsn) as conn:
             with conn.cursor() as cur:
                 cur.execute(
