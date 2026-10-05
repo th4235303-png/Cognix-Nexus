@@ -121,7 +121,8 @@ class CloudinaryObjectStorage:
         return hashlib.sha1(("&".join(pairs) + self.api_secret).encode("utf-8")).hexdigest()
 
     def _upload_url(self) -> str:
-        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/{self.resource_type}/upload"
+        delivery = self.delivery_type if self.delivery_type in {"upload", "private", "authenticated"} else "upload"
+        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/{self.resource_type}/{delivery}"
 
     def _download_url(self) -> str:
         return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/asset/download"
@@ -135,11 +136,15 @@ class CloudinaryObjectStorage:
         key = S3ObjectStorage._safe_key(key)
         public_id = key if Path(key).suffix else f"{key}.bin"
         timestamp = int(time.time())
-        signed = {"public_id": public_id, "timestamp": timestamp, "type": self.delivery_type}
+        # For the REST API, the delivery type is encoded in the endpoint path
+        # (e.g. /raw/authenticated), so it must not also be signed as a body field.
+        signed = {"public_id": public_id, "timestamp": timestamp}
         payload = {**signed, "api_key": self.api_key, "signature": self._sign(signed)}
         files = {"file": (Path(public_id).name, data, content_type or "application/octet-stream")}
         response = httpx.post(self._upload_url(), data=payload, files=files, timeout=120)
-        response.raise_for_status()
+        if response.is_error:
+            detail = response.text[:500]
+            raise RuntimeError(f"Cloudinary upload failed ({response.status_code}): {detail}")
         result = response.json()
         asset_id = str(result.get("asset_id", "")).strip()
         if not asset_id:
