@@ -115,7 +115,16 @@ class Database:
                               OR original_filename IS NOT NULL)
                          AND processing_attempts < 3
                          AND (
-                           status IN ('queued', 'failed')
+                           status='queued'
+                           OR (
+                             status='failed'
+                             AND updated_at <= now() - make_interval(
+                               secs => LEAST(
+                                 300.0,
+                                 5.0 * power(2.0, LEAST(GREATEST(processing_attempts - 1, 0), 6))
+                               )::double precision
+                             )
+                           )
                            OR (
                              status='processing' AND processing_stage='extracting'
                              AND (processing_started_at IS NULL
