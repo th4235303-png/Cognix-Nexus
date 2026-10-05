@@ -45,10 +45,15 @@ class DatabaseIntegrationTests(unittest.TestCase):
                 ):
                     cur.execute(statement)
                 cur.execute(
-                    """INSERT INTO processing_tasks(id,status,stage,retry_count)
-                       VALUES ('integration-task','queued','extracting',0)
-                       ON CONFLICT (id) DO UPDATE SET status='queued',stage='extracting',
-                         retry_count=0,claimed_by=NULL,claimed_at=NULL,updated_at=now()"""
+                    """INSERT INTO sources(id,url,status,processing_stage)
+                       VALUES ('integration-source','https://integration.invalid/source','queued','queued')
+                       ON CONFLICT (id) DO UPDATE SET status='queued',processing_stage='queued'"""
+                )
+                cur.execute(
+                    """INSERT INTO processing_tasks(id,source_id,status,stage,retry_count)
+                       VALUES ('integration-task','integration-source','queued','extracting',0)
+                       ON CONFLICT (id) DO UPDATE SET source_id='integration-source',status='queued',
+                         stage='extracting',retry_count=0,claimed_by=NULL,claimed_at=NULL,updated_at=now()"""
                 )
             conn.commit()
 
