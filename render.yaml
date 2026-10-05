@@ -31,11 +31,25 @@ services:
       - key: COGNIX_PROCESSING_PROVIDER
         value: "ai"
       - key: COGNIX_AI_BASE_URL
-        sync: false
+        value: "https://openrouter.ai/api/v1/chat/completions"
       - key: COGNIX_AI_API_KEY
         sync: false
       - key: COGNIX_AI_MODEL
+        value: "openai/gpt-chat-latest"
+      - key: COGNIX_LLM_API_URL
+        value: "https://openrouter.ai/api/v1/chat/completions"
+      - key: COGNIX_LLM_API_KEY
         sync: false
+      - key: COGNIX_LLM_MODEL
+        value: "openai/gpt-chat-latest"
+      - key: COGNIX_EMBEDDING_API_URL
+        sync: false
+      - key: COGNIX_EMBEDDING_API_KEY
+        sync: false
+      - key: COGNIX_EMBEDDING_MODEL
+        sync: false
+      - key: COGNIX_EMBEDDING_DIMENSION
+        value: "1536"
       - key: COGNIX_DRIVE_PROVIDER
         value: "google"
       - key: COGNIX_BOOK_STORAGE_PROVIDER
@@ -67,7 +81,7 @@ services:
       - key: COGNIX_B2_APPLICATION_KEY
         sync: false
       - key: COGNIX_B2_REGION
-        value: "us-east-005"
+        value: "eu-central-003"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
@@ -136,7 +150,7 @@ services:
       - key: COGNIX_B2_APPLICATION_KEY
         sync: false
       - key: COGNIX_B2_REGION
-        value: "us-east-005"
+        value: "eu-central-003"
       - key: SUPABASE_URL
         sync: false
       - key: SUPABASE_SERVICE_ROLE_KEY
