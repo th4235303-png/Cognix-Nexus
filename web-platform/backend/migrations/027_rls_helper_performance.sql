@@ -25,7 +25,7 @@ BEGIN
     LOOP
         using_expr := replace(
             policy_row.using_expr,
-            'current_setting(''request.jwt.claim.sub''::text, true)',
+            '(select current_setting(''request.jwt.claim.sub'', true))',
             '(select current_setting(''request.jwt.claim.sub''::text, true))'
         );
         check_expr := replace(
