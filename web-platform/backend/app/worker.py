@@ -207,6 +207,15 @@ def main() -> None:
     if require_database and store.database is None:
         raise RuntimeError("COGNIX_REQUIRE_DATABASE is enabled but DATABASE_URL is not configured")
     logger.info("worker_started persistence=%s database_configured=%s poll_seconds=%s", store.persistence_mode, bool(store.database), POLL_SECONDS)
+    e2e_run_id = os.getenv("COGNIX_PROVIDER_E2E_RUN_ID", "").strip()
+    if e2e_run_id:
+        try:
+            from scripts.provider_e2e import main as run_provider_e2e
+            run_provider_e2e()
+        except Exception:
+            logger.exception("provider_e2e_failed run_id=%s", e2e_run_id)
+        finally:
+            logger.info("provider_e2e_once_complete run_id=%s", e2e_run_id)
     try:
         while True:
             run_once()
