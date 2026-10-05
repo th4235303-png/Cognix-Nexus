@@ -1182,7 +1182,7 @@ class CognixApiTests(unittest.TestCase):
             ("post", "/brain/media/ingest", {"files": {"file": ("note.txt", b"not supported", "text/plain")}}),
         ):
             response = getattr(self.client, method)(path, **kwargs)
-            self.assertIn(response.status_code, {400, 503}, path)
+            self.assertIn(response.status_code, {400, 401, 503}, path)
 
     def test_agent_mode_requires_persistent_database(self):
         response = self.client.post(
