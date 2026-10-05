@@ -31,14 +31,3 @@ BEGIN
     );
   END LOOP;
 END $$;
-
--- Child rows must follow the report/job owner; the API also enforces this explicitly.
-ALTER TABLE public.research_claims DROP CONSTRAINT IF EXISTS cognix_research_claims_report_owner_fk;
-ALTER TABLE public.research_claims
-  ADD CONSTRAINT cognix_research_claims_report_owner_fk
-  FOREIGN KEY (report_id) REFERENCES public.research_reports(id) ON DELETE CASCADE;
-
-ALTER TABLE public.job_leases DROP CONSTRAINT IF EXISTS cognix_job_leases_job_fk;
-ALTER TABLE public.job_leases
-  ADD CONSTRAINT cognix_job_leases_job_fk
-  FOREIGN KEY (job_id) REFERENCES public.agent_jobs(id) ON DELETE CASCADE;
