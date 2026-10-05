@@ -20,7 +20,7 @@ def enqueue_due_agent_schedules(limit: int = 5) -> int:
     with db.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id,name,task_type,cadence_minutes,config FROM agent_schedules "
+                "SELECT id,name,task_type,cadence_minutes,config,owner_id FROM agent_schedules "
                 "WHERE enabled AND next_run_at <= now() ORDER BY next_run_at LIMIT %s",
                 (max(1, min(limit, 20)),),
             )
@@ -38,15 +38,15 @@ def enqueue_due_agent_schedules(limit: int = 5) -> int:
                 job_id = f"AJOB-{uuid4().hex[:8].upper()}"
                 idem = f"schedule:{schedule['id']}:{schedule.get('next_run_at')}"
                 cur.execute(
-                    "INSERT INTO agent_jobs(id,schedule_id,job_type,payload,run_after,idempotency_key) "
-                    "VALUES(%s,%s,%s,%s::jsonb,now(),%s) ON CONFLICT(idempotency_key) DO NOTHING",
+                    "INSERT INTO agent_jobs(id,schedule_id,job_type,payload,run_after,idempotency_key,owner_id) "
+                    "VALUES(%s,%s,%s,%s::jsonb,now(),%s,%s) ON CONFLICT(idempotency_key) DO NOTHING",
                     (
                         job_id, schedule["id"], schedule["task_type"],
                         json.dumps({
                             "question": question,
                             "source_ids": list(config.get("source_ids") or [])[:30],
                         }),
-                        idem,
+                        idem, schedule["owner_id"],
                     ),
                 )
                 created += cur.rowcount
@@ -120,6 +120,10 @@ async def _run_agent_job(job_id: str) -> bool:
             )
         conn.commit()
 
+    owner_id = job.get("owner_id")
+    if not owner_id:
+        _fail_agent_job(job_id, "Agent job has no owner_id; legacy ownerless jobs are fail-closed")
+        return False
     payload = job.get("payload") or {}
     question = str(payload.get("question") or "").strip()
     source_ids = [str(x) for x in (payload.get("source_ids") or [])][:30]
@@ -130,7 +134,7 @@ async def _run_agent_job(job_id: str) -> bool:
         _fail_agent_job(job_id, "LLM synthesis is not configured")
         return False
 
-    evidence = _load_chunk_evidence(source_ids)
+    evidence = _load_chunk_evidence(source_ids, owner_id)
     if not evidence:
         _fail_agent_job(job_id, "No approved evidence was supplied for this agent job")
         return False
@@ -191,15 +195,15 @@ async def _run_agent_job(job_id: str) -> bool:
         return False
 
 
-def _load_chunk_evidence(source_ids: list[str]) -> str:
+def _load_chunk_evidence(source_ids: list[str], owner_id: str) -> str:
     db = store.database
     if db is None or not source_ids:
         return ""
     with db.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id,content,page_number FROM chunks WHERE id=ANY(%s) ORDER BY id LIMIT 30",
-                (source_ids,),
+                "SELECT c.id,c.content,c.page_number FROM chunks c JOIN chapters ch ON ch.id=c.chapter_id JOIN books b ON b.id=ch.book_id WHERE c.id=ANY(%s) AND b.owner_id=%s ORDER BY c.id",
+                (source_ids, owner_id),
             )
             rows = cur.fetchall()
     return "\n\n".join(
