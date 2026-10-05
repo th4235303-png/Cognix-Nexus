@@ -6,7 +6,7 @@ from hashlib import sha256
 from datetime import datetime, timezone
 from uuid import uuid4
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from app.services.level_up import (
@@ -26,6 +26,7 @@ from app.services.level_up import (
     writing_citation_check,
 )
 from app.store import store
+from app.ownership import owner_for_request
 from app.services.llm import llm_provider
 
 router = APIRouter(prefix="/brain/level-up", tags=["level-up"])
@@ -463,8 +464,9 @@ class WikiIn(BaseModel):
 
 
 @router.post("/wiki/preview", status_code=201)
-def wiki(payload: WikiIn):
+def wiki(payload: WikiIn, request: Request):
     db = _db()
+    owner_id = owner_for_request(request)
     result = wiki_projection(payload.title, payload.body, payload.source_ids)
     page_id = f"WIKI-{uuid4().hex[:8].upper()}"
     with db.connect() as conn:
@@ -472,7 +474,7 @@ def wiki(payload: WikiIn):
             cur.execute(
                 "INSERT INTO wiki_pages(id,slug,title,body,source_ids,visibility,revision) "
                 "VALUES(%s,%s,%s,%s,%s::jsonb,'private',1) "
-                "ON CONFLICT(slug) DO UPDATE SET body=EXCLUDED.body,source_ids=EXCLUDED.source_ids,"
+                "ON CONFLICT (owner_id, slug) WHERE owner_id IS NOT NULL DO UPDATE SET body=EXCLUDED.body,source_ids=EXCLUDED.source_ids,"
                 "revision=wiki_pages.revision+1,updated_at=now() RETURNING *",
                 (page_id, result["slug"], result["title"], result["body"], _json(result["source_ids"])),
             )
@@ -482,15 +484,16 @@ def wiki(payload: WikiIn):
 
 
 @router.get("/wiki")
-def list_wiki(limit: int = 50):
+def list_wiki(request: Request, limit: int = 50):
     db = _db()
+    owner_id = owner_for_request(request)
     limit = max(1, min(limit, 100))
     with db.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id,slug,title,body,source_ids,visibility,revision,updated_at "
-                "FROM wiki_pages WHERE visibility='private' ORDER BY updated_at DESC LIMIT %s",
-                (limit,),
+                "FROM wiki_pages WHERE owner_id=%s AND visibility='private' ORDER BY updated_at DESC LIMIT %s",
+                (owner_id, limit),
             )
             items = cur.fetchall()
     return {"items": items, "total": len(items)}
@@ -654,8 +657,9 @@ class ScheduleIn(BaseModel):
 
 
 @router.post("/agent/schedules", status_code=201)
-def create_schedule(payload: ScheduleIn):
+def create_schedule(payload: ScheduleIn, request: Request):
     db = _db()
+    owner_id = owner_for_request(request)
     schedule_id = f"SCH-{uuid4().hex[:8].upper()}"
     with db.connect() as conn:
         with conn.cursor() as cur:
@@ -672,11 +676,12 @@ def create_schedule(payload: ScheduleIn):
 
 
 @router.get("/agent/schedules")
-def list_schedules():
+def list_schedules(request: Request):
     db = _db()
+    owner_id = owner_for_request(request)
     with db.connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM agent_schedules ORDER BY created_at DESC")
+            cur.execute("SELECT * FROM agent_schedules WHERE owner_id=%s ORDER BY created_at DESC", (owner_id,))
             return {"items": cur.fetchall()}
 
 
@@ -686,11 +691,12 @@ class LeaseIn(BaseModel):
 
 
 @router.post("/agent/jobs/{job_id}/lease")
-def lease_job(job_id: str, payload: LeaseIn):
+def lease_job(job_id: str, payload: LeaseIn, request: Request):
     db = _db()
+    owner_id = owner_for_request(request)
     with db.connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id,status FROM agent_jobs WHERE id=%s", (job_id,))
+            cur.execute("SELECT id,status FROM agent_jobs WHERE id=%s AND owner_id=%s", (job_id, owner_id))
             _row_or_404(cur.fetchone(), "Agent job not found")
             cur.execute(
                 "INSERT INTO job_leases(job_id,worker_id,expires_at) VALUES(%s,%s,now()+(%s * interval '1 second')) "
@@ -708,13 +714,14 @@ def lease_job(job_id: str, payload: LeaseIn):
 
 
 @router.post("/agent/jobs/{job_id}/release")
-def release_job_lease(job_id: str, worker_id: str):
+def release_job_lease(job_id: str, worker_id: str, request: Request):
     db = _db()
+    owner_id = owner_for_request(request)
     with db.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "DELETE FROM job_leases WHERE job_id=%s AND worker_id=%s RETURNING job_id",
-                (job_id, worker_id),
+                "DELETE FROM job_leases WHERE job_id=%s AND worker_id=%s AND owner_id=%s RETURNING job_id",
+                (job_id, worker_id, owner_id),
             )
             row = cur.fetchone()
         conn.commit()
@@ -724,8 +731,9 @@ def release_job_lease(job_id: str, worker_id: str):
 
 
 @router.get("/operational/health")
-def operational_health():
+def operational_health(request: Request):
     db = _db()
+    owner_id = owner_for_request(request)
     checks = {}
     try:
         checks["database"] = db.ping()
@@ -733,7 +741,7 @@ def operational_health():
         checks["database"] = False
     with db.connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) AS queued FROM agent_jobs WHERE status IN ('queued','retry_pending')")
+            cur.execute("SELECT COUNT(*) AS queued FROM agent_jobs WHERE owner_id=%s AND status IN ('queued','retry_pending')", (owner_id,))
             checks["queued_agent_jobs"] = cur.fetchone()["queued"]
             cur.execute("SELECT COUNT(*) AS unresolved_sync_conflicts FROM sync_conflicts WHERE status='needs_review'")
             checks["unresolved_sync_conflicts"] = cur.fetchone()["unresolved_sync_conflicts"]
@@ -748,15 +756,16 @@ class BackupManifestIn(BaseModel):
 
 
 @router.get("/operational/backups")
-def list_backups(limit: int = 20):
+def list_backups(request: Request, limit: int = 20):
     db = _db()
+    owner_id = owner_for_request(request)
     limit = max(1, min(limit, 100))
     with db.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id,provider,object_key,checksum,encrypted,verified_at,created_at "
-                "FROM backup_manifests ORDER BY created_at DESC LIMIT %s",
-                (limit,),
+                "FROM backup_manifests WHERE owner_id=%s ORDER BY created_at DESC LIMIT %s",
+                (owner_id, limit),
             )
             items = cur.fetchall()
     return {"items": items, "total": len(items)}
@@ -767,21 +776,22 @@ class BackupVerifyIn(BaseModel):
 
 
 @router.post("/operational/backups/{manifest_id}/verify")
-def verify_backup(manifest_id: str, payload: BackupVerifyIn):
+def verify_backup(manifest_id: str, payload: BackupVerifyIn, request: Request):
     db = _db()
+    owner_id = owner_for_request(request)
     with db.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id,checksum FROM backup_manifests WHERE id=%s FOR UPDATE",
-                (manifest_id,),
+                "SELECT id,checksum FROM backup_manifests WHERE id=%s AND owner_id=%s FOR UPDATE",
+                (manifest_id, owner_id),
             )
             row = cur.fetchone()
             _row_or_404(row, "Backup manifest not found")
             verified = hmac.compare_digest(str(row["checksum"]), payload.checksum)
             if verified:
                 cur.execute(
-                    "UPDATE backup_manifests SET verified_at=now() WHERE id=%s RETURNING id,verified_at",
-                    (manifest_id,),
+                    "UPDATE backup_manifests SET verified_at=now() WHERE id=%s AND owner_id=%s RETURNING id,verified_at",
+                    (manifest_id, owner_id),
                 )
                 result = cur.fetchone()
             else:
@@ -793,8 +803,9 @@ def verify_backup(manifest_id: str, payload: BackupVerifyIn):
 
 
 @router.post("/operational/backups", status_code=201)
-def backup_manifest(payload: BackupManifestIn):
+def backup_manifest(payload: BackupManifestIn, request: Request):
     db = _db()
+    owner_id = owner_for_request(request)
     manifest_id = f"BKP-{uuid4().hex[:8].upper()}"
     with db.connect() as conn:
         with conn.cursor() as cur:
