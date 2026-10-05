@@ -369,22 +369,65 @@ class Database:
 
     def ensure_schema(self) -> None:
         migrations_dir = Path(__file__).resolve().parents[1] / "migrations"
+        migration_names = (
+            "001_initial.sql",
+            "002_api_contract_alignment.sql",
+            "003_persistence_hardening.sql",
+            "004_brain_vault_foundation.sql",
+            "005_brain_vault_search.sql",
+            "006_brain_vault_advanced.sql",
+            "007_book_storage.sql",
+            "008_document_and_synthesis_hardening.sql",
+            "009_media_assets.sql",
+            "010_agent_active_layer.sql",
+            "010_intelligence_life_reliability.sql",
+            "011_level_up20_completion.sql",
+            "012_storage_reliability.sql",
+            "013_workflow_fk_indexes.sql",
+            "014_move_vector_extension.sql",
+            "015_supabase_storage_bucket.sql",
+            "016_processing_idempotency.sql",
+            "017_lock_down_data_api_roles.sql",
+            "018_book_processing_pipeline.sql",
+            "019_processing_task_claims.sql",
+            "020_record_ownership.sql",
+            "021_brain_record_ownership.sql",
+            "022_vault_item_ownership.sql",
+            "023_concepts_owner_unique.sql",
+            "024_book_export_job_leases.sql",
+            "025_rls_owner_isolation.sql",
+        )
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute("SELECT pg_advisory_xact_lock(7246823145061)")
+                cur.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS cognix_schema_migrations (
+                        migration_name TEXT PRIMARY KEY,
+                        applied_at TIMESTAMPTZ NOT NULL DEFAULT now()
+                    )
+                    """
+                )
                 cur.execute("SELECT to_regclass('public.sources') AS table_name")
                 exists = cur.fetchone()["table_name"] is not None
                 if not exists:
                     cur.execute((migrations_dir / "001_initial.sql").read_text())
+                    cur.execute(
+                        "INSERT INTO cognix_schema_migrations(migration_name) VALUES(%s) "
+                        "ON CONFLICT (migration_name) DO NOTHING",
+                        ("001_initial.sql",),
+                    )
                 else:
                     cur.execute(
-                        """SELECT
-                             to_regclass('public.sources') AS sources,
-                             to_regclass('public.processing_tasks') AS processing_tasks,
-                             to_regclass('public.claims') AS claims,
-                             to_regclass('public.reviews') AS reviews,
-                             to_regclass('public.export_jobs') AS export_jobs,
-                             to_regclass('public.activity_events') AS activity_events"""
+                        """
+                        SELECT
+                          to_regclass('public.sources') AS sources,
+                          to_regclass('public.processing_tasks') AS processing_tasks,
+                          to_regclass('public.claims') AS claims,
+                          to_regclass('public.reviews') AS reviews,
+                          to_regclass('public.export_jobs') AS export_jobs,
+                          to_regclass('public.activity_events') AS activity_events
+                        """
                     )
                     missing = [
                         table_name
@@ -397,35 +440,24 @@ class Database:
                             "refusing to skip migration 001. Missing tables: "
                             + ", ".join(missing)
                         )
-                cur.execute((migrations_dir / "002_api_contract_alignment.sql").read_text())
-                for migration_name in (
-                    "003_persistence_hardening.sql",
-                    "004_brain_vault_foundation.sql",
-                    "005_brain_vault_search.sql",
-                    "006_brain_vault_advanced.sql",
-                    "007_book_storage.sql",
-                    "008_document_and_synthesis_hardening.sql",
-                    "009_media_assets.sql",
-                    "010_agent_active_layer.sql",
-                    "010_intelligence_life_reliability.sql",
-                    "011_level_up20_completion.sql",
-                    "012_storage_reliability.sql",
-                    "013_workflow_fk_indexes.sql",
-                    "014_move_vector_extension.sql",
-                    "015_supabase_storage_bucket.sql",
-                    "016_processing_idempotency.sql",
-                    "017_lock_down_data_api_roles.sql",
-                    "018_book_processing_pipeline.sql",
-                    "019_processing_task_claims.sql",
-                    "020_record_ownership.sql",
-                    "021_brain_record_ownership.sql",
-                    "022_vault_item_ownership.sql",
-                    "023_concepts_owner_unique.sql",
-                    "024_book_export_job_leases.sql",
-                    "025_rls_owner_isolation.sql",
-                ):
+                    cur.execute(
+                        "INSERT INTO cognix_schema_migrations(migration_name) VALUES(%s) "
+                        "ON CONFLICT (migration_name) DO NOTHING",
+                        ("001_initial.sql",),
+                    )
+
+                cur.execute("SELECT migration_name FROM cognix_schema_migrations")
+                applied = {row["migration_name"] for row in cur.fetchall()}
+                for migration_name in migration_names[1:]:
+                    if migration_name in applied:
+                        continue
                     migration = migrations_dir / migration_name
                     cur.execute(migration.read_text())
+                    cur.execute(
+                        "INSERT INTO cognix_schema_migrations(migration_name) VALUES(%s) "
+                        "ON CONFLICT (migration_name) DO NOTHING",
+                        (migration_name,),
+                    )
             conn.commit()
 
     def load_state(self) -> dict[str, Any]:
