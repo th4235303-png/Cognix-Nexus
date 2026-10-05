@@ -2,17 +2,17 @@
 
 Never commit secret values.
 
-## Cloudinary — primary original files and media
-Set on both API and worker:
-- COGNIX_BOOK_STORAGE_PROVIDER=cloudinary
-- COGNIX_MEDIA_STORAGE_PROVIDER=cloudinary
-- CLOUDINARY_CLOUD_NAME
-- CLOUDINARY_API_KEY
-- CLOUDINARY_API_SECRET
-- CLOUDINARY_RESOURCE_TYPE=raw
-- CLOUDINARY_DELIVERY_TYPE=authenticated
+## Storage roles — production target
 
-Keep all Cloudinary credentials backend-only. The current connected Cloudinary account is on the Free plan; its live raw-file limit is 10 MB, so larger original books require an account/plan that permits the required raw-file size before production E2E.
+| File type | Storage | Rule |
+|---|---|---|
+| Research images, covers, thumbnails | Cloudinary | <10 MB; media optimization |
+| Small PDFs, notes, summaries | Supabase Storage | <=50 MB; private app artifacts |
+| Large PDFs, EPUBs, research papers | Backblaze B2 | >50 MB; large originals |
+| Export packages, backups | Google Drive | user-owned export/backup destination |
+
+Book uploads use the tiered adapter: <=50 MB goes to Supabase Storage and >50 MB goes to Backblaze B2. Image ingestion uses Cloudinary with a 10 MB guard on the current free plan.
+
 
 ## Supabase Storage — derived artifacts
 Set:
