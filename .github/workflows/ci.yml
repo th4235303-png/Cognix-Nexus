@@ -88,6 +88,17 @@ jobs:
         env:
           COGNIX_DEV_MODE: "true"
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
+      - name: Backup and isolated restore drill
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
+          COGNIX_ALLOW_RESTORE: "true"
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS cognix_restore_drill"
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE DATABASE cognix_restore_drill"
+          python scripts/backup_restore_drill.py --dump --dump /tmp/cognix-test.dump
+          test -s /tmp/cognix-test.dump
+          python scripts/backup_restore_drill.py --verify /tmp/cognix-test.dump
+          python scripts/backup_restore_drill.py --restore /tmp/cognix-test.dump             --target-dsn postgresql://postgres:postgres@localhost:5432/cognix_restore_drill             --allow-restore
       - run: env -u DATABASE_URL python -m coverage run --branch -m unittest discover -s tests -p 'test_*.py'
         env:
           COGNIX_DEV_MODE: "true"
