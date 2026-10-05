@@ -48,9 +48,11 @@ def storage_status() -> dict:
         "r2_configured": r2_storage().configured,
         "google_drive_configured": google_configured(),
         "roles": {
-            "primary_originals": os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower(),
-            "media_originals": os.getenv("COGNIX_MEDIA_STORAGE_PROVIDER", "local").strip().lower(),
-            "app_artifacts": "supabase_storage",
-            "exports_and_backup": "google_drive",
+            "research_images_covers_thumbnails": "cloudinary",
+            "small_pdfs_notes_summaries": "supabase_storage",
+            "large_pdfs_epubs_research_papers": "backblaze_b2",
+            "export_packages_backups": "google_drive",
         },
+        "book_large_file_threshold_bytes": int(os.getenv("COGNIX_B2_LARGE_FILE_THRESHOLD_BYTES", str(50 * 1024 * 1024))),
+
     }
