@@ -88,13 +88,6 @@ def validate_production_configuration() -> None:
             store.initialize()
         except Exception as exc:
             raise RuntimeError("Failed to initialize database") from exc
-    e2e_run_id = os.getenv("COGNIX_PROVIDER_E2E_RUN_ID", "").strip()
-    if e2e_run_id:
-        try:
-            from scripts.provider_e2e import main as run_provider_e2e
-            run_provider_e2e()
-        except Exception:
-            logger.exception("provider_e2e_failed run_id=%s", e2e_run_id)
 
 
 @app.on_event("shutdown")
