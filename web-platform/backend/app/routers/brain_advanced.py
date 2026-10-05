@@ -325,7 +325,7 @@ class SynthesisCreate(BaseModel):
 
 @router.post("/synthesis", status_code=201)
 def create_synthesis(payload: SynthesisCreate, request: Request) -> dict:
-    _require_unscoped_book_access(request)
+    _owner_id(request)
     # Evidence collection is deliberately separated from generation. No AI text
     # is invented here; a later model provider may consume this evidence package.
     db = _db()
@@ -343,7 +343,7 @@ def create_synthesis(payload: SynthesisCreate, request: Request) -> dict:
 
 @router.get("/synthesis/{run_id}")
 def get_synthesis(run_id: str, request: Request) -> dict:
-    _require_unscoped_book_access(request)
+    _owner_id(request)
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:
@@ -361,7 +361,7 @@ class SynthesisGenerateRequest(BaseModel):
 
 @router.post("/synthesis/{run_id}/generate")
 async def generate_synthesis(run_id: str, payload: SynthesisGenerateRequest, request: Request) -> dict:
-    _require_unscoped_book_access(request)
+    _owner_id(request)
     db = _db()
     if not llm_provider.configured:
         raise HTTPException(status_code=503, detail="LLM synthesis is not configured")
@@ -449,7 +449,7 @@ class EmbedRequest(BaseModel):
 
 @router.post("/embeddings/index")
 async def index_embeddings(payload: EmbedRequest, request: Request) -> dict:
-    _require_unscoped_book_access(request)
+    _owner_id(request)
     db = _db()
     owner_id = _owner_id(request)
     if not embedding_provider.configured:
@@ -497,7 +497,7 @@ class SemanticQuery(BaseModel):
 
 @router.post("/query/semantic")
 async def semantic_query(payload: SemanticQuery, request: Request) -> dict:
-    _require_unscoped_book_access(request)
+    owner_id = _owner_id(request)
     db = _db()
     if not embedding_provider.configured:
         raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
@@ -594,7 +594,7 @@ async def semantic_query(payload: SemanticQuery, request: Request) -> dict:
 
 @router.get("/export")
 def export_brain_vault(request: Request) -> dict:
-    _require_unscoped_book_access(request)
+    _owner_id(request)
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:
@@ -625,7 +625,7 @@ def export_brain_vault(request: Request) -> dict:
 
 @router.get("/contradictions/candidates")
 def contradiction_candidates(request: Request, limit: int = 50) -> dict:
-    _require_unscoped_book_access(request)
+    _owner_id(request)
     db = _db()
     limit = max(1, min(limit, 100))
     with db.connect() as conn:
@@ -680,7 +680,7 @@ class ContradictionReview(BaseModel):
 
 @router.post("/contradictions/{contradiction_id}/review")
 def review_contradiction(contradiction_id: str, payload: ContradictionReview, request: Request) -> dict:
-    _require_unscoped_book_access(request)
+    _owner_id(request)
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:
