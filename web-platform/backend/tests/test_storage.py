@@ -26,6 +26,30 @@ class StorageContractTests(unittest.TestCase):
         ):
             self.assertFalse(CloudinaryObjectStorage().configured)
 
+
+    def test_cloudinary_book_storage_uses_provider_and_stored_key(self):
+        class FakeCloudinary:
+            configured = True
+            def __init__(self):
+                self.read_keys = []
+                self.deleted_keys = []
+            def get_bytes(self, key):
+                self.read_keys.append(key)
+                return b"pdf-bytes"
+            def delete(self, key):
+                self.deleted_keys.append(key)
+
+        fake = FakeCloudinary()
+        with patch.dict(os.environ, {"COGNIX_BOOK_STORAGE_PROVIDER": "cloudinary"}, clear=False), patch(
+            "app.services.book_storage.cloudinary_storage", return_value=fake
+        ):
+            storage = BookBinaryStorage()
+            self.assertTrue(storage.configured)
+            self.assertEqual(storage.get("BOOK-1", "book.pdf", stored_key="cloudinary://asset-1"), b"pdf-bytes")
+            storage.delete("BOOK-1", "book.pdf", stored_key="cloudinary://asset-1")
+        self.assertEqual(fake.read_keys, ["cloudinary://asset-1"])
+        self.assertEqual(fake.deleted_keys, ["cloudinary://asset-1"])
+
     def test_b2_requires_all_credentials(self):
         with patch.dict(
             os.environ,
