@@ -75,7 +75,7 @@ def process_book(book_id: str) -> bool:
             )
             if not filename or filename == ".":
                 raise RuntimeError("Book binary metadata is incomplete: filename/path is missing")
-            data = BookBinaryStorage().get(book_id, filename)
+            data = BookBinaryStorage().get(book_id, filename, stored_key=binary_path)
             import hashlib
             checksum = hashlib.sha256(data).hexdigest()
             if checksum.lower() != str(book.get("binary_sha256") or book.get("content_hash")).lower():
