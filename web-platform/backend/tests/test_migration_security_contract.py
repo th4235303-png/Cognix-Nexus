@@ -35,6 +35,9 @@ class MigrationSecurityContractTests(unittest.TestCase):
         self.assertNotIn("migration.exists()", persistence)
         self.assertIn("pg_advisory_xact_lock", persistence)
         self.assertIn("incomplete base schema", persistence)
+        self.assertIn("cognix_schema_migrations", persistence)
+        self.assertIn("on conflict (migration_name) do nothing", persistence)
+        self.assertIn("if migration_name in applied", persistence)
 
     def test_020_to_022_only_add_nullable_owner_columns_and_indexes(self):
         expectations = {
