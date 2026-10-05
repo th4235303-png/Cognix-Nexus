@@ -4,9 +4,22 @@ from unittest.mock import patch
 
 from app.services.book_storage import BookBinaryStorage
 from app.services.google_drive import _oauth_state, verify_oauth_state
-from app.services.object_storage import B2ObjectStorage, CloudinaryObjectStorage, R2ObjectStorage, SupabaseObjectStorage, S3ObjectStorage
+from app.services.object_storage import B2ObjectStorage, CloudinaryObjectStorage, R2ObjectStorage, SupabaseObjectStorage, S3ObjectStorage, StoredObject
 from app.main import app
 from fastapi.testclient import TestClient
+
+
+class FakeStorage:
+    configured = True
+
+    def put_bytes(self, key, data, content_type=None):
+        return StoredObject(key=key, checksum="test", size=len(data))
+
+    def get_bytes(self, key):
+        return b"test"
+
+    def delete(self, key):
+        return None
 
 
 class StorageContractTests(unittest.TestCase):
@@ -47,8 +60,8 @@ class StorageContractTests(unittest.TestCase):
             self.assertTrue(storage.configured)
             self.assertEqual(storage.get("BOOK-1", "book.pdf", stored_key="cloudinary://asset-1"), b"pdf-bytes")
             storage.delete("BOOK-1", "book.pdf", stored_key="cloudinary://asset-1")
-        self.assertEqual(fake.read_keys, ["cloudinary://asset-1"])
-        self.assertEqual(fake.deleted_keys, ["cloudinary://asset-1"])
+        self.assertEqual(fake.read_keys, ["asset-1"])
+        self.assertEqual(fake.deleted_keys, ["asset-1"])
 
     def test_tiered_book_storage_routes_by_size(self):
         with patch.dict(
