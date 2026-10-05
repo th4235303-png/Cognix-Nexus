@@ -10,7 +10,7 @@ MIGRATIONS = BACKEND / "migrations"
 
 
 class MigrationSecurityContractTests(unittest.TestCase):
-    def test_020_to_024_are_registered_once_in_order_and_required(self):
+    def test_020_to_025_are_registered_once_in_order_and_required(self):
         persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8")
         start = persistence.index("for migration_name in (")
         end = persistence.index("):", start)
@@ -21,6 +21,7 @@ class MigrationSecurityContractTests(unittest.TestCase):
             "022_vault_item_ownership.sql",
             "023_concepts_owner_unique.sql",
             "024_book_export_job_leases.sql",
+            "025_rls_owner_isolation.sql",
         ]
         tail = registered[-len(expected):]
         self.assertEqual(tail, expected)
@@ -104,8 +105,12 @@ class MigrationSecurityContractTests(unittest.TestCase):
             sql,
         )
         self.assertNotRegex(sql, r"enable\s+row\s+level\s+security")
-        self.assertNotRegex(sql, r"create\s+policy\b")
-        self.assertIn("intentionally policy-less", sql)
+        self.assertNotRegex(sql, r"grant\s+")
+        rls_sql = (MIGRATIONS / "025_rls_owner_isolation.sql").read_text(encoding="utf-8").lower()
+        self.assertIn("create policy cognix_authenticated_sources", rls_sql)
+        self.assertIn("current_setting('request.jwt.claim.sub', true)", rls_sql)
+        self.assertIn("using (false) with check (false)", rls_sql)
+        self.assertIn("owner_id is not null", rls_sql)
 
     def test_authenticated_owner_paths_match_parent_owner_and_leave_null_owners_out(self):
         persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8").lower()
