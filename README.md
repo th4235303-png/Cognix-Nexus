@@ -160,13 +160,13 @@ The Brain Vault roadmap is implemented as a continuous delivery sequence. The re
 17. Observability + operations — bounded records, operational hooks, and deployment pause safeguards
 18. Integration + final verification — cross-module lineage and evidence/review invariants
 19. Level Up 20 completion layer — deterministic learning/intelligence contracts, privacy boundaries, offline sync checks, and web workspace
-20. Final production activation — provider adapters and E2E harness are implemented; live closeout is blocked only where Render service credential bindings are missing, with the current live blocker recorded below
+20. Final production activation — live provider E2E PASS recorded on 2026-10-05; operational residuals remain tracked separately
 
 ### Level Up 20 delivery matrix
 
 All 20 feature contracts are now represented in the backend and the web workspace. The contracts intentionally separate deterministic/product logic from provider-dependent AI execution and keep the Master Plan safety rules explicit: synthesis requires 3+ sources, decisions expose evidence coverage, writing checks citations, learning paths are library-only, mood remains local-only, ambient mode is user-triggered, wiki remains private, offline sync detects conflicts, and legacy metadata stays encrypted. These are implementation boundaries, not claims that every external AI/provider integration is live.
 
-The original Master Plan phases 0–15 remain the broader product roadmap. Phases 1–12 cover the delivered core foundation and hardening; phases 13–15 are extended by the Level Up and integration work. Production activation is being completed provider-by-provider; secrets and live provider credentials are external activation inputs, while storage routing, security controls, tests, and documentation remain version-controlled on `main`. All credential-dependent adapters are implemented in code; operator credentials and live drills remain external activation steps.
+The original Master Plan phases 0–15 remain the broader product roadmap. Phases 1–12 cover the delivered core foundation and hardening; phases 13–15 are extended by the Level Up and integration work. Production activation is provider-backed on `main`; live credential values remain external secrets, while storage routing, security controls, tests, and verification records remain version-controlled. All credential-dependent adapters are implemented in code; the required live provider bindings are now exercised by the production E2E drill.
 
 Phase 11 is intentionally an engineering hardening phase: it does not make AI output canonical and does not bypass the existing human-review boundaries.
 
@@ -176,7 +176,7 @@ Phase 12 is an operational guardrail phase: production readiness must not silent
 
 The final provider drill is implemented at `web-platform/backend/scripts/provider_e2e.py` and is opt-in through the temporary `COGNIX_PROVIDER_E2E_RUN_ID` Render variable. It exercises real Cloudinary, Supabase Storage, Backblaze B2, Google Drive, embedding, LLM/RAG citation, extraction/chunks, tier routing, checksum verification, owner isolation, and Drive retry/idempotency, then removes its temporary data.
 
-As of the latest live run on 2026-10-05, the drill reached the production API but stopped before provider I/O because `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` were not bound in the live Render API/worker environment. No secret values are stored in the repository or requested in chat. After those three backend bindings are added, rerun the opt-in drill and only then mark the full real-provider E2E chain PASS.
+A real production drill completed successfully on 2026-10-05 as run `20261005-1800`. The live Render API completed Cloudinary upload/read/checksum, private Supabase Storage round-trip, Backblaze B2 large-file round-trip, tier routing (<=50 MB → Supabase, >50 MB → B2), extraction → chunks, 1536-dimension embeddings, owner-scoped semantic retrieval + RRF/RAG citation, Google Drive export/upsert, and owner isolation. The run recorded `provider_e2e.completed` in production and temporary E2E data was cleaned up. The temporary Render E2E startup hook and run variable were then removed/cleared.
 
 Semantic/RRF retrieval is owner-scoped for authenticated requests, and the export worker now performs the real Google Drive upload/upsert path rather than treating the source URL as the Drive result.
 
