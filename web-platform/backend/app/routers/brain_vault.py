@@ -446,7 +446,7 @@ async def upload_book(
     except Exception as exc:
         if binary_path:
             try:
-                BookBinaryStorage().delete(book_id, filename)
+                BookBinaryStorage().delete(book_id, filename, stored_key=binary_path)
             except Exception:
                 pass
         if "duplicate key" in str(exc).lower() and store.database:
