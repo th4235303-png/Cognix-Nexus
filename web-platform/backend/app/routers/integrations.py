@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import HTMLResponse
 
 from app.services.google_drive import authorization_url, exchange_code, google_configured, verify_oauth_state
-from app.services.object_storage import b2_storage, r2_storage, supabase_storage
+from app.services.object_storage import b2_storage, cloudinary_storage, r2_storage, supabase_storage
 
 router = APIRouter(prefix="/integrations", tags=["integrations"])
 
@@ -42,6 +42,7 @@ def storage_status() -> dict:
     return {
         "book_storage_provider": os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower(),
         "media_storage_provider": os.getenv("COGNIX_MEDIA_STORAGE_PROVIDER", "local").strip().lower(),
+        "cloudinary_configured": cloudinary_storage().configured,
         "b2_configured": b2_storage().configured,
         "supabase_storage_configured": supabase_storage().configured,
         "r2_configured": r2_storage().configured,
