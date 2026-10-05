@@ -320,8 +320,30 @@ def main() -> None:
     run_id = os.getenv("COGNIX_PROVIDER_E2E_RUN_ID", "").strip()
     if not run_id:
         return
-    result = asyncio.run(run(run_id))
-    log.info("provider_e2e_result=%s", json.dumps(result, sort_keys=True))
+
+    try:
+        asyncio.get_running_loop()
+    except RuntimeError:
+        result = asyncio.run(run(run_id))
+        log.info("provider_e2e_result=%s", json.dumps(result, sort_keys=True))
+        return
+
+    import threading
+
+    outcome: dict[str, object] = {}
+
+    def runner() -> None:
+        try:
+            outcome["result"] = asyncio.run(run(run_id))
+        except Exception as exc:
+            outcome["error"] = exc
+
+    thread = threading.Thread(target=runner, name="provider-e2e", daemon=True)
+    thread.start()
+    thread.join()
+    if "error" in outcome:
+        raise outcome["error"]
+    log.info("provider_e2e_result=%s", json.dumps(outcome["result"], sort_keys=True))
 
 
 if __name__ == "__main__":
