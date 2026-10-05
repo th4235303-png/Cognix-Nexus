@@ -12,7 +12,7 @@ from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
 
-from app.ownership import current_request_owner
+from app.request_context import current_request_owner
 
 
 class Database:
