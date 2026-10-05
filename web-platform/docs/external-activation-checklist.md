@@ -2,17 +2,17 @@
 
 Never commit secret values.
 
-## Backblaze B2 — original files
+## Cloudinary — primary original files and media
 Set on both API and worker:
-- COGNIX_BOOK_STORAGE_PROVIDER=b2
-- COGNIX_MEDIA_STORAGE_PROVIDER=b2
-- COGNIX_B2_ENDPOINT
-- COGNIX_B2_BUCKET
-- COGNIX_B2_KEY_ID
-- COGNIX_B2_APPLICATION_KEY
-- COGNIX_B2_REGION=us-east-005
+- COGNIX_BOOK_STORAGE_PROVIDER=cloudinary
+- COGNIX_MEDIA_STORAGE_PROVIDER=cloudinary
+- CLOUDINARY_CLOUD_NAME
+- CLOUDINARY_API_KEY
+- CLOUDINARY_API_SECRET
+- CLOUDINARY_RESOURCE_TYPE=raw
+- CLOUDINARY_DELIVERY_TYPE=authenticated
 
-Verify with a real PDF/EPUB upload, storage round-trip, and SHA-256 comparison.
+Keep all Cloudinary credentials backend-only. The current connected Cloudinary account is on the Free plan; its live raw-file limit is 10 MB, so larger original books require an account/plan that permits the required raw-file size before production E2E.
 
 ## Supabase Storage — derived artifacts
 Set:
@@ -61,7 +61,7 @@ Production API and worker must share the same `DATABASE_URL`.
 - Set `DATABASE_URL` on the live worker service (`cognix-core-worker-runtime`) as well as the API.
 - Set `COGNIX_REQUIRE_DATABASE=true` on the live worker so a missing database binding fails fast instead of silently running in memory mode.
 - The checked-in `render.yaml` declares these variables for the intended worker definition, but an existing live Render service must be reconciled manually if its configuration predates the blueprint.
-The checked-in render.yaml defines the Python API, native Render worker, B2 originals, private Supabase artifact storage, and Google Drive export boundary.
+The checked-in render.yaml defines the Python API, native Render worker, Cloudinary originals/media, private Supabase artifact storage, and Google Drive export boundary.
 
 If an existing Render service has a different resource type/root directory, reconcile it in the Render dashboard rather than creating duplicates.
 
