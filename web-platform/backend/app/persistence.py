@@ -347,6 +347,7 @@ class Database:
                        WHERE id=%s AND claim_token=%s
                          AND claimed_by=%s
                          AND claimed_at >= now() - interval '30 minutes'
+                         AND status IN ('queued','uploading')
                        RETURNING id""",
                     (export_id, token, self.worker_id),
                 )
