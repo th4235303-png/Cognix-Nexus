@@ -15,6 +15,7 @@ DECLARE
 BEGIN
   FOREACH t IN ARRAY tables LOOP
     EXECUTE format('ALTER TABLE public.%I ADD COLUMN IF NOT EXISTS owner_id text', t);
+    EXECUTE format('ALTER TABLE public.%I ALTER COLUMN owner_id SET DEFAULT NULLIF(current_setting(''request.jwt.claim.sub'', true), '''')', t);
     EXECUTE format('CREATE INDEX IF NOT EXISTS %I ON public.%I(owner_id)', 'idx_'||t||'_owner_id', t);
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('DROP POLICY IF EXISTS cognix_anon_deny_'||t||' ON public.%I', t);
