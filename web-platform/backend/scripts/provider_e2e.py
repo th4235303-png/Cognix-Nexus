@@ -86,7 +86,7 @@ async def run(run_id: str) -> dict:
     try:
         # 1. Real provider round trips.
         for label, storage, key in (
-            ("cloudinary", cloudinary_storage(), f"e2e/{run_id}/cloudinary.bin"),
+            ("cloudinary", cloudinary_storage(), f"e2e/{run_id}/cloudinary.txt"),
             ("supabase", supabase_storage(), f"e2e/{run_id}/supabase.bin"),
         ):
             _assert(storage.configured, f"{label} is not configured")
