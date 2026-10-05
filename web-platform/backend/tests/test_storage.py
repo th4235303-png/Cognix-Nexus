@@ -50,6 +50,24 @@ class StorageContractTests(unittest.TestCase):
         self.assertEqual(fake.read_keys, ["cloudinary://asset-1"])
         self.assertEqual(fake.deleted_keys, ["cloudinary://asset-1"])
 
+    def test_tiered_book_storage_routes_by_size(self):
+        with patch.dict(
+            os.environ,
+            {
+                "COGNIX_BOOK_STORAGE_PROVIDER": "tiered",
+                "COGNIX_B2_LARGE_FILE_THRESHOLD_BYTES": "10",
+            },
+            clear=False,
+        ):
+            small = FakeStorage()
+            large = FakeStorage()
+            with patch("app.services.book_storage.supabase_storage", return_value=small), patch(
+                "app.services.book_storage.b2_storage", return_value=large
+            ):
+                storage = BookBinaryStorage()
+                self.assertEqual(storage.put("BOOK-1", "small.pdf", b"123").split("://", 1)[0], "supabase")
+                self.assertEqual(storage.put("BOOK-2", "large.pdf", b"12345678901").split("://", 1)[0], "b2")
+
     def test_b2_requires_all_credentials(self):
         with patch.dict(
             os.environ,
