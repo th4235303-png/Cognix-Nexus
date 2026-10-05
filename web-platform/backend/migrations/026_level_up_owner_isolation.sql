@@ -34,5 +34,6 @@ BEGIN
 END $$;
 
 -- Personal wiki slugs must be unique per owner, not globally.
+ALTER TABLE public.wiki_pages DROP CONSTRAINT IF EXISTS wiki_pages_slug_key;
 DROP INDEX IF EXISTS public.wiki_pages_slug_key;
 CREATE UNIQUE INDEX IF NOT EXISTS wiki_pages_owner_slug_key ON public.wiki_pages(owner_id, slug) WHERE owner_id IS NOT NULL;
