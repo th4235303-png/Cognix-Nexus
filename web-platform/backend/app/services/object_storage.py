@@ -121,8 +121,7 @@ class CloudinaryObjectStorage:
         return hashlib.sha1(("&".join(pairs) + self.api_secret).encode("utf-8")).hexdigest()
 
     def _upload_url(self) -> str:
-        delivery = self.delivery_type if self.delivery_type in {"upload", "private", "authenticated"} else "upload"
-        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/{self.resource_type}/{delivery}"
+        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/{self.resource_type}/upload"
 
     def _download_url(self) -> str:
         return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/asset/download"
@@ -136,12 +135,23 @@ class CloudinaryObjectStorage:
         key = S3ObjectStorage._safe_key(key)
         public_id = key if Path(key).suffix else f"{key}.bin"
         timestamp = int(time.time())
-        # For the REST API, the delivery type is encoded in the endpoint path
-        # (e.g. /raw/authenticated), so it must not also be signed as a body field.
-        signed = {"public_id": public_id, "timestamp": timestamp}
-        payload = {**signed, "api_key": self.api_key, "signature": self._sign(signed)}
+        # Use backend-only Basic Authentication for the Upload API. Cloudinary
+        # supports all upload parameters with Basic Auth, while the API secret
+        # never leaves the server.
+        timestamp = int(time.time())
+        payload = {
+            "public_id": public_id,
+            "timestamp": timestamp,
+            "type": self.delivery_type,
+        }
         files = {"file": (Path(public_id).name, data, content_type or "application/octet-stream")}
-        response = httpx.post(self._upload_url(), data=payload, files=files, timeout=120)
+        response = httpx.post(
+            self._upload_url(),
+            data=payload,
+            files=files,
+            auth=(self.api_key, self.api_secret),
+            timeout=120,
+        )
         if response.is_error:
             detail = response.text[:500]
             raise RuntimeError(f"Cloudinary upload failed ({response.status_code}): {detail}")
