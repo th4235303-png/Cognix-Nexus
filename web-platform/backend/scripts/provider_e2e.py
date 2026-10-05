@@ -266,9 +266,9 @@ async def run(run_id: str) -> dict:
             with conn.cursor() as cur:
                 cur.execute(
                     """INSERT INTO sources(
-                       id,url,title,status,source_trust,original_text,ai_summary,
+                       id,url,title,status,processing_stage,source_trust,original_text,ai_summary,
                        approved_myanmar,created_at,updated_at,owner_id
-                    ) VALUES(%s,%s,%s,'approved','e2e',%s,%s,%s,now(),now(),%s)""",
+                    ) VALUES(%s,%s,%s,'approved','approved','e2e',%s,%s,%s,now(),now(),%s)""",
                     (
                         source_id,
                         source["url"],
