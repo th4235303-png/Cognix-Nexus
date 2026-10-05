@@ -137,7 +137,7 @@ class CloudinaryObjectStorage:
         return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/asset/download"
 
     def _destroy_url(self) -> str:
-        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/{self.resource_type}/destroy"
+        return f"https://api.cloudinary.com/v1_1/{urllib.parse.quote(self.cloud_name, safe='')}/destroy"
 
     def put_bytes(self, key: str, data: bytes, content_type: str | None = None) -> StoredObject:
         if not self.configured:
