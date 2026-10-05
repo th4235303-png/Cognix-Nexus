@@ -11,7 +11,7 @@ class LLMProvider:
 
     def __init__(self) -> None:
         self.url = (os.getenv("COGNIX_LLM_API_URL") or os.getenv("COGNIX_AI_BASE_URL") or "").strip()
-        self.api_key = (os.getenv("COGNIX_LLM_API_KEY") or os.getenv("COGNIX_AI_API_KEY") or "").strip()
+        self.api_key = (os.getenv("COGNIX_LLM_API_KEY") or os.getenv("COGNIX_AI_API_KEY") or os.getenv("COGNIX_EMBEDDING_API_KEY") or "").strip()
         self.model = (os.getenv("COGNIX_LLM_MODEL") or os.getenv("COGNIX_AI_MODEL") or "").strip()
         raw_fallbacks = os.getenv("COGNIX_LLM_FALLBACK_URLS", "")
         self.fallback_urls = [item.strip() for item in raw_fallbacks.split(",") if item.strip()]
