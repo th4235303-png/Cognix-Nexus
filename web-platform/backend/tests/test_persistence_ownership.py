@@ -279,7 +279,7 @@ class PersistenceOwnershipTests(unittest.TestCase):
             "relation": "related", "weight": 1, "created_at": "2026-01-01",
         }
         database.save_brain_concept_link(link, "user-a")
-        link_query, link_params = cursor.statements[2]
+        link_query, link_params = next((q, p) for q, p in cursor.statements if "INSERT INTO concept_links" in q)
         self.assertIn("source.owner_id=%(owner_id)s AND target.owner_id=%(owner_id)s", link_query)
         self.assertEqual(link_params["owner_id"], "user-a")
 
