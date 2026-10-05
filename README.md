@@ -27,6 +27,19 @@ Cognix Nexus remains the research and evidence foundation. Brain Vault is the pr
 - Delivery: Google Drive
 - Hosting: Netlify (frontend) + Render (API/worker)
 
+## Storage architecture
+
+Cognix Nexus uses four storage tiers by file role and size:
+
+| File type | Provider | Rule |
+|---|---|---|
+| Research images, covers, thumbnails | Cloudinary | <10 MB |
+| Small PDFs, notes, summaries | Supabase Storage | <=50 MB, private |
+| Large PDFs, EPUBs, research papers | Backblaze B2 | >50 MB |
+| Export packages, backups | Google Drive | user-owned destination |
+
+The book upload adapter routes <=50 MB to Supabase Storage and >50 MB to B2. Image ingestion is Cloudinary-only. Provider secrets remain backend-only.
+
 ## Repository structure
 
 ```text
