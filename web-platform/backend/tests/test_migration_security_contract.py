@@ -11,7 +11,7 @@ MIGRATIONS = BACKEND / "migrations"
 
 class MigrationSecurityContractTests(unittest.TestCase):
     def test_020_to_027_are_registered_once_in_order_and_required(self):
-        persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8")
+        persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8").lower()
         start = persistence.index("migration_names = (")
         end = persistence.index(")\n        with self.connect", start)
         registered = re.findall(r'"(\d{3}_[^"]+\.sql)"', persistence[start:end])
