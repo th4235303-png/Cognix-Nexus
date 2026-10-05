@@ -1,23 +1,9 @@
 import os
-from contextvars import ContextVar, Token
 
 from fastapi import HTTPException, Request
 
 from app.store import store
-
-_REQUEST_OWNER: ContextVar[str | None] = ContextVar("cognix_request_owner", default=None)
-
-
-def set_request_owner(owner_id: str | None) -> Token:
-    return _REQUEST_OWNER.set(owner_id)
-
-
-def reset_request_owner(token: Token) -> None:
-    _REQUEST_OWNER.reset(token)
-
-
-def current_request_owner() -> str | None:
-    return _REQUEST_OWNER.get()
+from app.request_context import current_request_owner, reset_request_owner, set_request_owner
 
 
 def owner_for_request(request: Request) -> str | None:
