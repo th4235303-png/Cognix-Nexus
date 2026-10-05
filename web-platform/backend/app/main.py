@@ -20,6 +20,7 @@ except ImportError:
 from app.auth import auth_required, authenticate_request
 from app.routers import activity, brain_advanced, brain_agent, brain_documents, brain_media, brain_vault, exports, integrations, intelligence, level_up, processing, reviews, sources, usage
 from app.store import store
+from app.ownership import reset_request_owner, set_request_owner
 
 API_VERSION = "1.0.0"
 DEFAULT_CORS_ORIGINS = ("http://localhost:3000",)
@@ -121,7 +122,11 @@ async def request_context(request: Request, call_next):
     started = time.perf_counter()
     try:
         request.state.auth = authenticate_request(request)
-        response = await call_next(request)
+        owner_token = set_request_owner(request.state.auth.get("sub"))
+        try:
+            response = await call_next(request)
+        finally:
+            reset_request_owner(owner_token)
     except Exception as exc:
         from fastapi import HTTPException
         if isinstance(exc, HTTPException):
