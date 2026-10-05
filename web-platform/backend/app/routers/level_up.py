@@ -743,7 +743,7 @@ def operational_health(request: Request):
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) AS queued FROM agent_jobs WHERE owner_id=%s AND status IN ('queued','retry_pending')", (owner_id,))
             checks["queued_agent_jobs"] = cur.fetchone()["queued"]
-            cur.execute("SELECT COUNT(*) AS unresolved_sync_conflicts FROM sync_conflicts WHERE status='needs_review'")
+            cur.execute("SELECT COUNT(*) AS unresolved_sync_conflicts FROM sync_conflicts WHERE owner_id=%s AND status='needs_review'", (owner_id,))
             checks["unresolved_sync_conflicts"] = cur.fetchone()["unresolved_sync_conflicts"]
     return {"status": "ok" if checks["database"] else "degraded", "checks": checks}
 
