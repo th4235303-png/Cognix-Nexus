@@ -82,6 +82,7 @@ jobs:
       - run: env -u DATABASE_URL python -m unittest discover -s tests
         env:
           COGNIX_DEV_MODE: "true"
+          COGNIX_RATE_LIMIT_PER_MINUTE: "0"
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
       - run: python -m unittest discover -s tests -p 'test_database_integration.py'
         env:
@@ -90,6 +91,7 @@ jobs:
       - run: env -u DATABASE_URL python -m coverage run --branch -m unittest discover -s tests -p 'test_*.py'
         env:
           COGNIX_DEV_MODE: "true"
+          COGNIX_RATE_LIMIT_PER_MINUTE: "0"
       - run: python -m coverage report --include="app/auth.py,app/main.py" --fail-under=80
       - run: python -m pip install pip-audit
       - run: pip-audit -r requirements.lock
