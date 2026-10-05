@@ -68,6 +68,16 @@ class MemoryOwnershipDatabase:
     def save_task(self, task):
         self.tasks[task["id"]] = task
 
+    def claim_task(self, task_id):
+        task = self.tasks.get(task_id)
+        if task is None:
+            return None
+        token = "memory-worker:test"
+        task["claimed_by"] = "memory-worker"
+        task["claimed_at"] = datetime.now(timezone.utc).isoformat()
+        task["claim_token"] = token
+        return token
+
     def save_processing_transition(
         self, task, source, expected_status, expected_stage, claim_token=None
     ):
