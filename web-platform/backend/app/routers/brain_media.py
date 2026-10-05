@@ -7,12 +7,12 @@ from uuid import uuid4
 from fastapi import APIRouter, File, HTTPException, UploadFile
 
 from app.services.document_ocr import extract_ocr
-from app.services.object_storage import b2_storage, cloudinary_storage, r2_storage
+from app.services.object_storage import cloudinary_storage
 from app.store import store
 
 router = APIRouter(prefix="/brain/media", tags=["brain-media"])
 
-MAX_MEDIA_BYTES = 20 * 1024 * 1024
+MAX_MEDIA_BYTES = 10 * 1024 * 1024
 IMAGE_TYPES = {"png", "jpg", "jpeg", "webp", "tiff", "bmp"}
 
 
@@ -25,8 +25,9 @@ async def ingest_media(file: UploadFile = File(...), ocr_language: str = "eng") 
     data = await file.read()
     if not data:
         raise HTTPException(status_code=400, detail="Media file is empty")
-    if len(data) > MAX_MEDIA_BYTES:
-        raise HTTPException(status_code=413, detail="Media file exceeds the 20 MB limit")
+    max_media_bytes = max(1, int(os.getenv("CLOUDINARY_MAX_RAW_BYTES", str(MAX_MEDIA_BYTES))))
+    if len(data) > max_media_bytes:
+        raise HTTPException(status_code=413, detail="Media file exceeds the configured Cloudinary upload limit")
     if store.database is None:
         raise HTTPException(status_code=503, detail="Persistent database is required for media ingestion")
 
@@ -40,9 +41,9 @@ async def ingest_media(file: UploadFile = File(...), ocr_language: str = "eng") 
 
     storage_provider = os.getenv("COGNIX_MEDIA_STORAGE_PROVIDER", "local").strip().lower()
     binary_path = None
-    if storage_provider in {"b2", "r2", "cloudinary"}:
+    if storage_provider == "cloudinary":
         try:
-            storage = cloudinary_storage() if storage_provider == "cloudinary" else (b2_storage() if storage_provider == "b2" else r2_storage())
+            storage = cloudinary_storage()
             content_type = "image/jpeg" if suffix in {"jpg", "jpeg"} else f"image/{suffix}"
             stored = storage.put_bytes(f"media/{media_id}/{filename}", data, content_type=content_type)
             binary_path = stored.key
