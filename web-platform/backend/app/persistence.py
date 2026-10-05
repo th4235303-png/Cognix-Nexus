@@ -409,6 +409,7 @@ class Database:
             "024_book_export_job_leases.sql",
             "025_rls_owner_isolation.sql",
             "026_level_up_owner_isolation.sql",
+            "027_rls_helper_performance.sql",
         )
         with self.connect() as conn:
             with conn.cursor() as cur:
