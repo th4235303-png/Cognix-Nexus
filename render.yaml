@@ -39,9 +39,19 @@ services:
       - key: COGNIX_DRIVE_PROVIDER
         value: "google"
       - key: COGNIX_BOOK_STORAGE_PROVIDER
-        value: "b2"
+        value: "cloudinary"
       - key: COGNIX_MEDIA_STORAGE_PROVIDER
-        value: "b2"
+        value: "cloudinary"
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_RESOURCE_TYPE
+        value: "raw"
+      - key: CLOUDINARY_DELIVERY_TYPE
+        value: "authenticated"
       - key: COGNIX_B2_ENDPOINT
         sync: false
       - key: COGNIX_B2_BUCKET
@@ -94,9 +104,19 @@ services:
       - key: COGNIX_AI_MODEL
         sync: false
       - key: COGNIX_BOOK_STORAGE_PROVIDER
-        value: "b2"
+        value: "cloudinary"
       - key: COGNIX_MEDIA_STORAGE_PROVIDER
-        value: "b2"
+        value: "cloudinary"
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: CLOUDINARY_RESOURCE_TYPE
+        value: "raw"
+      - key: CLOUDINARY_DELIVERY_TYPE
+        value: "authenticated"
       - key: COGNIX_B2_ENDPOINT
         sync: false
       - key: COGNIX_B2_BUCKET
