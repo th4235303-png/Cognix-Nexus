@@ -1,6 +1,6 @@
 -- Phase 14: optimize owner RLS helper evaluation without changing authorization semantics.
--- Supabase's RLS advisor recommends wrapping current_setting/auth helper calls
--- in a scalar subquery so the value is evaluated once per statement.
+-- Wrap the per-request JWT claim lookup in a scalar subquery so PostgreSQL
+-- evaluates the stable request value once per statement instead of once per row.
 DO $$
 DECLARE
     policy_row record;
@@ -25,14 +25,17 @@ BEGIN
     LOOP
         using_expr := replace(
             policy_row.using_expr,
-            '(select current_setting(''request.jwt.claim.sub'', true))',
-            '(select current_setting(''request.jwt.claim.sub''::text, true))'
+            'current_setting(''request.jwt.claim.sub'', true)',
+            '(select current_setting(''request.jwt.claim.sub'', true))'
         );
-        check_expr := replace(
-            policy_row.check_expr,
-            'current_setting(''request.jwt.claim.sub''::text, true)',
-            '(select current_setting(''request.jwt.claim.sub''::text, true))'
-        );
+        check_expr := CASE
+            WHEN policy_row.check_expr IS NULL THEN NULL
+            ELSE replace(
+                policy_row.check_expr,
+                'current_setting(''request.jwt.claim.sub'', true)',
+                '(select current_setting(''request.jwt.claim.sub'', true))'
+            )
+        END;
 
         IF policy_row.check_expr IS NULL THEN
             EXECUTE format(
