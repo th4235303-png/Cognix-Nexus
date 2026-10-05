@@ -22,17 +22,11 @@ def _db():
     return store.database
 
 
-def _require_unscoped_book_access(request: Request) -> None:
+def _owner_id(request: Request) -> str:
     owner_id = owner_for_request(request)
-    if owner_id is None or store.database is None:
-        return
-    raise HTTPException(
-        status_code=503,
-        detail={
-            "code": "OWNERSHIP_UNAVAILABLE",
-            "message": "This book-wide feature is not scoped to an authenticated owner",
-        },
-    )
+    if not owner_id:
+        raise HTTPException(status_code=401, detail="Authenticated owner is required")
+    return owner_id
 
 
 class SummaryCreate(BaseModel):
@@ -251,7 +245,7 @@ class RetrievalRequest(BaseModel):
 
 @router.post("/retrieval")
 async def hybrid_retrieval(payload: RetrievalRequest, request: Request) -> dict:
-    _require_unscoped_book_access(request)
+    _owner_id(request)
     db = _db()
     if not embedding_provider.configured:
         raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
@@ -457,13 +451,19 @@ class EmbedRequest(BaseModel):
 async def index_embeddings(payload: EmbedRequest, request: Request) -> dict:
     _require_unscoped_book_access(request)
     db = _db()
+    owner_id = _owner_id(request)
     if not embedding_provider.configured:
         raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
     with db.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id, content FROM chunks WHERE id = ANY(%s) ORDER BY id",
-                (payload.owner_ids,),
+                """SELECT c.id, c.content
+                   FROM chunks c
+                   JOIN chapters ch ON ch.id=c.chapter_id
+                   JOIN books b ON b.id=ch.book_id
+                   WHERE c.id = ANY(%s) AND b.owner_id=%s
+                   ORDER BY c.id""",
+                (payload.owner_ids, owner_id),
             )
             rows = cur.fetchall()
     if not rows:
@@ -511,10 +511,14 @@ async def semantic_query(payload: SemanticQuery, request: Request) -> dict:
                 "SELECT e.owner_id, e.content, e.model, "
                 "1 - (e.embedding_vector <=> %s::vector) AS similarity, "
                 "c.chapter_id, c.page_number, c.sequence "
-                "FROM embeddings e JOIN chunks c ON c.id=e.owner_id "
+                "FROM embeddings e "
+                "JOIN chunks c ON c.id=e.owner_id "
+                "JOIN chapters ch ON ch.id=c.chapter_id "
+                "JOIN books b ON b.id=ch.book_id "
                 "WHERE e.embedding_vector IS NOT NULL AND e.owner_type='chunk' "
+                "AND b.owner_id=%s "
                 "ORDER BY e.embedding_vector <=> %s::vector LIMIT %s",
-                (vector_literal, vector_literal, lexical_limit),
+                (vector_literal, owner_id, vector_literal, lexical_limit),
             )
             semantic_rows = cur.fetchall()
             if terms:
@@ -526,9 +530,12 @@ async def semantic_query(payload: SemanticQuery, request: Request) -> dict:
                 cur.execute(
                     "SELECT c.id AS owner_id, c.content, NULL::text AS model, "
                     "c.chapter_id, c.page_number, c.sequence "
-                    "FROM chunks c WHERE " + " OR ".join(like_parts) +
+                    "FROM chunks c "
+                    "JOIN chapters ch ON ch.id=c.chapter_id "
+                    "JOIN books b ON b.id=ch.book_id "
+                    "WHERE b.owner_id=%s AND (" + " OR ".join(like_parts) + ")" +
                     " ORDER BY c.created_at DESC LIMIT %s",
-                    (*params, lexical_limit),
+                    (owner_id, *params, lexical_limit),
                 )
                 lexical_rows = cur.fetchall()
             else:
