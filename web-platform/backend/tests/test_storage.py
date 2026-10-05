@@ -4,7 +4,7 @@ from unittest.mock import patch
 
 from app.services.book_storage import BookBinaryStorage
 from app.services.google_drive import _oauth_state, verify_oauth_state
-from app.services.object_storage import B2ObjectStorage, R2ObjectStorage, SupabaseObjectStorage, S3ObjectStorage
+from app.services.object_storage import B2ObjectStorage, CloudinaryObjectStorage, R2ObjectStorage, SupabaseObjectStorage, S3ObjectStorage
 from app.main import app
 from fastapi.testclient import TestClient
 
@@ -13,6 +13,18 @@ class StorageContractTests(unittest.TestCase):
     def test_local_storage_requires_explicit_directory(self):
         with patch.dict(os.environ, {"COGNIX_BOOK_STORAGE_PROVIDER": "local", "COGNIX_BOOK_STORAGE_DIR": ""}, clear=False):
             self.assertFalse(BookBinaryStorage().configured)
+
+    def test_cloudinary_requires_all_credentials(self):
+        with patch.dict(
+            os.environ,
+            {
+                "CLOUDINARY_CLOUD_NAME": "demo",
+                "CLOUDINARY_API_KEY": "key",
+                "CLOUDINARY_API_SECRET": "",
+            },
+            clear=False,
+        ):
+            self.assertFalse(CloudinaryObjectStorage().configured)
 
     def test_b2_requires_all_credentials(self):
         with patch.dict(
@@ -71,6 +83,7 @@ class StorageContractTests(unittest.TestCase):
         response = client.get("/integrations/storage/status")
         self.assertEqual(response.status_code, 200)
         body = response.json()
+        self.assertIn("cloudinary_configured", body)
         self.assertIn("b2_configured", body)
         self.assertIn("supabase_storage_configured", body)
         self.assertNotIn("COGNIX_B2_APPLICATION_KEY", body)
