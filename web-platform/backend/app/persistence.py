@@ -422,6 +422,7 @@ class Database:
                     "022_vault_item_ownership.sql",
                     "023_concepts_owner_unique.sql",
                     "024_book_export_job_leases.sql",
+                    "025_rls_owner_isolation.sql",
                 ):
                     migration = migrations_dir / migration_name
                     cur.execute(migration.read_text())
