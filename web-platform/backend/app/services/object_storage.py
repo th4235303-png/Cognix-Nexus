@@ -60,9 +60,11 @@ class S3ObjectStorage:
     def put_bytes(self, key: str, data: bytes, content_type: str | None = None) -> StoredObject:
         key = self._safe_key(key)
         checksum = hashlib.sha256(data).hexdigest()
-        extra = {"ChecksumSHA256": checksum}
+        extra = {}
         if content_type:
             extra["ContentType"] = content_type
+        # Keep application-level SHA-256 verification. B2's S3-compatible
+        # PutObject does not require an explicit ChecksumSHA256 header.
         self._client().put_object(Bucket=self.bucket, Key=key, Body=data, **extra)
         return StoredObject(key=key, checksum=checksum, size=len(data))
 
@@ -95,6 +97,14 @@ class B2ObjectStorage(S3ObjectStorage):
 
     def __init__(self) -> None:
         super().__init__(label="Backblaze B2", endpoint_env="COGNIX_B2_ENDPOINT", bucket_env="COGNIX_B2_BUCKET", access_env="COGNIX_B2_KEY_ID", secret_env="COGNIX_B2_APPLICATION_KEY", region_env="COGNIX_B2_REGION", default_region="us-east-005")
+        if not os.getenv("COGNIX_B2_REGION", "").strip() and self.endpoint:
+            host = urllib.parse.urlparse(self.endpoint).hostname or ""
+            prefix = "s3."
+            suffix = ".backblazeb2.com"
+            if host.startswith(prefix) and host.endswith(suffix):
+                inferred = host[len(prefix):-len(suffix)]
+                if inferred:
+                    self.region = inferred
 
 
 class CloudinaryObjectStorage:
