@@ -420,6 +420,7 @@ class Database:
             "025_rls_owner_isolation.sql",
             "026_level_up_owner_isolation.sql",
             "027_rls_helper_performance.sql",
+            "028_rls_policy_dedup.sql",
         )
         with self.connect() as conn:
             with conn.cursor() as cur:
