@@ -181,9 +181,9 @@ class CloudinaryObjectStorage:
         asset_id = key.removeprefix("cloudinary://").strip()
         timestamp = int(time.time())
         signed = {"asset_id": asset_id, "timestamp": timestamp}
-        response = httpx.get(
+        response = httpx.post(
             self._download_url(),
-            params={**signed, "api_key": self.api_key, "signature": self._sign(signed)},
+            data={**signed, "api_key": self.api_key, "signature": self._sign(signed)},
             timeout=120,
         )
         response.raise_for_status()
