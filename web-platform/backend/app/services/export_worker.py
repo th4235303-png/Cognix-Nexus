@@ -25,6 +25,7 @@ def advance_export_job(export_id: str) -> dict:
             if not source:
                 raise RuntimeError("Source not found")
             job["status"] = "exported"
+            job["drive_reference"] = f"mock-drive://cognix-nexus/{source['id']}"
             job["result_url"] = source.get("url")
             store.save_export(job)
             return job
