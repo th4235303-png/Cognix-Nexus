@@ -19,8 +19,6 @@ class BookBinaryStorage:
     def configured(self) -> bool:
         if self.provider == "cloudinary":
             return cloudinary_storage().configured
-        if self.provider == "cloudinary":
-            return cloudinary_storage()
         if self.provider == "b2":
             return b2_storage().configured
         if self.provider == "r2":
@@ -30,6 +28,8 @@ class BookBinaryStorage:
         return self.root is not None
 
     def _object_storage(self):
+        if self.provider == "cloudinary":
+            return cloudinary_storage()
         if self.provider == "b2":
             return b2_storage()
         if self.provider == "r2":
@@ -52,11 +52,12 @@ class BookBinaryStorage:
         target.write_bytes(data)
         return str(target)
 
-    def get(self, book_id: str, filename: str) -> bytes:
+    def get(self, book_id: str, filename: str, stored_key: str | None = None) -> bytes:
         safe_name = Path(filename).name or "document"
         storage = self._object_storage()
         if storage:
-            return storage.get_bytes(f"books/{book_id}/{safe_name}")
+            key = stored_key or f"books/{book_id}/{safe_name}"
+            return storage.get_bytes(key)
         if not self.configured:
             raise RuntimeError("COGNIX_BOOK_STORAGE_DIR is not configured")
         return (self.root / book_id / safe_name).read_bytes()
@@ -64,11 +65,12 @@ class BookBinaryStorage:
     def checksum(self, book_id: str, filename: str) -> str:
         return hashlib.sha256(self.get(book_id, filename)).hexdigest()
 
-    def delete(self, book_id: str, filename: str) -> None:
+    def delete(self, book_id: str, filename: str, stored_key: str | None = None) -> None:
         safe_name = Path(filename).name or "document"
         storage = self._object_storage()
         if storage:
-            storage.delete(f"books/{book_id}/{safe_name}")
+            key = stored_key or f"books/{book_id}/{safe_name}"
+            storage.delete(key)
             return
         if not self.configured:
             raise RuntimeError("COGNIX_BOOK_STORAGE_DIR is not configured")
