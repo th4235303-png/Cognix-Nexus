@@ -52,6 +52,8 @@ services:
         value: "raw"
       - key: CLOUDINARY_DELIVERY_TYPE
         value: "authenticated"
+      - key: CLOUDINARY_MAX_RAW_BYTES
+        value: "10485760"
       - key: COGNIX_B2_ENDPOINT
         sync: false
       - key: COGNIX_B2_BUCKET
