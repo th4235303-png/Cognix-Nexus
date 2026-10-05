@@ -392,7 +392,7 @@ async def upload_book(
     if store.database is None:
         raise HTTPException(status_code=503, detail="Persistent database is required for book uploads")
 
-    max_upload_bytes = 50 * 1024 * 1024
+    max_upload_bytes = max(1, int(os.getenv("COGNIX_MAX_BOOK_UPLOAD_BYTES", str(200 * 1024 * 1024))))
     try:
         data = await read_upload_limited(file, max_upload_bytes)
     except UploadTooLargeError as exc:
@@ -427,7 +427,11 @@ async def upload_book(
             "chapters": [],
             "chunk_count": 0,
             "original_filename": filename,
-            "binary_storage": os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "local").strip().lower(),
+            "binary_storage": (
+                "b2" if binary_path and binary_path.startswith("b2://")
+                else "supabase" if binary_path and binary_path.startswith("supabase://")
+                else os.getenv("COGNIX_BOOK_STORAGE_PROVIDER", "tiered").strip().lower()
+            ),
             "binary_path": binary_path,
             "binary_sha256": content_hash,
             "processing_stage": "queued",
