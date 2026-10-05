@@ -57,11 +57,11 @@ Set:
 Production device builds still require Expo/EAS account and signing setup.
 
 ## Render
-Production API and worker must share the same `DATABASE_URL`.
+Production API and worker must share the same `DATABASE_URL` and provider credential bindings.
 - Set `DATABASE_URL` on the live worker service (`cognix-core-worker-runtime`) as well as the API.
 - Set `COGNIX_REQUIRE_DATABASE=true` on the live worker so a missing database binding fails fast instead of silently running in memory mode.
 - The checked-in `render.yaml` declares these variables for the intended worker definition, but an existing live Render service must be reconciled manually if its configuration predates the blueprint.
-The checked-in render.yaml defines the Python API, native Render worker, Cloudinary originals/media, private Supabase artifact storage, and Google Drive export boundary.
+The checked-in render.yaml defines the Python API, native Render worker, Cloudinary originals/media, private Supabase artifact storage, Backblaze B2 large-file storage, and Google Drive export boundary. The live Render API and worker must each have the Cloudinary, Supabase, B2, AI/embedding, and Google OAuth secrets bound.
 
 If an existing Render service has a different resource type/root directory, reconcile it in the Render dashboard rather than creating duplicates.
 
@@ -69,4 +69,4 @@ If an existing Render service has a different resource type/root directory, reco
 netlify.toml builds from main. Set the public API/Supabase variables in Netlify production, then deploy the latest main commit.
 
 ## Final live drill
-Run health/readiness, B2 round-trip, private artifact write/read, Google Drive export, processing idempotency/retry, agent lease/retry, RRF citation checks, local vault decrypt, isolated backup/restore, Expo device smoke test, and the 500-page stress workflow.
+Use `web-platform/backend/scripts/provider_e2e.py` for the one-shot real-provider drill. It covers Cloudinary upload/read/checksum, Supabase private artifact round-trip, B2 large-file round-trip, tiered book routing, extraction → chunks → embeddings → owner-scoped RRF/RAG citation, Google Drive export/upsert retry, and owner isolation. The latest run was blocked before provider I/O because the live Render API/worker did not expose the three Cloudinary credential variables. Do not mark the final production checklist closed until that binding is present and the drill records `provider_e2e.completed`.
