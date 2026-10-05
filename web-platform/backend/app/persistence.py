@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import contextmanager
 import os
 from pathlib import Path
 from typing import Any
@@ -10,6 +11,8 @@ import psycopg
 from psycopg_pool import ConnectionPool
 from psycopg.rows import dict_row
 from psycopg.types.json import Jsonb
+
+from app.ownership import current_request_owner
 
 
 class Database:
@@ -351,8 +354,17 @@ class Database:
             conn.commit()
         return row is not None
 
+    @contextmanager
     def connect(self):
-        return self._pool.connection()
+        with self._pool.connection() as conn:
+            owner_id = current_request_owner()
+            if owner_id:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT set_config('request.jwt.claim.sub', %s, true)",
+                        (owner_id,),
+                    )
+            yield conn
 
     def close(self) -> None:
         self._pool.close()
@@ -396,6 +408,7 @@ class Database:
             "023_concepts_owner_unique.sql",
             "024_book_export_job_leases.sql",
             "025_rls_owner_isolation.sql",
+            "026_level_up_owner_isolation.sql",
         )
         with self.connect() as conn:
             with conn.cursor() as cur:
