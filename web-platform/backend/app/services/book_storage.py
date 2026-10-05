@@ -71,12 +71,16 @@ class BookBinaryStorage:
                 data,
                 content_type=content_type,
             )
-            prefix = (
-                "b2://" if isinstance(storage, type(b2_storage()))
-                else "supabase://" if isinstance(storage, type(supabase_storage()))
-                else "cloudinary://" if isinstance(storage, type(cloudinary_storage()))
-                else "r2://"
-            )
+            if self.provider in {"tiered", "hybrid"}:
+                prefix = "b2://" if len(data) > self.threshold_bytes else "supabase://"
+            elif self.provider == "b2":
+                prefix = "b2://"
+            elif self.provider == "supabase":
+                prefix = "supabase://"
+            elif self.provider == "cloudinary":
+                prefix = "cloudinary://"
+            else:
+                prefix = "r2://"
             return stored.key if stored.key.startswith("cloudinary://") else f"{prefix}{stored.key}"
         if not self.configured:
             raise RuntimeError("Book storage is not configured")
