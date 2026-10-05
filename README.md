@@ -127,7 +127,7 @@ The existing database bootstrap applies the Brain Vault migrations after the Cog
 ## Implemented Brain Vault capabilities
 
 - PDF/EPUB upload and extraction
-- Original binary storage behind a local/Cloudflare R2 storage adapter with SHA-256 integrity metadata
+- Original binary storage uses tiered Supabase Storage (<=50 MB) and Backblaze B2 (>50 MB), with SHA-256 integrity metadata
 - Page/section metadata on extracted chunks
 - Optional pgvector embedding index and semantic retrieval
 - Versioned L1–L7 summary records with source linkage
@@ -160,7 +160,7 @@ The Brain Vault roadmap is implemented as a continuous delivery sequence. The re
 17. Observability + operations — bounded records, operational hooks, and deployment pause safeguards
 18. Integration + final verification — cross-module lineage and evidence/review invariants
 19. Level Up 20 completion layer — deterministic learning/intelligence contracts, privacy boundaries, offline sync checks, and web workspace
-20. Final production activation — pending full provider credentials, real database/R2/Drive verification, mobile release signing, and deployment re-enable
+20. Final production activation — provider adapters and E2E harness are implemented; live closeout is blocked only where Render service credential bindings are missing, with the current live blocker recorded below
 
 ### Level Up 20 delivery matrix
 
@@ -171,6 +171,14 @@ The original Master Plan phases 0–15 remain the broader product roadmap. Phase
 Phase 11 is intentionally an engineering hardening phase: it does not make AI output canonical and does not bypass the existing human-review boundaries.
 
 Phase 12 is an operational guardrail phase: production readiness must not silently fall back to memory-only persistence, and runtime protection must remain bounded under high-cardinality clients.
+
+## Production verification state
+
+The final provider drill is implemented at `web-platform/backend/scripts/provider_e2e.py` and is opt-in through the temporary `COGNIX_PROVIDER_E2E_RUN_ID` Render variable. It exercises real Cloudinary, Supabase Storage, Backblaze B2, Google Drive, embedding, LLM/RAG citation, extraction/chunks, tier routing, checksum verification, owner isolation, and Drive retry/idempotency, then removes its temporary data.
+
+As of the latest live run on 2026-10-05, the drill reached the production API but stopped before provider I/O because `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, and `CLOUDINARY_API_SECRET` were not bound in the live Render API/worker environment. No secret values are stored in the repository or requested in chat. After those three backend bindings are added, rerun the opt-in drill and only then mark the full real-provider E2E chain PASS.
+
+Semantic/RRF retrieval is owner-scoped for authenticated requests, and the export worker now performs the real Google Drive upload/upsert path rather than treating the source URL as the Drive result.
 
 ## Google Drive output
 
