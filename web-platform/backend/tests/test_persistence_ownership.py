@@ -269,7 +269,7 @@ class PersistenceOwnershipTests(unittest.TestCase):
             "created_at": "2026-01-01", "updated_at": "2026-01-01",
         }
         database.save_brain_concept(concept, "user-a")
-        concept_query, concept_params = cursor.statements[1]
+        concept_query, concept_params = next((q, p) for q, p in cursor.statements if "INSERT INTO concepts" in q)
         self.assertIn("owner_id", concept_query)
         self.assertEqual(concept_params["owner_id"], "user-a")
         self.assertIn("concepts.owner_id IS NOT DISTINCT FROM EXCLUDED.owner_id", concept_query)
