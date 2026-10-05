@@ -396,7 +396,7 @@ async def upload_book(
     try:
         data = await read_upload_limited(file, max_upload_bytes)
     except UploadTooLargeError as exc:
-        raise HTTPException(status_code=413, detail="Document exceeds the 50 MB upload limit") from exc
+        raise HTTPException(status_code=413, detail="Document exceeds the configured storage upload limit") from exc
     if not data:
         raise HTTPException(status_code=400, detail="Uploaded document is empty")
 
