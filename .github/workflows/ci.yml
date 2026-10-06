@@ -88,6 +88,10 @@ jobs:
         env:
           COGNIX_DEV_MODE: "true"
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
+      - name: Install PostgreSQL 17 client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client-17
       - name: Backup and isolated restore drill
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
