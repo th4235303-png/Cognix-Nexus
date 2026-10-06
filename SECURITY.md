@@ -44,7 +44,7 @@ Do not test destructive actions against production data.
 
 ## Known external action
 
-Supabase currently reports leaked-password protection disabled. This is an account-level Auth configuration item and remains open until explicitly enabled and re-verified.
+Supabase currently reports leaked-password protection disabled. The active project is on the free tier, where this Auth feature cannot be enabled. Treat this as an account-plan limitation, keep the warning visible, and do not mislabel it as an application-code defect.
 
 ## Supported versions
 
