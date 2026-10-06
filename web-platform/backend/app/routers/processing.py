@@ -107,7 +107,7 @@ def advance_processing_task(task_id: str, request: Request) -> dict:
     try:
         return advance(task_id, claim_token=claim_token)
     except TaskLeaseLost as exc:
-        raise HTTPException(status_code=409, detail="Processing task is currently leased by a worker") from exc
+        raise HTTPException(status_code=409, detail="Processing task is currently leased by a worker")
     finally:
         store.database.release_task(task_id, claim_token)
 
