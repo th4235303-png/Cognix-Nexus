@@ -90,8 +90,11 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
       - name: Install PostgreSQL 17 client
         run: |
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
+          echo "deb [signed-by=/usr/share/keyrings/postgresql.gpg] http://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
           sudo apt-get update
           sudo apt-get install -y postgresql-client-17
+          echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
       - name: Backup and isolated restore drill
         env:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
