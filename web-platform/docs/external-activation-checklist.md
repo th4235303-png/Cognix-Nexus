@@ -24,7 +24,7 @@ Keep the bucket private and the service-role key backend-only.
 
 ## Google Drive — export/backup
 
-Google Drive activation is intentionally deferred for the current release track. When resumed, set:
+Google Drive integration is implemented in the backend; the real-account provider drill is the remaining external activation step. The feature is not removed from the plan. When you are ready to re-authorize Drive, set:
 - COGNIX_DRIVE_PROVIDER=google
 - GOOGLE_CLIENT_ID
 - GOOGLE_CLIENT_SECRET
@@ -32,7 +32,7 @@ Google Drive activation is intentionally deferred for the current release track.
 - GOOGLE_REFRESH_TOKEN
 - GOOGLE_DRIVE_ROOT_FOLDER_ID (optional)
 
-Authorize through /integrations/google-drive/authorize. The callback validates a signed, time-limited OAuth state and returns the refresh token once for operator-side secret storage. Never commit or share the token.
+Authorize through /integrations/google-drive/authorize. The callback validates a signed, time-limited OAuth state and returns the refresh token once for operator-side secret storage. The export worker creates/upserts the package folder/files and is designed for crash-safe idempotent retry. Never commit or share the token.
 
 ## Production AI
 
@@ -75,7 +75,7 @@ netlify.toml builds from main. Set the public API/Supabase variables in Netlify 
 
 ## Provider drill
 
-web-platform/backend/scripts/provider_e2e.py remains the one-shot provider drill for when external providers are intentionally enabled. The current release track does not claim a full provider PASS because paid LLM and Google Drive are deferred.
+web-platform/backend/scripts/provider_e2e.py remains the one-shot provider drill for when external providers are intentionally enabled. The current release evidence claims implementation and persisted embedding state, but does not fabricate a real provider PASS where credentials have not been exercised.
 
 Previously verified evidence remains valid for the components actually observed, including the live Cloudinary upload/read/checksum/delete round-trip.
 
