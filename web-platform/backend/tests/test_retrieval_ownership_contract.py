@@ -15,11 +15,11 @@ class RetrievalOwnershipContractTests(unittest.TestCase):
         self.assertIn("JOIN books b ON b.id = ch.book_id", source)
         self.assertGreaterEqual(source.count("AND b.owner_id = %s"), 1)
         self.assertIn(
-            "query_vector, query_vector, owner_id, payload.limit,",
+            "query_vector, owner_id, query_vector, payload.limit,",
             source,
         )
         self.assertIn(
-            "owner_id, payload.query, payload.query, payload.query, payload.limit,",
+            "payload.query, owner_id, payload.query, payload.query, payload.limit,",
             source,
         )
 
