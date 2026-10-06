@@ -103,7 +103,7 @@ def advance(
             }
         task["error"] = None
     except Exception as exc:
-        task["error"] = str(exc)
+        task["error"] = f"Processing failed: {type(exc).__name__}"
         task["status"] = "failed"
         task["updated_at"] = now_iso()
         source["status"] = "failed"
