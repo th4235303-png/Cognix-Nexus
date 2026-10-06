@@ -38,8 +38,8 @@
 ### P0.2 Processing pipeline
 - [ ] Re-run real book E2E with English + Myanmar + scanned pages.
 - [ ] Verify queued → extraction → chapters → chunks → embeddings → retrieval/RRF.
-- [ ] Verify 100+ chunks and 100+ embeddings on the production test book.
-- [ ] Verify failed/queued retry behavior and cleanup.
+- [x] Verify 100+ chunks and 100+ embeddings on the production P0 test book (100/100; embeddings 1536-dim).
+- [x] Confirm queued=0 and running=0; one historical failed task remains preserved for audit/retry verification.\n- [ ] Complete a fresh retry/recovery drill on a new production test job.
 
 ### P0.3 Source Inbox error matrix
 - [ ] Normal HTML; Wikipedia; redirect; invalid URL; 403 fallback.
