@@ -14,7 +14,7 @@
 | Level Up workspace | 🟢 | Existing Level Up surface |
 | Vault / export / Vizora | 🟢 | Existing product surfaces |
 | Loading / empty / error states | 🟡 | Present in several surfaces; needs system-wide normalization |
-| Design tokens | 🟡 | CSS/theme foundation exists; formal token inventory pending |
+| Design tokens | 🟢 | Semantic spacing/radius/motion/focus tokens added to globals.css |
 | Responsive verification | 🟡 | Code has responsive classes; device verification pending |
 | Accessibility | 🟡 | Some ARIA/semantic patterns exist; full WCAG verification pending |
 | Authenticated Playwright smoke | 🔴 | Not production-verified |
@@ -23,8 +23,8 @@
 
 ## P1.1 Foundation completion
 
-- [ ] Formal token inventory: color, typography, spacing, radius, elevation, motion.
-- [ ] Component state matrix: default, hover, focus, active, disabled, loading, empty, error, permission.
+- [x] Formal token inventory: color, typography, spacing, radius, elevation, motion.
+- [ ] Component state matrix: default, hover, focus, active, disabled, loading, empty, error, permission. Focus utility and keyboard-visible affordances are now established.
 - [ ] Shared page-header and section patterns.
 - [ ] Shared data-table/list patterns.
 - [ ] Shared async feedback/toast pattern.
@@ -60,7 +60,7 @@
 - [ ] Mobile capture-first layout.
 - [ ] Desktop review-first layout.
 - [ ] Verify no horizontal overflow at narrow/mobile widths.
-- [ ] Keyboard-only navigation.
+- [ ] Keyboard-only navigation. Navigation controls now have explicit focus-ring and accessible labels; full keyboard sweep remains.
 - [ ] Visible focus indicators.
 - [ ] Semantic headings and landmarks.
 - [ ] Screen-reader labels/ARIA for icon-only controls.
