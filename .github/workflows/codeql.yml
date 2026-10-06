@@ -1,6 +1,6 @@
 name: CodeQL
 
-# Security scanning for JavaScript/TypeScript and Python.
+# Security scanning for JavaScript/TypeScript and Python; dependency overrides are checked by CI.
 
 on:
   push:
