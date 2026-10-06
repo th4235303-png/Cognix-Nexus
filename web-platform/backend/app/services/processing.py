@@ -65,6 +65,10 @@ def advance(
     claim_token: str | None = None,
     lease_is_valid: Callable[[], bool] | None = None,
 ) -> dict:
+    if task_id not in store.tasks:
+        store.refresh()
+    if store.tasks.get(task_id, {}).get("status") == "cancelled":
+        raise TaskLeaseLost(f"Processing task {task_id} was superseded")
     task = deepcopy(store.tasks[task_id])
     current_stage = task["stage"]
     current_status = task["status"]
