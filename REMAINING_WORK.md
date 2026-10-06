@@ -4,7 +4,8 @@
 > Strategic product scope: ROADMAP.md
 > Production evidence: PRODUCTION_STATUS.md
 > Stack/services: TOOLS.md
-> UI roadmap: UI_PLAN.md
+> UI specification: UI_PLAN.md
+> UI implementation status: UI_STATUS.md
 
 ## Current verified state — 2026-10-06
 
@@ -12,27 +13,27 @@
 |---|---|
 | Foundation / Brain Vault | 🟢 Implemented in main |
 | Level Up 20 contracts | 🟢 Implemented foundation/contracts |
-| Ownership / RLS | 🟢 Implemented; policy cleanup pending |
+| Ownership / RLS | 🟢 Implemented; migration 028 applied in production |
 | Worker leases / retry | 🟢 Implemented; CI integration green |
 | SSRF hardening | 🟢 Implemented |
-| CI | 🟢 Latest main run #696 passed |
+| CI | 🟢 Latest verified main CI #696 passed |
 | Cloudinary | 🟢 Live round-trip verified |
 | Supabase Storage | 🟡 Configured; full provider drill pending |
 | Backblaze B2 | 🟡 Configured; full provider drill pending |
-| Google Drive | 🔴 Live OAuth/provider drill blocked |
-| Paid LLM | 🔴 Live provider drill blocked by provider configuration/402 |
-| Frontend | 🟡 Real routes/components exist; production activation remains paused |
+| Google Drive | 🟡 External OAuth/provider drill deferred |
+| Paid LLM | ⚪ Deferred by product decision; do not block P0/UI work |
+| Frontend | 🟡 Routes/components exist; completion/polish is the active workstream |
 | Observability | 🟡 Code hooks exist; live ingestion not verified |
-| Cloudflare edge | 🟡 Account exists; Cognix zone/edge deployment not verified |
+| Cloudflare edge | 🟡 Account exists; Cognix zone/edge deployment needs a domain |
 | Account export/delete | 🔴 Full GDPR lifecycle not yet verified/closed |
-| Production release | 🔴 Not closed |
+| Production release | 🟡 Engineering gates are closing; final smoke/release remains |
 
 ## Priority 0 — Production verification
 
 ### P0.1 Live runtime
-- [ ] Verify API /api/v1/health and /ready against the current Render deploy.
-- [ ] Verify worker is running the latest intended main revision.
-- [ ] Verify production migration ledger through 028_rls_policy_dedup.sql.
+- [x] API/worker Render services are on the latest main revision (7287b682...).
+- [ ] Verify /api/v1/health and /api/v1/ready with a reachable external probe.
+- [x] Verify production migration ledger through 028_rls_policy_dedup.sql.
 
 ### P0.2 Processing pipeline
 - [ ] Re-run real book E2E with English + Myanmar + scanned pages.
@@ -57,40 +58,59 @@
 - [ ] Delete and server plaintext audit.
 
 ### P0.6 Google Drive
-- [ ] Re-authorize OAuth with the exact production Drive scope.
-- [ ] Callback/refresh-token flow.
-- [ ] Export worker upload and folder structure.
-- [ ] File verification and idempotent retry.
-- [ ] Remove live invalid_scope blocker.
+- [ ] Keep OAuth/provider drill deferred until Drive credentials are intentionally re-authorized.
+- [ ] Callback/refresh-token flow when re-enabled.
+- [ ] Export worker upload and folder structure when re-enabled.
+- [ ] File verification and idempotent retry when re-enabled.
 
 ### P0.7 AI / RAG
-- [ ] Resolve live LLM 402/configuration blocker.
 - [ ] Real embedding call and 1536-dimension verification.
 - [ ] RRF score from the production retrieval path, not a hand-calculated substitute.
 - [ ] Citation-backed answer.
 - [ ] Unsupported question returns an evidence-safe response.
 - [ ] Multi-book and contradictory-source behavior.
+- Paid LLM activation is explicitly deferred and is not a P0 release blocker.
 
 ### P0.8 Authorization / RLS
-- [ ] Apply and verify migration 028.
-- [ ] Re-run Supabase performance/security advisors.
-- [ ] Confirm redundant policy warnings are removed.
-- [ ] Keep leaked-password-protection warning as an explicit external security action until enabled.
-- [ ] Re-run cross-user negative tests.
+- [x] Apply and verify migration 028.
+- [x] Re-run Supabase performance/security advisors.
+- [x] Redundant level-up deny-policy warnings are removed.
+- [ ] Keep leaked-password-protection warning as an explicit external limitation until enabled.
+- [ ] Re-run cross-user negative tests after the final UI/API release candidate.
 
 ### P0.9 Regression / release
 - [x] Unit tests green in CI.
 - [x] DB integration tests green in CI.
-- [x] Backup/restore CI gate green in latest main run.
+- [x] Backup/restore CI gate green in latest verified main run.
 - [ ] Production-like Playwright E2E.
 - [ ] Load/stress baseline.
 - [ ] Rollback drill.
 - [ ] Final production smoke.
 - [ ] Release tag.
 
-## Product backlog after P0
+## P1 — UI completion / polish
 
-These are not production blockers unless a specific release depends on them.
+Execution target: move from existing routes/components to a coherent, production-quality workspace. See UI_PLAN.md for design requirements and UI_STATUS.md for the live implementation checklist.
+
+- [ ] Formal design tokens/component states.
+- [ ] Dashboard hierarchy and responsive polish.
+- [ ] Book upload/progress/filter + reader/TOC/highlight/note flow.
+- [ ] Source Inbox error/retry states.
+- [ ] Notes/backlinks/collections and graph exploration.
+- [ ] RAG citation cards and evidence states.
+- [ ] Review Center evidence/edit workflow.
+- [ ] Vault unlock/auto-lock/client encryption states.
+- [ ] Settings/provider/security surfaces.
+- [ ] Level Up workspace polish.
+- [ ] Vizora media/OCR/review polish.
+- [ ] Export queue/history/retry polish.
+- [ ] Keyboard/focus/ARIA/contrast/reduced-motion/WCAG AA.
+- [ ] Authenticated Playwright smoke.
+- [ ] Mobile Expo smoke/device evaluation.
+
+## Product backlog after P1
+
+These are not release blockers unless a specific release depends on them.
 
 ### AI / Learning
 - [ ] Expand agent runtime beyond deterministic contracts.
@@ -103,7 +123,7 @@ These are not production blockers unless a specific release depends on them.
 - [ ] Camera OCR and voice capture.
 - [ ] Offline sync/device evaluation.
 - [ ] JP/KR reading evaluation.
-- [ ] Accessibility and responsive polish.
+- [ ] Accessibility beyond the core WCAG gate.
 - [ ] Legacy handoff operational drill.
 
 ### Vizora
@@ -114,12 +134,18 @@ These are not production blockers unless a specific release depends on them.
 
 ### Infrastructure
 - [ ] Production observability ingestion.
-- [ ] Cloudflare zone/WAF/rate-limit deployment once domain is available.
+- [ ] Cloudflare zone/WAF/rate-limit deployment once a Cognix domain is available.
 - [ ] Optional Redis/rate-limit/cache evaluation.
 - [ ] Evaluation and stress-test suites.
 
 ## Documentation split
-- PRODUCTION_STATUS.md — evidence and live gates.
+
+- PRODUCTION_STATUS.md — evidence and live gates only.
+- REMAINING_WORK.md — tactical execution backlog only.
+- ROADMAP.md — strategic product waves only.
+- TOOLS.md — service catalog and provider ownership only.
+- UI_PLAN.md — UI design/product requirements only.
+- UI_STATUS.md — UI implementation/verification status only.
 - ARCHITECTURE.md — system topology and boundaries.
 - DATA_MODEL.md — tables, ownership and lineage.
 - DEPLOYMENT.md — Render/Netlify/Supabase release runbook.
@@ -131,19 +157,29 @@ These are not production blockers unless a specific release depends on them.
 - SECURITY.md — actual vulnerability-reporting/security policy.
 
 ## Execution rule
-Verify → implement/fix → test → production verify → update evidence → main
 
-## Definition of Done
-- P0 production verification is green.
-- Live LLM + Drive blockers are resolved.
-- Migration/RLS verification is current.
-- Storage and processing E2E are green.
-- Monitoring/backup/rollback evidence exists.
-- Frontend production smoke passes.
+**Verify → implement/fix → test → production verify → update evidence → main.**
+
+All implementation and documentation changes for this project land on **main**. Do not treat a feature as complete until the changed main revision is tested and its production evidence is updated.
+
+## Known external limitations
+
+- **Paid LLM:** intentionally deferred for now. Provider credentials/credits are not part of the current completion gate.
+- **Supabase Leaked Password Protection:** currently disabled. The current project is on the free tier, so this account-level Auth feature cannot be enabled from the current plan. Keep the warning visible and do not mislabel it as a code defect.
+- **Cloudflare:** no Cognix DNS zone/domain is available for edge deployment yet.
+
+## Definition of Done — current release track
+
+- P0 engineering gates are green or explicitly deferred by product decision.
+- RLS/migration evidence is current.
+- Storage and processing E2E evidence is current.
+- Monitoring/backup/rollback evidence exists where available.
+- Frontend production smoke and UI completion are green.
 - Documentation reflects the verified state.
 - CI remains green on main.
 
 ## Change Log
+
 | Date | Change |
 |---|---|
-| 2026-10-06 | Reconciled tactical work with verified production evidence and separated product backlog from production blockers. |
+| 2026-10-06 | Reconciled tactical work with production evidence; removed paid LLM as a P0 blocker; added explicit free-tier leaked-password limitation; made main-only execution rule explicit; separated UI status from UI specification. |
