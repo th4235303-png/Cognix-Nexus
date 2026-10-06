@@ -176,9 +176,11 @@ Phase 12 is an operational guardrail phase: production readiness must not silent
 
 The final provider drill is implemented at `web-platform/backend/scripts/provider_e2e.py` and is opt-in through the temporary `COGNIX_PROVIDER_E2E_RUN_ID` Render variable. It exercises real Cloudinary, Supabase Storage, Backblaze B2, Google Drive, embedding, LLM/RAG citation, extraction/chunks, tier routing, checksum verification, owner isolation, and Drive retry/idempotency, then removes its temporary data.
 
-A real production integration drill completed successfully on 2026-10-05 as run `20261005-1800`. The live Render API completed Cloudinary upload/read/checksum, private Supabase Storage round-trip, Backblaze B2 large-file round-trip, tier routing (<=50 MB → Supabase, >50 MB → B2), extraction → chunks, 1536-dimension embeddings, owner-scoped semantic retrieval + RRF/RAG citation, Google Drive export/upsert, and owner isolation. Supabase confirms the durable `provider_e2e.completed` PASS marker for that run, and the temporary E2E data was cleaned up.
+A real production provider drill was re-run after Render credentials were re-bound. Cloudinary upload/read/checksum/delete completed successfully in live Render. The same run then stopped at the LLM provider initialization because the live worker environment did not expose a usable paid LLM configuration. Therefore the provider chain is **not currently marked fully PASS**.
 
-For that verification run only, the LLM model was temporarily set to OpenRouter's free router so the full integration chain could execute without billing dependency. The production model has since been restored to `openai/gpt-chat-latest`. A live request with the restored paid model returned HTTP 402 (Payment Required), so **the integration is verified, but paid-LLM production availability remains an external OpenRouter credit/billing gate**. The temporary Render E2E startup hook and run variable were removed/cleared afterward.
+The latest CI work is also still gated by the isolated backup/restore drill: application unit tests and database integration tests pass, while the restore gate is being validated against PostgreSQL 17 tooling. Do not treat the repository as fully production-closed until that gate is green.
+
+Semantic/RRF retrieval is owner-scoped for authenticated requests, and the export worker uses the real Google Drive upload/upsert path rather than treating the source URL as the Drive result.
 
 Semantic/RRF retrieval is owner-scoped for authenticated requests, and the export worker now performs the real Google Drive upload/upsert path rather than treating the source URL as the Drive result.
 
