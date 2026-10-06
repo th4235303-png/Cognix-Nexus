@@ -186,7 +186,4 @@ All implementation and documentation changes for this project land on **main**. 
 | Date | Change |
 |---|---|
 | 2026-10-06 | Hardened hybrid RRF retrieval, Brain Vault export, and contradiction review/candidate paths with explicit owner scoping; added regression contract coverage; reconciled live DB evidence (101 chunks/embeddings, 1536-d vectors, queued/running zero). |
-
-| Date | Change |
-|---|---|
 | 2026-10-06 | Reconciled tactical work with production evidence; removed paid LLM as a P0 blocker; added explicit free-tier leaked-password limitation; made main-only execution rule explicit; separated UI status from UI specification. |
