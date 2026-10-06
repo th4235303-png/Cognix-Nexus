@@ -7,14 +7,14 @@
 | Layer | Service | Verified state |
 |---|---|---|
 | Source / CI | GitHub + Actions | 🟢 Active; verified main CI #696 PASS |
-| API | Render | 🟢 Latest main revision live |
-| Worker | Render | 🟢 Latest main revision live |
+| API | Render | 🟡 P0 security-hardening deploy in progress |
+| Worker | Render | 🟡 P0 security-hardening deploy in progress |
 | Database/Auth | Supabase | 🟢 Live |
 | Vector | pgvector | 🟢 Enabled |
 | Media | Cloudinary | 🟢 Live round-trip verified |
 | Small artifacts | Supabase Storage | 🟡 Configured; full provider drill pending |
 | Large originals | Backblaze B2 | 🟡 Configured; full provider drill pending |
-| Export/backup | Google Drive | 🟡 Intentionally deferred; OAuth drill remains available later |
+| Export/backup | Google Drive | 🟡 Integration implemented; real OAuth/provider drill pending |
 | LLM | OpenAI-compatible provider | ⚪ Intentionally deferred; not a current release gate |
 | Frontend | Netlify | 🟡 Release activation/polish pending |
 | Monitoring | Sentry | 🟡 Code hook exists; live ingestion unverified |
@@ -38,7 +38,7 @@
 - Cloudinary: research media and image assets.
 - Supabase Storage: small private artifacts.
 - Backblaze B2: large original files.
-- Google Drive: user-owned export/backup destination; currently deferred.
+- Google Drive: user-owned export/backup destination; integration exists, credentials/OAuth drill pending.
 - LLM: optional provider-dependent intelligence; currently deferred.
 - Supabase Auth: authentication and account controls.
 - Render: API and worker runtime.
