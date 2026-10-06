@@ -90,7 +90,7 @@ async def run(run_id: str) -> dict:
             ("supabase", supabase_storage(), f"e2e/{run_id}/supabase.bin"),
         ):
             _assert(storage.configured, f"{label} is not configured")
-            stored = storage.put_bytes(key, small, content_type="application/octet-stream")
+            stored = storage.put_bytes(key, small, content_type="application/pdf")
             temporary_objects.append((storage, stored.key))
             expected = hashlib.sha256(small).hexdigest()
             _assert(storage.get_bytes(stored.key) == small, f"{label} read-back failed")
