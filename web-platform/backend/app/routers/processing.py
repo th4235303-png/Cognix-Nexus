@@ -95,6 +95,8 @@ def advance_processing_task(task_id: str, request: Request) -> dict:
     owner_for_request(request)
     store.refresh()
     task = get_task_for_request(request, task_id)
+    if task["status"] == "cancelled":
+        raise HTTPException(status_code=409, detail="Processing task was superseded by a newer action")
     if task["status"] in {"completed", "failed"} or task["stage"] == "needs_review":
         return advance(task_id)
     if store.database is None:
