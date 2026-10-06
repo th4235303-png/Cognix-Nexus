@@ -1,8 +1,9 @@
 # Cognix Nexus — Strategic Roadmap
 
-> Strategic product scope only. Tactical blockers belong in REMAINING_WORK.md.
+> Strategic product scope only. Tactical execution belongs in REMAINING_WORK.md.
 
 ## Verified foundation
+
 Phases 1–12 and the Brain Vault/Level Up foundation are represented in main as durable APIs, schemas, worker contracts and web surfaces. This does not mean every external provider or device flow is production-verified.
 
 ## Product waves
@@ -34,7 +35,16 @@ Durable leases, backup/restore, migrations, observability, evaluation datasets, 
 ### Phase 21 — Release
 Re-enable frontend deployment, configure domains/TLS/secrets, smoke-test and tag release. This remains the final release wave.
 
+## Current execution priority
+
+The immediate delivery track is intentionally narrower than the full strategic roadmap:
+
+**P0 engineering verification → storage/processing verification → security regression → P1 UI completion/polish → production smoke → release.**
+
+Paid LLM activation and Google Drive re-authorization are deferred and can be resumed later without changing this execution order.
+
 ## Non-negotiable principles
+
 1. AI output is not canonical without the required review.
 2. Every answer must retain evidence/citation lineage.
 3. Durable data must not silently fall back to memory.
@@ -44,4 +54,5 @@ Re-enable frontend deployment, configure domains/TLS/secrets, smoke-test and tag
 7. Every release lands on main and passes CI.
 
 ## Source of truth
-Use REMAINING_WORK.md for current actions and PRODUCTION_STATUS.md for verified evidence.
+
+Use REMAINING_WORK.md for current actions and PRODUCTION_STATUS.md for verified evidence. UI_PLAN.md is the UI specification; UI_STATUS.md is the UI implementation tracker.
