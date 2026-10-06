@@ -134,7 +134,7 @@ export function Sidebar({
                     key={item.href}
                     href={item.href}
                     className={cn(
-                      'group flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-all duration-200',
+                      'focus-ring interactive group flex items-center gap-3 rounded-md px-2.5 py-2 text-sm',
                       active
                         ? 'bg-primary/10 text-primary border border-primary/20'
                         : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.03] border border-transparent',
@@ -167,8 +167,11 @@ export function Sidebar({
       {/* Collapse toggle + user */}
       <div className="border-t border-border/40 p-3">
         <button
+          type="button"
           onClick={() => setCollapsed(!collapsed)}
-          className="flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-white/[0.03] transition-colors"
+          aria-label={collapsed ? 'Expand navigation' : 'Collapse navigation'}
+          aria-expanded={!collapsed}
+          className="focus-ring interactive flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-white/[0.03]"
         >
           <ChevronLeft
             className={cn(
@@ -182,7 +185,7 @@ export function Sidebar({
           <button
             type="button"
             onClick={signOut}
-            className="mt-1 flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
+            className="focus-ring interactive mt-1 flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-sm text-muted-foreground hover:text-destructive hover:bg-destructive/5"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign out</span>
@@ -211,7 +214,9 @@ export function MobileNav({
     <>
       {/* Overlay */}
       {open && (
-        <div
+        <button
+          type="button"
+          aria-label="Close navigation"
           className="fixed inset-0 z-40 bg-black/60 backdrop-blur-sm md:hidden animate-fade-in"
           onClick={() => setOpen(false)}
         />
@@ -252,7 +257,7 @@ export function MobileNav({
                       href={item.href}
                       onClick={() => setOpen(false)}
                       className={cn(
-                        'group flex items-center gap-3 rounded-md px-2.5 py-2.5 text-sm transition-all',
+                        'focus-ring interactive group flex items-center gap-3 rounded-md px-2.5 py-2.5 text-sm',
                         active
                           ? 'bg-primary/10 text-primary border border-primary/20'
                           : 'text-muted-foreground hover:text-foreground hover:bg-white/[0.03] border border-transparent'
@@ -276,7 +281,7 @@ export function MobileNav({
           <button
             type="button"
             onClick={signOut}
-            className="flex w-full items-center gap-3 rounded-md px-2.5 py-2.5 text-sm text-muted-foreground hover:text-destructive transition-colors"
+            className="focus-ring interactive flex w-full items-center gap-3 rounded-md px-2.5 py-2.5 text-sm text-muted-foreground hover:text-destructive"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign out</span>
