@@ -2,7 +2,7 @@
 > **Stack reference:** See `TOOLS.md`.
 > **UI planning:** See `UI_PLAN.md`.
 
-...# Cognix Brain Vault — Execution Roadmap
+# Cognix Brain Vault — Execution Roadmap
 
 This roadmap reconciles the original Phase 1–12 implementation history with Unified Master Plan v2.0.
 
