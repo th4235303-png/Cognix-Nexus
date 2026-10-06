@@ -32,7 +32,7 @@
 
 ### P0.1 Live runtime
 - [x] API/worker Render services are on the latest main revision (7287b682...).
-- [ ] Verify /api/v1/health and /api/v1/ready with a reachable external probe (Render service is live; external probe tool cannot reach the onrender URL).
+- [ ] Verify /health and /ready with a reachable external probe (Render service is live; external probe tool cannot reach the onrender URL).
 - [x] Verify production migration ledger through 028_rls_policy_dedup.sql.
 
 ### P0.2 Processing pipeline
