@@ -59,7 +59,7 @@ class S3ObjectStorage:
 
     def put_bytes(self, key: str, data: bytes, content_type: str | None = None) -> StoredObject:
         key = self._safe_key(key)
-        checksum = hashlib.sha256(data).hexdigest()
+        checksum = hashlib.sha256(data, usedforsecurity=False).hexdigest()
         extra = {}
         if content_type:
             extra["ContentType"] = content_type
@@ -82,7 +82,7 @@ class S3ObjectStorage:
         self._client().delete_object(Bucket=self.bucket, Key=key)
 
     def verify(self, key: str, expected_sha256: str) -> bool:
-        return hashlib.sha256(self.get_bytes(key)).hexdigest().lower() == expected_sha256.lower()
+        return hashlib.sha256(self.get_bytes(key), usedforsecurity=False).hexdigest().lower() == expected_sha256.lower()
 
 
 class R2ObjectStorage(S3ObjectStorage):
