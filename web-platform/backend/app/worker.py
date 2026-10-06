@@ -136,10 +136,10 @@ def run_once() -> int:
     candidates = [
         task
         for task in store.tasks.values()
-        if task["stage"] in STAGES and task_is_runnable(task)
+        if task["stage"] in STAGES and task["status"] in {"queued", "running"} and task_is_runnable(task)
     ]
     processed = 0
-    for task in sorted(candidates, key=lambda item: item["created_at"]):
+    for task in sorted(candidates, key=lambda item: (item["updated_at"], item["created_at"]), reverse=True):
         claim_token = None
         if store.database:
             claim_token = store.database.claim_task(task["id"])
