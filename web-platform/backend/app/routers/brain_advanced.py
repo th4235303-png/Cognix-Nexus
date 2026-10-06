@@ -306,7 +306,7 @@ async def hybrid_retrieval(payload: RetrievalRequest, request: Request) -> dict:
                 LIMIT %s
                 """,
                 (
-                    owner_id, query_vector, owner_id, query_vector, payload.limit,
+                    query_vector, query_vector, owner_id, payload.limit,
                     owner_id, payload.query, payload.query, payload.query, payload.limit,
                     payload.rrf_k, payload.rrf_k, payload.limit,
                 ),
