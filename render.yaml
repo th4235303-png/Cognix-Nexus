@@ -1,7 +1,7 @@
 services:
   - type: web
     name: cognix-core-api
-    autoDeployTrigger: off
+    autoDeployTrigger: commit
     runtime: python
     rootDir: web-platform/backend
     buildCommand: pip install -r requirements.lock
@@ -103,7 +103,7 @@ services:
 
   - type: worker
     name: cognix-core-worker
-    autoDeployTrigger: off
+    autoDeployTrigger: commit
     runtime: python
     rootDir: web-platform/backend
     buildCommand: pip install -r requirements.lock
