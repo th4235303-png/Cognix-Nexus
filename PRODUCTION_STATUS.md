@@ -7,14 +7,14 @@
 | Gate | Status | Evidence / next action |
 |---|---|---|
 | Main CI | 🟢 PASS | Verified CI #696 |
-| API deploy | 🟢 LIVE | Render API is live on latest main revision 7287b682... |
-| Worker | 🟢 LIVE | Render worker is live on latest main revision 7287b682... |
+| API deploy | 🟡 DEPLOYING | Security-hardened retrieval/export code is queued in Render deploy 5398929...; final live confirmation follows deployment completion. |
+| Worker | 🟡 DEPLOYING | Worker deploy 5398929... is in progress after the P0 security hardening. |
 | Cloudinary | 🟢 VERIFIED | Live upload/read/checksum/delete completed |
-| Supabase Storage | 🟡 CONFIGURED | Full provider drill still pending |
-| B2 | 🟡 CONFIGURED | Full provider drill still pending |
-| Embeddings | 🟡 CONFIGURED | Full real-provider drill pending |
+| Supabase Storage | 🟡 CONFIGURED | Full private write/read/checksum provider drill still pending |
+| B2 | 🟡 CONFIGURED | Full large-file write/read/checksum provider drill still pending |
+| Embeddings | 🟡 CONFIGURED | Production DB has 101 persisted 1536-d vectors; live provider/API drill remains pending |
 | LLM | ⚪ DEFERRED | Paid provider activation intentionally postponed |
-| Google Drive | ⚪ DEFERRED | OAuth/provider drill intentionally postponed |
+| Google Drive | 🟡 IMPLEMENTED / EXTERNAL DRILL PENDING | OAuth, refresh-token, export worker, folder/upsert/idempotent retry code exists; real account drill awaits credentials re-authorization |
 | RLS cleanup | 🟢 VERIFIED | Migration 028 applied in production |
 | Supabase security | 🟡 WARN | Leaked-password protection disabled; current free-tier account cannot enable it |
 | Observability | 🟡 PARTIAL | Sentry hooks exist; live ingestion not verified |
@@ -36,14 +36,17 @@
 - Render API service: Cognix-Core, branch main, latest live deploy is revision d0c6d5bd....
 - Render worker service: cognix-core-worker-runtime, branch main, latest live deploy is revision d0c6d5bd....
 - Both services are on the latest repository revision available at the verification checkpoint.
-- External web probing of /api/v1/health and /api/v1/ready was not available from the verification tool, so those two endpoints remain an explicit smoke item rather than being falsely marked PASS.
+- External web probing of /api/v1/health and /api/v1/ready was not reachable from the available verification tool, so those two endpoints remain an explicit smoke item rather than being falsely marked PASS.
+- P0 owner-isolation hardening was added to hybrid RRF retrieval, Brain Vault export, and contradiction candidate/review paths; regression contract coverage was added.
 
 ## Release track
 
 The current track deliberately excludes paid LLM activation and Google Drive re-authorization. Those can be resumed later without reopening the engineering plan.
 
 The current completion target is:
-**P0 engineering → storage/processing verification → security regression → UI completion/polish → production smoke → release.**
+**P0 engineering → external provider verification → security regression → UI completion/polish → production smoke → release.**
+
+Code-level P0 security hardening is complete on main; credential-dependent provider drills remain explicitly open rather than being fabricated as PASS.
 
 ## Release rule
 
