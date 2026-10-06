@@ -1,357 +1,88 @@
 # Cognix Nexus — UI / Frontend Plan
 
-> **Frontend planning file.**
-> Backend ကို အရင် ပြီးအောင်လုပ်ပြီးမှ UI ကို တည်ဆောက်။
-> See `REMAINING_WORK.md` for backend tasks.
+> UI roadmap and implementation status. Backend contracts are tracked separately.
 
----
+## Current UI state — 2026-10-06
 
-## Current State
-
-| Item | Status |
+| Area | State |
 |---|---|
-| Frontend Framework | Next.js 14 + React + TypeScript |
-| Styling | Tailwind CSS + shadcn/ui |
-| Design System | ⚠️ Not defined |
-| Mockup | ❌ Missing |
-| Component Library | ⚠️ Partial |
-| Routes | ⚠️ Partial |
-| Responsive | ⚠️ Not tested |
-| Accessibility | ⚠️ Not tested |
+| Next.js/React/TypeScript | 🟢 Implemented |
+| Tailwind + shadcn foundation | 🟢 Present |
+| App shell/sidebar/mobile nav | 🟢 Present |
+| Core Brain Vault routes | 🟢 Present |
+| Review/processing surfaces | 🟢 Present |
+| Level Up workspace | 🟢 Present |
+| Vault/export/Vizora surfaces | 🟢 Present |
+| Design system | 🟡 Needs formal token/component documentation |
+| Visual mockups | 🔴 Missing |
+| Responsive verification | 🟡 Needs device-level verification |
+| Accessibility | 🟡 Needs WCAG/keyboard/screen-reader verification |
+| Playwright UI E2E | 🔴 Not yet production-verified |
 
-**Rule:** Backend Priority 0 ပြီးမှ UI ကို တည်ဆောက်။
+## Existing routes/surfaces
 
----
+Core: dashboard, books, reader, notes, graph, chat, source/review/processing, approved knowledge.
 
-## Phase 1 — UI Foundation (Backend ပြီးရင်)
+Product extensions: tutor, documents/OCR, vault, export, Vizora Lens, Level Up, delivery, usage, activity, settings.
 
-### 1.1 Design System
-- [ ] Color palette (deep navy-black + cyan + amber)
-- [ ] Typography (editorial, calm)
-- [ ] Spacing scale (4/8/16/24/32)
-- [ ] Border radius
-- [ ] Shadow levels
-- [ ] Animation (minimal)
+## Phase 1 — UI foundation
 
-### 1.2 Layout
-- [ ] Root layout
-- [ ] Sidebar (collapsible)
-- [ ] Header (search + user)
-- [ ] Main content area
-- [ ] Footer (minimal)
+- [ ] Formalize color/type/spacing/radius/shadow/motion tokens.
+- [ ] Document component variants and states.
+- [ ] Standardize loading, empty, error and permission states.
+- [ ] Produce representative desktop/mobile mockups.
 
-### 1.3 Component Library
-- [ ] Button (primary, secondary, ghost, danger)
-- [ ] Input (text, search, textarea)
-- [ ] Select / Combobox
-- [ ] Checkbox / Radio / Switch
-- [ ] Modal / Dialog / Drawer
-- [ ] Toast / Notification
-- [ ] Badge / Status pill
-- [ ] Card / Panel
-- [ ] Table / List
-- [ ] Tabs
-- [ ] Tooltip
-- [ ] Skeleton / Loading
-- [ ] Empty state
-- [ ] Error state
+## Phase 2 — Core UX
 
----
+- [ ] Dashboard information hierarchy.
+- [ ] Book library upload/progress/filter UX.
+- [ ] Reader chapter/TOC/highlight/note flow.
+- [ ] Source inbox detail/retry/error matrix.
+- [ ] Notes/backlinks/collections.
+- [ ] Graph exploration.
+- [ ] RAG chat with citation cards.
+- [ ] Review Center evidence/edit workflow.
+- [ ] Vault unlock/auto-lock/encrypted client flow.
+- [ ] Settings/provider/security surfaces.
 
-## Phase 2 — Core UI Pages
+## Phase 3 — Advanced UX
 
-### 2.1 Dashboard
+- [ ] Agent dashboard/findings/review.
+- [ ] Synthesis/decision/writing/Feynman workspaces.
+- [ ] Learning paths/gaps.
+- [ ] Timeline/context/time capsules.
+- [ ] Private wiki/growth/ideas/legacy.
+- [ ] Vizora media/OCR/review.
+- [ ] Export queue/history/retry.
 
-┌─────────────────────────────────────┐
-│ Dashboard │
-├─────────────────────────────────────┤
-│ ┌──────────┐ ┌──────────┐ │
-│ │ Books │ │ Notes │ │
-│ │ 12 │ │ 234 │ │
-│ └──────────┘ └──────────┘ │
-│ ┌──────────┐ ┌──────────┐ │
-│ │ Sources │ │ Embeddings│ │
-│ │ 45 │ │ 1,234 │ │
-│ └──────────┘ └──────────┘ │
-│ │
-│ Recent Activity │
-│ - Book "Atomic Habits" uploaded │
-│ - Source "Logistics" processed │
-│ - Note "Focus System" created │
-└─────────────────────────────────────┘
+## Phase 4 — Responsive + accessibility
 
-text
+- [ ] Mobile capture-first layout.
+- [ ] Desktop review-first layout.
+- [ ] No horizontal overflow.
+- [ ] Keyboard navigation.
+- [ ] Focus indicators.
+- [ ] Screen-reader labels/ARIA.
+- [ ] Color contrast.
+- [ ] Reduced motion.
+- [ ] WCAG AA verification.
 
-### 2.2 Book Library
-- [ ] Grid view / List view toggle
-- [ ] Search + Filter
-- [ ] Upload button (drag & drop)
-- [ ] Book card (cover, title, author, progress)
-- [ ] Sort (recent, title, progress)
+## Phase 5 — UI testing/release
 
-### 2.3 Book Reader
-- [ ] Chapter navigation
-- [ ] Highlight + Note
-- [ ] TOC sidebar
-- [ ] Font / Theme toggle
-- [ ] TTS controls
-- [ ] Progress bar
-- [ ] Book chat (sidebar)
+- [ ] Playwright authenticated smoke suite.
+- [ ] Upload → processing → review → retrieval UI flow.
+- [ ] Citation rendering.
+- [ ] Permission/session-expiry states.
+- [ ] Offline/error states.
+- [ ] Lighthouse performance/accessibility baseline.
+- [ ] Mobile Expo smoke and device evaluation.
 
-### 2.4 Source Inbox
-- [ ] Add URL input
-- [ ] Manual note
-- [ ] Status pills (queued, processing, done, failed)
-- [ ] List view
-- [ ] Detail drawer
+## Design rules
 
-### 2.5 Notes
-- [ ] Note list
-- [ ] Note editor (Markdown)
-- [ ] Backlinks panel
-- [ ] Tags + Collections
-- [ ] Source links
-
-### 2.6 Knowledge Graph
-- [ ] Force-directed graph
-- [ ] Node types (Book, Note, Concept)
-- [ ] Filter
-- [ ] Zoom + Pan
-- [ ] Click → detail
-
-### 2.7 Chat (RAG)
-- [ ] Message list
-- [ ] Input box
-- [ ] Citation cards
-- [ ] Source link
-- [ ] Streaming response
-
-### 2.8 Review Center
-- [ ] Queue list
-- [ ] 3-column layout (queue | evidence | edit)
-- [ ] Approve / Reject / Revision buttons
-- [ ] Checklist
-- [ ] Warning display
-
-### 2.9 Vault
-- [ ] Vault unlock screen
-- [ ] Entry list
-- [ ] Entry detail
-- [ ] Password generator
-- [ ] TOTP display
-- [ ] Auto-lock timer
-
-### 2.10 Settings
-- [ ] Profile
-- [ ] Appearance (theme, font)
-- [ ] Storage
-- [ ] AI Providers
-- [ ] Notifications
-- [ ] Security
-
----
-
-## Phase 3 — Advanced UI
-
-### 3.1 Level Up Pages
-- [ ] Agent dashboard
-- [ ] Synthesis viewer
-- [ ] Decision workspace
-- [ ] Writing editor
-- [ ] Feynman mode UI
-- [ ] Learning paths
-- [ ] Knowledge gaps
-- [ ] Timeline
-- [ ] Mood log
-- [ ] Ambient player
-- [ ] Context restore
-- [ ] Time capsules
-- [ ] Personal wiki
-- [ ] Growth metrics
-- [ ] Idea generator
-- [ ] Legacy mode
-
-### 3.2 Media (Vizora)
-- [ ] Media library
-- [ ] Image viewer
-- [ ] OCR result viewer
-- [ ] Batch upload
-- [ ] Batch review
-
-### 3.3 Document Assistant
-- [ ] Document list
-- [ ] Document detail
-- [ ] Extracted fields
-- [ ] Review screen
-
-### 3.4 Export
-- [ ] Export queue
-- [ ] Export detail
-- [ ] Drive history
-- [ ] Retry failed
-
----
-
-## Phase 4 — Design System Detail
-
-### 4.1 Color Palette (Suggested)
-
-| Token | Value | Use |
-|---|---|---|
-| `bg-primary` | #0A0E1A | Deep navy-black |
-| `bg-surface` | #111827 | Card surface |
-| `accent-primary` | #06B6D4 | Muted cyan |
-| `accent-secondary` | #8B5CF6 | Violet |
-| `text-primary` | #F9FAFB | Main text |
-| `text-muted` | #9CA3AF | Secondary |
-| `border` | #1F2937 | Thin border |
-| `warning` | #F59E0B | Amber |
-| `success` | #10B981 | Green |
-| `error` | #EF4444 | Red |
-
-### 4.2 Typography
-
-| Element | Font | Size |
-|---|---|---|
-| Heading 1 | Inter | 32px |
-| Heading 2 | Inter | 24px |
-| Heading 3 | Inter | 20px |
-| Body | Inter | 16px |
-| Small | Inter | 14px |
-| Caption | Inter | 12px |
-| Code | JetBrains Mono | 14px |
-
-### 4.3 Spacing Scale
-4px → xs
-8px → sm
-16px → md
-24px → lg
-32px → xl
-48px → 2xl
-64px → 3xl
-
-text
-
----
-
-## Phase 5 — Responsive Design
-
-### 5.1 Breakpoints
-| Breakpoint | Width |
-|---|---|
-| Mobile | <640px |
-| Tablet | 640-1024px |
-| Desktop | >1024px |
-
-### 5.2 Mobile Layout
-- [ ] Hamburger navigation
-- [ ] Card/list layout
-- [ ] Full-width forms
-- [ ] Bottom-sheet filters
-- [ ] Sticky action bar
-- [ ] No horizontal overflow
-
-### 5.3 Tablet Layout
-- [ ] Collapsible sidebar
-- [ ] Reduced columns
-- [ ] Stacked metadata
-- [ ] Slide-in drawers
-
----
-
-## Phase 6 — Accessibility
-
-- [ ] WCAG AA compliance
-- [ ] Keyboard navigation
-- [ ] Focus indicators
-- [ ] Screen reader labels
-- [ ] ARIA attributes
-- [ ] Color contrast
-- [ ] Reduced motion support
-
----
-
-## Phase 7 — UX Patterns
-
-### 7.1 Loading States
-- [ ] Skeleton loaders
-- [ ] Progress bars
-- [ ] Spinners (minimal)
-- [ ] Optimistic updates
-
-### 7.2 Empty States
-- [ ] No books
-- [ ] No notes
-- [ ] No sources
-- [ ] No results
-- [ ] No data
-
-### 7.3 Error States
-- [ ] Network error
-- [ ] Server error
-- [ ] Permission denied
-- [ ] Session expired
-- [ ] Offline
-
-### 7.4 Notifications
-- [ ] Toast (success, error, info)
-- [ ] In-app banner
-- [ ] Email (via Brevo)
-- [ ] Push (native)
-
----
-
-## Phase 8 — Design Tools
-
-| Tool | Purpose |
-|---|---|
-| **Figma** | Mockup + Design system |
-| **Storybook** | Component library |
-| **Playwright** | UI E2E tests |
-| **Lighthouse** | Performance + A11y |
-
----
-
-## UI Priority Order
-Backend Priority 0
-↓
-UI Phase 1 (Foundation)
-↓
-UI Phase 2 (Core Pages)
-↓
-UI Phase 3 (Advanced)
-↓
-UI Phase 4 (Design System Polish)
-↓
-UI Phase 5 (Responsive)
-↓
-UI Phase 6 (Accessibility)
-↓
-UI Phase 7 (UX Polish)
-↓
-UI Phase 8 (Tools + Testing)
-
-text
-
----
-
-## Non-Negotiable UI Rules
-
-1. No marketing layout — private workspace feel
-2. No excessive gradients or neon
-3. No decorative AI imagery
-4. Minimal animation
-5. Editorial typography
-6. Thin borders, layered surfaces
-7. Calm, professional, cinematic
-8. Mobile-first for capture
-9. Desktop-first for review
-10. Accessibility always
-
----
-
-## Change Log
-
-| Date | Change |
-|---|---|
-| 2026-10-06 | Initial file created |
+1. Private workspace feel; no marketing-heavy layout.
+2. Calm editorial typography.
+3. Minimal animation.
+4. Thin borders and layered surfaces.
+5. Mobile-first capture; desktop-first review.
+6. Evidence/citation state must be visually explicit.
+7. Accessibility is part of definition-of-done, not a later decoration.
