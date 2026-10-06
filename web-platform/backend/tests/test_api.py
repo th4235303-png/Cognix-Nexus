@@ -333,7 +333,7 @@ class CognixApiTests(unittest.TestCase):
 
         superseded_advance = self.client.post(f"/processing/{task_id}/advance")
         self.assertEqual(superseded_advance.status_code, 409)
-        self.assertEqual(superseded_advance.json()["detail"], "Processing task is currently leased by a worker")
+        self.assertEqual(superseded_advance.json()["detail"], "Processing task was superseded by a newer action")
 
         advanced = self.client.post(f"/processing/{new_task_id}/advance")
         self.assertEqual(advanced.status_code, 200)
