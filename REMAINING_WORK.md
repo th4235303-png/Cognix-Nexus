@@ -20,7 +20,7 @@
 | Cloudinary | 🟢 Live round-trip verified |
 | Supabase Storage | 🟡 Configured; full provider drill pending |
 | Backblaze B2 | 🟡 Configured; full provider drill pending |
-| Google Drive | 🟡 External OAuth/provider drill deferred |
+| Google Drive | 🟡 Integration implemented; real OAuth/provider drill awaits intentional credentials re-authorization |
 | Paid LLM | ⚪ Deferred by product decision; do not block P0/UI work |
 | Frontend | 🟡 Routes/components exist; completion/polish is the active workstream |
 | Observability | 🟡 Code hooks exist; live ingestion not verified |
@@ -32,12 +32,14 @@
 
 ### P0.1 Live runtime
 - [x] API/worker Render services are on the latest main revision (7287b682...).
-- [ ] Verify /api/v1/health and /api/v1/ready with a reachable external probe.
+- [ ] Verify /api/v1/health and /api/v1/ready with a reachable external probe (Render service is live; external probe tool cannot reach the onrender URL).
 - [x] Verify production migration ledger through 028_rls_policy_dedup.sql.
 
 ### P0.2 Processing pipeline
-- [ ] Re-run real book E2E with English + Myanmar + scanned pages.
-- [ ] Verify queued → extraction → chapters → chunks → embeddings → retrieval/RRF.
+- [ ] Re-run a fresh real book E2E with English + Myanmar + scanned pages.
+- [x] Production DB snapshot confirms queued=0, running=0, 101 chunks, 101 embeddings, 1536-d vectors.
+- [x] Hybrid RRF retrieval path is implemented and now owner-scoped; regression contract added.
+- [ ] Verify the owner-scoped retrieval path against the live API with real provider credentials.
 - [x] Verify 100+ chunks and 100+ embeddings on the production P0 test book (100/100; embeddings 1536-dim).
 - [x] Confirm queued=0 and running=0; one historical failed task remains preserved for audit/retry verification.\n- [ ] Complete a fresh retry/recovery drill on a new production test job.
 
@@ -58,15 +60,15 @@
 - [ ] Delete and server plaintext audit.
 
 ### P0.6 Google Drive
-- [ ] Keep OAuth/provider drill deferred until Drive credentials are intentionally re-authorized.
-- [ ] Callback/refresh-token flow when re-enabled.
-- [ ] Export worker upload and folder structure when re-enabled.
-- [ ] File verification and idempotent retry when re-enabled.
+- [x] OAuth callback, refresh-token handling, export worker, folder creation, file upsert/idempotent retry code paths are implemented.
+- [ ] Real Google OAuth callback/refresh-token drill with a user account.
+- [ ] Real export worker upload/folder/file verification drill after credentials are re-authorized.
 
 ### P0.7 AI / RAG
-- [ ] Real embedding call and 1536-dimension verification.
-- [ ] RRF score from the production retrieval path, not a hand-calculated substitute.
-- [ ] Citation-backed answer.
+- [x] Production DB contains 101 persisted embeddings and all observed vectors are 1536-dimensional.
+- [x] RRF scoring is implemented in the production retrieval endpoint; owner scoping regression was hardened.
+- [ ] Real provider embedding call and live API retrieval verification.
+- [ ] Citation-backed LLM answer (paid LLM remains intentionally deferred).
 - [ ] Unsupported question returns an evidence-safe response.
 - [ ] Multi-book and contradictory-source behavior.
 - Paid LLM activation is explicitly deferred and is not a P0 release blocker.
@@ -76,7 +78,8 @@
 - [x] Re-run Supabase performance/security advisors.
 - [x] Redundant level-up deny-policy warnings are removed.
 - [ ] Keep leaked-password-protection warning as an explicit external limitation until enabled.
-- [ ] Re-run cross-user negative tests after the final UI/API release candidate.
+- [x] Add regression coverage for owner-scoped hybrid retrieval/export/contradiction paths.
+- [ ] Run full cross-user negative tests against the final deployed API release candidate.
 
 ### P0.9 Regression / release
 - [x] Unit tests green in CI.
@@ -179,6 +182,10 @@ All implementation and documentation changes for this project land on **main**. 
 - CI remains green on main.
 
 ## Change Log
+
+| Date | Change |
+|---|---|
+| 2026-10-06 | Hardened hybrid RRF retrieval, Brain Vault export, and contradiction review/candidate paths with explicit owner scoping; added regression contract coverage; reconciled live DB evidence (101 chunks/embeddings, 1536-d vectors, queued/running zero). |
 
 | Date | Change |
 |---|---|
