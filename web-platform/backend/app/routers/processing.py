@@ -15,6 +15,7 @@ router = APIRouter()
 
 class ProcessingCreate(BaseModel):
     source_id: str
+    idempotency_key: str | None = None
 
 
 @router.post("", status_code=202)
@@ -22,13 +23,14 @@ def create_processing_task(payload: ProcessingCreate, request: Request) -> dict:
     owner_id = owner_for_request(request)
     store.refresh()
     source = get_source_for_request(request, payload.source_id)
-    existing = next(
-        (task for task in store.list_tasks_for_owner(owner_id)
-         if task["source_id"] == payload.source_id and task["status"] in {"queued", "running"}),
-        None,
-    )
-    if existing:
-        return existing
+    active = [
+        task for task in store.list_tasks_for_owner(owner_id)
+        if task["source_id"] == payload.source_id and task["status"] in {"queued", "running"}
+    ]
+    if payload.idempotency_key:
+        same = next((t for t in active if t.get("idempotency_key") == payload.idempotency_key), None)
+        if same:
+            return same
 
     task_id = f"TSK-{uuid4().hex[:8].upper()}"
     task = {
@@ -39,10 +41,19 @@ def create_processing_task(payload: ProcessingCreate, request: Request) -> dict:
         "status": "queued",
         "retry_count": 0,
         "error": None,
+        "idempotency_key": payload.idempotency_key,
+        "superseded_by": None,
         "created_at": now_iso(),
         "updated_at": now_iso(),
     }
     try:
+        for previous in active:
+            if store.database:
+                store.database.cancel_processing_task(previous["id"], "Superseded by a newer processing action", task_id)
+            previous["status"] = "cancelled"
+            previous["error"] = "Superseded by a newer processing action"
+            previous["superseded_by"] = task_id
+            previous["updated_at"] = now_iso()
         store.tasks[task_id] = task
         store.save_task(task)
     except psycopg.errors.UniqueViolation:
