@@ -6,20 +6,20 @@
 
 | Layer | Service | Verified state |
 |---|---|---|
-| Source / CI | GitHub + Actions | 🟢 Active; main CI #696 PASS |
-| API | Render | 🟡 Live; deploy revision must be refreshed to latest main |
-| Worker | Render | 🟡 Live; latest main revision must be refreshed |
+| Source / CI | GitHub + Actions | 🟢 Active; verified main CI #696 PASS |
+| API | Render | 🟢 Latest main revision live |
+| Worker | Render | 🟢 Latest main revision live |
 | Database/Auth | Supabase | 🟢 Live |
 | Vector | pgvector | 🟢 Enabled |
 | Media | Cloudinary | 🟢 Live round-trip verified |
-| Small artifacts | Supabase Storage | 🟡 Configured; full E2E pending |
-| Large originals | Backblaze B2 | 🟡 Configured; full E2E pending |
-| Export/backup | Google Drive | 🔴 OAuth/provider E2E blocked |
-| LLM | OpenAI-compatible provider | 🔴 Live provider drill blocked by 402/config |
-| Frontend | Netlify | 🟡 Intentionally paused |
+| Small artifacts | Supabase Storage | 🟡 Configured; full provider drill pending |
+| Large originals | Backblaze B2 | 🟡 Configured; full provider drill pending |
+| Export/backup | Google Drive | 🟡 Intentionally deferred; OAuth drill remains available later |
+| LLM | OpenAI-compatible provider | ⚪ Intentionally deferred; not a current release gate |
+| Frontend | Netlify | 🟡 Release activation/polish pending |
 | Monitoring | Sentry | 🟡 Code hook exists; live ingestion unverified |
-| Uptime / analytics | UptimeRobot / Umami / Axiom | 🟡 Account/configuration claims require live evidence |
-| Edge | Cloudflare | 🟡 Account exists; Cognix zone/edge deployment not verified |
+| Uptime / analytics | UptimeRobot / Umami / Axiom | 🟡 Live account evidence not verified |
+| Edge | Cloudflare | 🟡 Account exists; Cognix zone/edge deployment needs a domain |
 | Email | Brevo | 🟡 Integration exists; live send not verified |
 | Queue | Upstash QStash | 🟡 Integration exists; live delivery not verified |
 | Mobile | Expo/EAS | 🟡 Foundation exists; device/EAS production verification pending |
@@ -33,13 +33,25 @@
 | Large PDFs/EPUBs/research papers | Backblaze B2 | >50 MB |
 | Export packages/backups | Google Drive | user-owned destination |
 
+## Provider ownership
+
+- Cloudinary: research media and image assets.
+- Supabase Storage: small private artifacts.
+- Backblaze B2: large original files.
+- Google Drive: user-owned export/backup destination; currently deferred.
+- LLM: optional provider-dependent intelligence; currently deferred.
+- Supabase Auth: authentication and account controls.
+- Render: API and worker runtime.
+- Netlify: frontend hosting, activation pending final UI smoke.
+- GitHub Actions: regression and release gates.
+- Cloudflare: future edge/WAF once a Cognix domain is available.
+
 ## Planned infrastructure
 
 These remain optional backlog items, not current production dependencies:
 - Upstash Redis / rate-limit/cache
 - PostHog
 - Doppler/Infisical
-- Playwright
 - k6/Artillery
 - Better Stack
 - Mintlify/Docusaurus
@@ -49,3 +61,7 @@ These remain optional backlog items, not current production dependencies:
 ## Account-status rule
 
 An account existing is not the same as a provider being production-verified. Use PRODUCTION_STATUS.md for evidence.
+
+## Change policy
+
+All service/configuration changes that are part of Cognix completion are recorded on main. Provider credentials remain external secrets and must never be committed.
