@@ -6,32 +6,45 @@
 
 | Gate | Status | Evidence / next action |
 |---|---|---|
-| Main CI | 🟢 PASS | Run #696 on main |
-| API deploy | 🟡 LIVE | Current Render live deploy is older than latest main; redeploy/verify |
-| Worker | 🟡 LIVE | Current Render worker deploy is older than latest main; redeploy/verify |
+| Main CI | 🟢 PASS | Verified CI #696 |
+| API deploy | 🟢 LIVE | Render API is live on latest main revision 7287b682... |
+| Worker | 🟢 LIVE | Render worker is live on latest main revision 7287b682... |
 | Cloudinary | 🟢 VERIFIED | Live upload/read/checksum/delete completed |
 | Supabase Storage | 🟡 CONFIGURED | Full provider drill still pending |
 | B2 | 🟡 CONFIGURED | Full provider drill still pending |
-| Embeddings | 🟡 CONFIGURED | Real provider drill pending |
-| LLM | 🔴 BLOCKED | Live provider configuration/402 |
-| Google Drive | 🔴 BLOCKED | Live OAuth scope/configuration issue |
-| RLS cleanup | 🟡 PENDING | Production ledger stops at 027; 028 not yet applied |
-| Supabase security | 🟡 WARN | Leaked-password protection disabled |
+| Embeddings | 🟡 CONFIGURED | Full real-provider drill pending |
+| LLM | ⚪ DEFERRED | Paid provider activation intentionally postponed |
+| Google Drive | ⚪ DEFERRED | OAuth/provider drill intentionally postponed |
+| RLS cleanup | 🟢 VERIFIED | Migration 028 applied in production |
+| Supabase security | 🟡 WARN | Leaked-password protection disabled; current free-tier account cannot enable it |
 | Observability | 🟡 PARTIAL | Sentry hooks exist; live ingestion not verified |
-| Netlify | 🟡 PAUSED | Intentional release safeguard |
-| Cloudflare edge | 🟡 NOT DEPLOYED | No Cognix zone/edge deployment verified |
+| Netlify | 🟡 PENDING | UI completion/smoke gate remains |
+| Cloudflare edge | 🟡 NOT DEPLOYED | No Cognix domain/zone available yet |
 | GDPR delete/export | 🔴 OPEN | Full account lifecycle not verified |
-
-## CI evidence
-- Latest main run: Cognix Core CI #696.
-- Result: success.
-- Unit/integration/coverage/security/backup-restore gates are represented in CI.
+| UI completion | 🟡 ACTIVE | P0.1→UI completion/polish is the current execution track |
 
 ## Database evidence
-- Custom Cognix migration ledger currently reaches 027_rls_helper_performance.sql.
-- Migration 028_rls_policy_dedup.sql exists in the repository but is not yet recorded in production.
-- Supabase performance advisor still reports 176 multiple-permissive-policy warnings from redundant policies.
-- Supabase security advisor reports leaked password protection disabled.
+
+- Cognix migration ledger includes 028_rls_policy_dedup.
+- 028 removed the redundant level-up deny policies.
+- Supabase performance advisor no longer reports the previous redundant-policy warning set.
+- Supabase security advisor still reports exactly one warning: auth_leaked_password_protection.
+- The leaked-password warning is an account-level Auth limitation on the current free-tier plan, not an application-code defect.
+
+## Runtime evidence
+
+- Render API service: Cognix-Core, branch main, latest live deploy is revision 7287b682....
+- Render worker service: cognix-core-worker-runtime, branch main, latest live deploy is revision 7287b682....
+- Both services are on the latest repository revision available at the verification checkpoint.
+- External web probing of /api/v1/health and /api/v1/ready was not available from the verification tool, so those two endpoints remain an explicit smoke item rather than being falsely marked PASS.
+
+## Release track
+
+The current track deliberately excludes paid LLM activation and Google Drive re-authorization. Those can be resumed later without reopening the engineering plan.
+
+The current completion target is:
+**P0 engineering → storage/processing verification → security regression → UI completion/polish → production smoke → release.**
 
 ## Release rule
-Do not call the system fully production-ready until the red gates and the pending production verification gates above are closed with real evidence.
+
+Do not call the system fully production-ready until the remaining red/open engineering gates and final UI/release smoke are closed with real evidence.
