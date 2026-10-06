@@ -36,7 +36,7 @@
 - Render API service: Cognix-Core, branch main, latest live deploy is revision d0c6d5bd....
 - Render worker service: cognix-core-worker-runtime, branch main, latest live deploy is revision d0c6d5bd....
 - Both services are on the latest repository revision available at the verification checkpoint.
-- External web probing of /api/v1/health and /api/v1/ready was not reachable from the available verification tool, so those two endpoints remain an explicit smoke item rather than being falsely marked PASS.
+- External web probing of /health and /ready was not reachable from the available verification tool, so those two endpoints remain an explicit smoke item rather than being falsely marked PASS.
 - P0 owner-isolation hardening was added to hybrid RRF retrieval, Brain Vault export, and contradiction candidate/review paths; regression contract coverage was added.
 
 ## Release track
