@@ -600,21 +600,38 @@ async def semantic_query(payload: SemanticQuery, request: Request) -> dict:
 
 @router.get("/export")
 def export_brain_vault(request: Request) -> dict:
-    _owner_id(request)
+    owner_id = _owner_id(request)
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM books ORDER BY created_at")
+            cur.execute("SELECT * FROM books WHERE owner_id=%s ORDER BY created_at", (owner_id,))
             books = cur.fetchall()
-            cur.execute("SELECT * FROM chapters ORDER BY book_id, chapter_number")
+            book_ids = [row["id"] for row in books]
+            cur.execute(
+                "SELECT * FROM chapters WHERE book_id = ANY(%s) ORDER BY book_id, chapter_number",
+                (book_ids,),
+            )
             chapters = cur.fetchall()
-            cur.execute("SELECT id,title,content,note_type,status,created_at,updated_at FROM notes ORDER BY updated_at DESC")
+            cur.execute(
+                "SELECT id,title,content,note_type,status,created_at,updated_at FROM notes WHERE owner_id=%s ORDER BY updated_at DESC",
+                (owner_id,),
+            )
             notes = cur.fetchall()
-            cur.execute("SELECT * FROM concepts ORDER BY name")
+            cur.execute("SELECT * FROM concepts WHERE owner_id=%s ORDER BY name", (owner_id,))
             concepts = cur.fetchall()
-            cur.execute("SELECT * FROM concept_links ORDER BY created_at")
+            cur.execute(
+                """SELECT cl.* FROM concept_links cl
+                   JOIN concepts c1 ON c1.id=cl.from_concept_id
+                   JOIN concepts c2 ON c2.id=cl.to_concept_id
+                   WHERE c1.owner_id=%s AND c2.owner_id=%s
+                   ORDER BY cl.created_at""",
+                (owner_id, owner_id),
+            )
             links = cur.fetchall()
-            cur.execute("SELECT * FROM book_summaries ORDER BY book_id, level, version")
+            cur.execute(
+                "SELECT * FROM book_summaries WHERE book_id = ANY(%s) ORDER BY book_id, level, version",
+                (book_ids,),
+            )
             summaries = cur.fetchall()
     return {
         "format": "cognix-brain-vault-json",
@@ -631,7 +648,7 @@ def export_brain_vault(request: Request) -> dict:
 
 @router.get("/contradictions/candidates")
 def contradiction_candidates(request: Request, limit: int = 50) -> dict:
-    _owner_id(request)
+    owner_id = _owner_id(request)
     db = _db()
     limit = max(1, min(limit, 100))
     with db.connect() as conn:
@@ -641,10 +658,15 @@ def contradiction_candidates(request: Request, limit: int = 50) -> dict:
                 SELECT a.id AS left_id, b.id AS right_id, a.content AS left_content, b.content AS right_content
                 FROM chunks a
                 JOIN chunks b ON a.id < b.id
-                WHERE (
+                JOIN chapters cha ON cha.id = a.chapter_id
+                JOIN chapters chb ON chb.id = b.chapter_id
+                JOIN books ba ON ba.id = cha.book_id
+                JOIN books bb ON bb.id = chb.book_id
+                WHERE ba.owner_id=%s AND bb.owner_id=%s
+                  AND (
                     lower(a.content) LIKE '%%not %%' OR lower(a.content) LIKE '%%no %%' OR
                     lower(a.content) LIKE '%%never %%' OR lower(a.content) LIKE '%%cannot %%'
-                )
+                  )
                 AND (
                     lower(b.content) NOT LIKE '%%not %%' AND lower(b.content) NOT LIKE '%%no %%' AND
                     lower(b.content) NOT LIKE '%%never %%' AND lower(b.content) NOT LIKE '%%cannot %%'
@@ -652,7 +674,7 @@ def contradiction_candidates(request: Request, limit: int = 50) -> dict:
                 ORDER BY a.created_at DESC
                 LIMIT %s
                 """,
-                (limit,),
+                (owner_id, owner_id, limit),
             )
             rows = cur.fetchall()
     items = []
@@ -686,11 +708,29 @@ class ContradictionReview(BaseModel):
 
 @router.post("/contradictions/{contradiction_id}/review")
 def review_contradiction(contradiction_id: str, payload: ContradictionReview, request: Request) -> dict:
-    _owner_id(request)
+    owner_id = _owner_id(request)
     db = _db()
     with db.connect() as conn:
         with conn.cursor() as cur:
-            cur.execute("UPDATE contradictions SET status=%s WHERE id=%s RETURNING *", (payload.status, contradiction_id))
+            cur.execute(
+                """UPDATE contradictions
+                   SET status=%s
+                   WHERE id=%s
+                     AND EXISTS (
+                       SELECT 1
+                       FROM chunks lc
+                       JOIN chapters lch ON lch.id=lc.chapter_id
+                       JOIN books lb ON lb.id=lch.book_id
+                       JOIN chunks rc ON rc.id=contradictions.right_source_id
+                       JOIN chapters rch ON rch.id=rc.chapter_id
+                       JOIN books rb ON rb.id=rch.book_id
+                       WHERE lc.id=contradictions.left_source_id
+                         AND lb.owner_id=%s
+                         AND rb.owner_id=%s
+                     )
+                   RETURNING *""",
+                (payload.status, contradiction_id, owner_id, owner_id),
+            )
             row = cur.fetchone()
         conn.commit()
     if not row:
