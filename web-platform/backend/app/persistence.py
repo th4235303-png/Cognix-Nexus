@@ -78,6 +78,28 @@ class Database:
             conn.commit()
         return row is not None
 
+    def cancel_processing_task(
+        self,
+        task_id: str,
+        reason: str,
+        superseded_by: str | None = None,
+    ) -> bool:
+        """Cooperatively cancel a queued/running task; its lease is fenced immediately."""
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """UPDATE processing_tasks
+                       SET status='cancelled', error=%s, superseded_by=%s,
+                           claimed_by=NULL, claimed_at=NULL, updated_at=now()
+                       WHERE id=%s AND status IN ('queued','running')
+                       RETURNING id""",
+                    (reason, superseded_by, task_id),
+                )
+                row = cur.fetchone()
+            conn.commit()
+        self._claim_tokens.pop(task_id, None)
+        return row is not None
+
     def release_task(self, task_id: str, claim_token: str | None = None) -> bool:
         token = claim_token or self._claim_tokens.get(task_id)
         if token is None:
@@ -843,10 +865,10 @@ class Database:
             with conn.cursor() as cur:
                 cur.execute(
                     """INSERT INTO processing_tasks (
-                        id, source_id, stage, progress, status, retry_count, error, created_at, updated_at
+                        id, source_id, stage, progress, status, retry_count, error, idempotency_key, created_at, updated_at
                     ) VALUES (
                         %(id)s, %(source_id)s, %(stage)s, %(progress)s, %(status)s,
-                        %(retry_count)s, %(error)s, %(created_at)s, %(updated_at)s
+                        %(retry_count)s, %(error)s, %(idempotency_key)s, %(created_at)s, %(updated_at)s
                     )
                     ON CONFLICT (id) DO NOTHING
                     RETURNING id""",
@@ -1409,6 +1431,7 @@ class Database:
     def _task_row(row: dict[str, Any]) -> dict[str, Any]:
         return {"id": row["id"], "source_id": row["source_id"], "stage": row["stage"], "progress": row["progress"],
                 "status": row["status"], "retry_count": row["retry_count"], "error": row.get("error"),
+                "idempotency_key": row.get("idempotency_key"), "superseded_by": row.get("superseded_by"),
                 "created_at": row["created_at"].isoformat(), "updated_at": row["updated_at"].isoformat()}
 
     @staticmethod
