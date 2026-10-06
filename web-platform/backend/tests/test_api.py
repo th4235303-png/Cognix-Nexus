@@ -323,7 +323,13 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(task.status_code, 202)
         task_id = task.json()["id"]
         duplicate_task = self.client.post("/processing", json={"source_id": source["id"]})
-        self.assertEqual(duplicate_task.json()["id"], task_id)
+        self.assertEqual(duplicate_task.status_code, 202)
+        new_task_id = duplicate_task.json()["id"]
+        self.assertNotEqual(new_task_id, task_id)
+        old_task = self.client.get(f"/processing/{task_id}")
+        self.assertEqual(old_task.status_code, 200)
+        self.assertEqual(old_task.json()["status"], "cancelled")
+        self.assertEqual(old_task.json()["superseded_by"], new_task_id)
 
         advanced = self.client.post(f"/processing/{task_id}/advance")
         self.assertEqual(advanced.status_code, 200)
