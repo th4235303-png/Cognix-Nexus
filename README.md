@@ -228,3 +228,22 @@ Backend:
 Never commit API keys, OAuth refresh tokens, database passwords, or other provider secrets.
 
 No Logixa Flow webhook is used.
+
+
+## Current production status
+
+See PRODUCTION_STATUS.md for the evidence matrix. The repository is not fully production-closed while the live LLM/Google Drive gates, production RLS cleanup, and final release smoke remain open.
+
+## Documentation map
+
+- PRODUCTION_STATUS.md — live evidence and release gates
+- REMAINING_WORK.md — tactical blockers and next actions
+- ARCHITECTURE.md — system boundaries
+- DATA_MODEL.md — ownership and lineage
+- DEPLOYMENT.md — release/runbook
+- PIPELINE.md — processing and retrieval lifecycle
+- AGENT.md — agent contract
+- SECURITY.md — security policy
+- TROUBLESHOOTING.md — operational recovery
+- DECISIONS.md — durable architecture decisions
+- UI_PLAN.md — frontend roadmap
