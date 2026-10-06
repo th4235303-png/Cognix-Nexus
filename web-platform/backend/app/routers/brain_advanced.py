@@ -245,7 +245,7 @@ class RetrievalRequest(BaseModel):
 
 @router.post("/retrieval")
 async def hybrid_retrieval(payload: RetrievalRequest, request: Request) -> dict:
-    _owner_id(request)
+    owner_id = _owner_id(request)
     db = _db()
     if not embedding_provider.configured:
         raise HTTPException(status_code=503, detail="Semantic embeddings are not configured")
@@ -262,8 +262,11 @@ async def hybrid_retrieval(payload: RetrievalRequest, request: Request) -> dict:
                            row_number() OVER (ORDER BY e.embedding_vector <=> %s::vector) AS rank
                     FROM embeddings e
                     JOIN chunks c ON c.id = e.owner_id
+                    JOIN chapters ch ON ch.id = c.chapter_id
+                    JOIN books b ON b.id = ch.book_id
                     WHERE e.owner_type = 'chunk'
                       AND e.embedding_vector IS NOT NULL
+                      AND b.owner_id = %s
                     ORDER BY e.embedding_vector <=> %s::vector
                     LIMIT %s
                 ),
@@ -274,7 +277,10 @@ async def hybrid_retrieval(payload: RetrievalRequest, request: Request) -> dict:
                                         c.created_at DESC
                            ) AS rank
                     FROM chunks c
-                    WHERE c.search_vector @@ websearch_to_tsquery('simple', %s)
+                    JOIN chapters ch ON ch.id = c.chapter_id
+                    JOIN books b ON b.id = ch.book_id
+                    WHERE b.owner_id = %s
+                      AND c.search_vector @@ websearch_to_tsquery('simple', %s)
                     ORDER BY ts_rank_cd(c.search_vector, websearch_to_tsquery('simple', %s)) DESC,
                              c.created_at DESC
                     LIMIT %s
@@ -300,8 +306,8 @@ async def hybrid_retrieval(payload: RetrievalRequest, request: Request) -> dict:
                 LIMIT %s
                 """,
                 (
-                    query_vector, query_vector, payload.limit,
-                    payload.query, payload.query, payload.query, payload.limit,
+                    owner_id, query_vector, owner_id, query_vector, payload.limit,
+                    owner_id, payload.query, payload.query, payload.query, payload.limit,
                     payload.rrf_k, payload.rrf_k, payload.limit,
                 ),
             )
