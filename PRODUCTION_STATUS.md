@@ -27,14 +27,14 @@
 
 - Cognix migration ledger includes 028_rls_policy_dedup.
 - 028 removed the redundant level-up deny policies.
-- Supabase performance advisor no longer reports the previous redundant-policy warning set.
+- Supabase performance advisor no longer reports the previous redundant-policy warning set.\n- Production processing snapshot: 2 books, 61 chapters, 101 chunks, 101 embeddings; queued=0 and running=0; all observed embedding vectors are 1536-dimensional.\n- The P0 60-page test book contains 60 chapters, 100 chunks and 100 embeddings; one historical failed processing task remains preserved.
 - Supabase security advisor still reports exactly one warning: auth_leaked_password_protection.
 - The leaked-password warning is an account-level Auth limitation on the current free-tier plan, not an application-code defect.
 
 ## Runtime evidence
 
-- Render API service: Cognix-Core, branch main, latest live deploy is revision 7287b682....
-- Render worker service: cognix-core-worker-runtime, branch main, latest live deploy is revision 7287b682....
+- Render API service: Cognix-Core, branch main, latest live deploy is revision d0c6d5bd....
+- Render worker service: cognix-core-worker-runtime, branch main, latest live deploy is revision d0c6d5bd....
 - Both services are on the latest repository revision available at the verification checkpoint.
 - External web probing of /api/v1/health and /api/v1/ready was not available from the verification tool, so those two endpoints remain an explicit smoke item rather than being falsely marked PASS.
 
