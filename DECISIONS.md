@@ -17,3 +17,12 @@ Outbound fetching validates URL scheme, destination and redirects, then uses pin
 
 ## ADR-006 — Documentation separation
 Tracking, production evidence, architecture, pipeline, data, deployment, security and UI planning are separate documents so a stale checklist cannot masquerade as live evidence.
+
+## ADR-007 — Main-only execution
+Cognix implementation and documentation changes are landed directly on main. The current operating rule is verify → implement/fix → test → production verify → update evidence → main.
+
+## ADR-008 — Paid provider deferral
+Paid LLM activation and Google Drive re-authorization are intentionally deferred. They are not current P0 blockers and must not be represented as completed or as reasons to stop UI/engineering work.
+
+## ADR-009 — Free-tier Auth limitation
+Supabase leaked-password protection is currently disabled because the active project is on the free tier and the feature is not available to enable there. The warning remains explicitly documented and is not treated as an application-code defect.
