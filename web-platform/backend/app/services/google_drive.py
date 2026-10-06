@@ -27,7 +27,7 @@ def google_configured() -> bool:
 def _oauth_state() -> str:
     issued_at = str(int(time.time()))
     secret = os.environ["GOOGLE_CLIENT_SECRET"].encode("utf-8")
-    signature = hmac.new(secret, issued_at.encode("ascii"), hashlib.sha256).hexdigest()
+    signature = hmac.digest(secret, issued_at.encode("ascii"), "sha256").hex()
     return base64.urlsafe_b64encode(f"{issued_at}.{signature}".encode("ascii")).decode("ascii").rstrip("=")
 
 
@@ -41,7 +41,7 @@ def verify_oauth_state(state: str, max_age_seconds: int = 600) -> bool:
     if abs(int(time.time()) - issued) > max_age_seconds:
         return False
     secret = os.environ.get("GOOGLE_CLIENT_SECRET", "").encode("utf-8")
-    expected = hmac.new(secret, issued_at.encode("ascii"), hashlib.sha256).hexdigest()
+    expected = hmac.digest(secret, issued_at.encode("ascii"), "sha256").hex()
     return bool(secret) and hmac.compare_digest(signature, expected)
 
 
