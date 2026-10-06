@@ -331,12 +331,16 @@ class CognixApiTests(unittest.TestCase):
         self.assertEqual(old_task.json()["status"], "cancelled")
         self.assertEqual(old_task.json()["superseded_by"], new_task_id)
 
-        advanced = self.client.post(f"/processing/{task_id}/advance")
+        superseded_advance = self.client.post(f"/processing/{task_id}/advance")
+        self.assertEqual(superseded_advance.status_code, 409)
+        self.assertEqual(superseded_advance.json()["detail"], "Processing task is currently leased by a worker")
+
+        advanced = self.client.post(f"/processing/{new_task_id}/advance")
         self.assertEqual(advanced.status_code, 200)
         self.assertEqual(advanced.json()["stage"], "extracting")
         self.assertEqual(advanced.json()["progress"], 11)
 
-        retried = self.client.post(f"/processing/{task_id}/retry")
+        retried = self.client.post(f"/processing/{new_task_id}/retry")
         self.assertEqual(retried.status_code, 200)
         self.assertEqual(retried.json()["retry_count"], 1)
         self.assertEqual(retried.json()["stage"], "queued")
