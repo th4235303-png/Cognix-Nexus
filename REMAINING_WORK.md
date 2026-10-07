@@ -187,3 +187,76 @@ All implementation and documentation changes for this project land on **main**. 
 |---|---|
 | 2026-10-06 | Hardened hybrid RRF retrieval, Brain Vault export, and contradiction review/candidate paths with explicit owner scoping; added regression contract coverage; reconciled live DB evidence (101 chunks/embeddings, 1536-d vectors, queued/running zero). |
 | 2026-10-06 | Reconciled tactical work with production evidence; removed paid LLM as a P0 blocker; added explicit free-tier leaked-password limitation; made main-only execution rule explicit; separated UI status from UI specification. |
+
+## Book Intelligence expansion — 2026-10-07
+
+The current reference corpus is **9 categories / 170 files**. This is the planning/dry-run corpus, not yet evidence that all 170 files are processed in production.
+
+### BI-1 Library / Inbox
+
+- [ ] PDF/EPUB/DOCX/TXT ingestion through existing storage routing.
+- [ ] Normalize title/author/edition/category metadata.
+- [ ] Content fingerprint before expensive processing.
+- [ ] Exact duplicate auto-stop + link to existing book/version.
+- [ ] High-confidence same-book detection with confirmation.
+- [ ] Resume incomplete processing instead of parallel duplicate work.
+- [ ] Explicit reprocess/version action.
+
+### BI-2 AI Reading Room
+
+- [ ] Durable background reading task/stage machine.
+- [ ] Chunk → extraction → chapter synthesis → book synthesis.
+- [ ] Provider-neutral routing with quota/rate-limit/backoff.
+- [ ] Checkpoint after every durable unit.
+- [ ] Retry/resume without losing completed knowledge.
+- [ ] Provider usage/quota accounting.
+- [ ] Safe quota pause and later resume.
+- [ ] Source-span lineage on every AI-derived artifact.
+
+### BI-3 Partial progress + ledger
+
+- [ ] Durable date/time/book/category/stage/progress snapshots.
+- [ ] Chapter/page/chunk counters.
+- [ ] Latest extracted keys visible before book completion.
+- [ ] Per-book retry/pause/error timeline.
+- [ ] Markdown/plain-text reading ledger view/export.
+- [ ] Worker restart resumes from latest checkpoint.
+- [ ] Completion notification only after final synthesis succeeds.
+
+### BI-4 Knowledge distillation
+
+- [ ] Keep/filter scoring for useful ideas, principles, definitions, examples, actions and caveats.
+- [ ] Versioned chapter/book summaries.
+- [ ] Source-linked knowledge items.
+- [ ] Category/topic assignment.
+- [ ] Duplicate-knowledge suppression without destroying provenance.
+- [ ] Human review state before canonical promotion.
+
+### BI-5 Cross-book lessons + derived books
+
+- [ ] Aggregate knowledge by the 9 categories and user-defined categories.
+- [ ] Category lesson packs and topic study guides.
+- [ ] Shared-theme and contradiction detection.
+- [ ] Derived books from selected knowledge items.
+- [ ] Source manifest/citations on every generated artifact.
+- [ ] Partial lesson packs update as more books finish.
+
+### BI-6 UI
+
+- [ ] Library/Inbox → AI Reading Room → Knowledge Vault separation.
+- [ ] Upload duplicate-stop explanation.
+- [ ] Live chapter/page/chunk progress.
+- [ ] Partial result view during processing.
+- [ ] Daily/weekly reading ledger with dates and book names.
+- [ ] Category dashboards and lesson-pack views.
+- [ ] Derived-book builder with provenance preview.
+
+### BI-7 Verification
+
+- [ ] Same-file duplicate E2E does not create a second expensive run.
+- [ ] Interrupted job resumes from checkpoint.
+- [ ] Free-tier quota/rate-limit simulation.
+- [ ] Partial book exposes partial summary/keys.
+- [ ] Multi-book category synthesis preserves citations.
+- [ ] Derived-book provenance verification.
+- [ ] Controlled 9-category / 170-file corpus dry-run.
