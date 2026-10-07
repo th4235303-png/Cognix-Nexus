@@ -14,6 +14,8 @@ export default function BooksPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [file, setFile] = useState<File | null>(null);
+  const [category, setCategory] = useState('Unclassified');
+  const [notice, setNotice] = useState('');
 
   const load = async () => setBooks((await listBrainBooks()).items);
   useEffect(() => { load().catch(() => setError('Unable to load the book library.')); }, []);
@@ -40,11 +42,12 @@ export default function BooksPage() {
     setSaving(true);
     setError('');
     try {
-      await uploadBrainBook(file);
+      const result = await uploadBrainBook(file, 'en', undefined, category);
+      setNotice(result.idempotent ? `Duplicate detected — linked to existing book ${result.id}.` : 'Book queued for background AI reading.');
       setFile(null);
       await load();
     } catch {
-      setError('PDF/EPUB upload failed. Make sure persistent book storage is configured.');
+      setError('Book upload failed. Make sure persistent book storage is configured.');
     } finally {
       setSaving(false);
     }
@@ -63,20 +66,22 @@ export default function BooksPage() {
                   <BookOpen className="mt-0.5 h-5 w-5 text-primary" />
                   <div className="min-w-0">
                     <p className="font-medium text-foreground">{book.title}</p>
-                    <p className="mt-1 text-xs text-muted-foreground">{book.author || 'Unknown author'} · {book.chunk_count} chunks · {book.language}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">{book.category || 'Unclassified'} · {book.chunk_count} chunks · {book.language} · {book.processing_stage || book.status}</p>
                   </div>
                 </div>
               </Link>
             ))}
           </div>
         </SectionCard>
-        <SectionCard title="Import book" description="Paste text or upload a PDF/EPUB. Original files are stored behind the backend storage boundary.">
+        <SectionCard title="Import book" description="Upload a PDF, EPUB, DOCX or TXT. Cognix reads it in the background; you do not need to keep this page open.">
           <form onSubmit={submit} className="space-y-4">
+            <select aria-label="Book category" value={category} onChange={(e) => setCategory(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"><option>Unclassified</option><option>Business, Entrepreneurship & Finance</option><option>Communication & Negotiation</option><option>Creativity & Tech</option><option>Future Tech</option><option>Leadership & Management</option><option>Productivity, Habits & Discipline</option><option>Psychology & Critical Thinking</option><option>Self-Help & Emotional Intelligence</option><option>Stoicism & Philosophy</option></select>
             <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Book title" className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
-            <input type="file" accept=".pdf,.epub,application/pdf,application/epub+zip" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
-            <button type="button" onClick={() => file && upload()} disabled={!file || saving} className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium disabled:opacity-50">{saving ? "Uploading…" : "Upload PDF / EPUB"}</button>
+            <input type="file" accept=".pdf,.epub,.docx,.txt,application/pdf,application/epub+zip,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" onChange={(e) => setFile(e.target.files?.[0] || null)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
+            <button type="button" onClick={() => file && upload()} disabled={!file || saving} className="w-full rounded-md border border-border px-4 py-2 text-sm font-medium disabled:opacity-50">{saving ? "Uploading…" : "Upload Book"}</button>
             <div className="text-center text-xs text-muted-foreground">or paste extracted text</div>
             <textarea value={text} onChange={(e) => setText(e.target.value)} placeholder="Paste extracted book text here…" rows={10} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm" />
+            {notice && <p className="text-sm text-primary" role="status">{notice}</p>}
             {error && <p className="text-sm text-destructive">{error}</p>}
             <button disabled={saving} className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground disabled:opacity-50"><Plus className="h-4 w-4" /> {saving ? 'Importing…' : 'Import book'}</button>
           </form>
