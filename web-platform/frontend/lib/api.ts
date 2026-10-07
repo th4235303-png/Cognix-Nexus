@@ -277,7 +277,28 @@ export interface ApiBookUploadResponse { id: string; status: string; processing_
 export interface ApiBookProgress { book_id: string; stage: string; status: string; completed_units: number; total_units: number; percent: number; current_chapter_id?: string | null; current_chapter_number?: number | null; last_checkpoint_at?: string | null; paused_reason?: string | null; }
 export function getBookProgress(bookId: string) { return request<ApiBookProgress>(`/brain/books/${bookId}/progress`); }
 export function getBookTimeline(bookId: string) { return request<{items: Array<Record<string, unknown>>; total: number}>(`/brain/books/${bookId}/timeline`); }
-export function listKnowledge(category?: string, bookId?: string) { const q = new URLSearchParams(); if (category) q.set('category',category); if (bookId) q.set('book_id',bookId); return request<{items: Array<Record<string, unknown>>; total: number}>(`/brain/knowledge?${q.toString()}`); }
+export interface ApiKnowledgeItem {
+  id: string; book_id: string; chapter_id?: string | null; category: string; knowledge_type: string;
+  title?: string | null; content: string; confidence?: number | null; status: 'draft' | 'canonical' | 'rejected';
+  model?: string | null; source_chunk_ids?: string[]; created_at: string; updated_at: string;
+}
+export interface ApiKnowledgeStats { total: number; draft: number; canonical: number; rejected: number; categories: Array<{ category: string; total: number }> }
+export function listKnowledge(category?: string, bookId?: string, status?: string) {
+  const q = new URLSearchParams();
+  if (category) q.set('category', category);
+  if (bookId) q.set('book_id', bookId);
+  if (status) q.set('status', status);
+  const suffix = q.toString() ? `?${q.toString()}` : '';
+  return request<{items: ApiKnowledgeItem[]; total: number}>(`/brain/knowledge${suffix}`);
+}
+export function getKnowledgeStats() { return request<ApiKnowledgeStats>('/brain/knowledge/stats'); }
+export function reviewKnowledge(id: string, status: 'draft' | 'canonical' | 'rejected', note?: string) {
+  return request<ApiKnowledgeItem>(`/brain/knowledge/${encodeURIComponent(id)}/review`, { method: 'PATCH', body: JSON.stringify({ status, note: note || null }) });
+}
+export function exportKnowledge(status = 'canonical', category?: string) {
+  const q = new URLSearchParams({ status }); if (category) q.set('category', category);
+  return request<{ status: string; category?: string; total: number; items: ApiKnowledgeItem[]; markdown: string }>(`/brain/knowledge/export?${q.toString()}`);
+}
 export function listLessonPacks() { return request<{items: Array<Record<string, unknown>>; total: number}>('/brain/lessons'); }
 export function listDerivedBooks() { return request<{items: Array<Record<string, unknown>>; total: number}>('/brain/derived-books'); }
 export function semanticBrainQuery(q: string, limit = 8) {
