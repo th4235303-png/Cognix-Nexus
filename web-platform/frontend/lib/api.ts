@@ -207,6 +207,7 @@ export function createBrainBook(payload: {
   language?: string;
   file_type?: string;
   description?: string;
+  category?: string;
   text: string;
 }) {
   return request<ApiBrainBook>('/brain/books', {
