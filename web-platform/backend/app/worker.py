@@ -11,6 +11,7 @@ from app.services.embeddings import embedding_provider
 from app.services.agent import enqueue_due_agent_schedules, run_due_agent_jobs
 from app.services.export_worker import advance_export_job
 from app.services.book_processing import process_queued_books, finalize_indexed_books
+from app.services.book_intelligence import advance_book_ai
 
 from app.services.processing import STAGES, TaskLeaseLost, advance
 from app.services.task_retry import task_is_runnable
@@ -221,6 +222,9 @@ def main() -> None:
                 if indexed:
                     logger.info("embedding_index_cycle indexed=%d model=%s", indexed, embedding_provider.model)
                 completed_books = finalize_indexed_books()
+                ai_books = asyncio.run(advance_book_ai(limit=1))
+                if ai_books:
+                    logger.info("book_ai_cycle processed=%d", ai_books)
                 if completed_books:
                     logger.info("book_processing_finalize completed=%d", completed_books)
             except Exception as exc:
