@@ -268,7 +268,7 @@ class Database:
             with conn.cursor() as cur:
                 cur.execute(
                     """UPDATE books
-                       SET status='ready', processing_stage='completed', processed_at=now(),
+                       SET status='processing', processing_stage='ai_reading', processed_at=NULL,
                            processing_error=NULL, updated_at=now(),
                            processing_claimed_by=NULL, processing_claimed_at=NULL,
                            processing_claim_token=NULL
