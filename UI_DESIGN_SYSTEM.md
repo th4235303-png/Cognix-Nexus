@@ -6,7 +6,6 @@
 > Do NOT put here: live release evidence, tactical verification status, backend architecture, or provider credentials.
 
 ## Product UX principles
-
 1. Private workspace feel; avoid marketing-heavy layouts.
 2. Calm editorial typography.
 3. Minimal animation.
@@ -16,81 +15,46 @@
 7. Accessibility is part of definition-of-done.
 
 ## Design tokens
-
 The existing frontend establishes semantic color, typography, spacing, radius, elevation/shadow, motion and focus tokens. New UI should consume shared semantic tokens rather than page-local magic values.
 
 ## Typography and layout
-
-- Use a calm editorial hierarchy with clear headings, readable body text and compact metadata.
-- Desktop layouts should prioritize review and comparison.
-- Mobile layouts should prioritize capture, reading and focused actions.
-- Avoid horizontal overflow at narrow widths.
+- Calm editorial hierarchy with clear headings and readable body text.
+- Desktop prioritizes review and comparison.
+- Mobile prioritizes capture, reading and focused actions.
+- Avoid horizontal overflow.
 - Use consistent page-header and section patterns.
 
-## Surface and component rules
-
-Shared components should define explicit states where applicable:
-
-- default
-- hover
-- focus
-- active
-- disabled
-- loading
-- empty
-- error
-- permission denied
-
-Prefer thin borders, layered surfaces, restrained elevation and clear action hierarchy.
+## Component states
+Shared components should define explicit states where applicable: default, hover, focus, active, disabled, loading, empty, error and permission denied.
 
 ## Evidence and AI states
-
 Citation/evidence status must be visually distinguishable. Unsupported answers, pending review, partial/draft knowledge and approved/canonical knowledge must not look interchangeable.
 
 ## Responsive rules
-
 - Mobile: capture-first, compact navigation, touch-friendly controls.
 - Desktop: review-first, richer comparison and side-by-side evidence.
-- No horizontal overflow.
 - Preserve essential actions at narrow widths.
 
 ## Accessibility rules
-
-- Keyboard navigation must be supported.
-- Visible focus indicators are required.
-- Use semantic headings and landmarks.
-- Icon-only controls require accessible labels.
-- Meet WCAG AA contrast expectations.
-- Respect reduced-motion preferences.
-- Session-expiry and permission-denied states must be explicit.
+- Keyboard navigation.
+- Visible focus indicators.
+- Semantic headings and landmarks.
+- Accessible labels for icon-only controls.
+- WCAG AA contrast expectations.
+- Reduced-motion support.
+- Explicit session-expiry and permission-denied states.
 
 ## Core surfaces
-
-- App shell/navigation.
-- Dashboard.
-- Books/library and upload/progress.
-- Reader/chapters/highlights/notes.
-- Sources and processing.
-- Review Center.
-- Notes/backlinks/collections.
-- Graph.
-- RAG chat and citation cards.
-- Vault unlock/auto-lock/encrypted state.
-- Settings/security/provider states.
-- Level Up, agent, synthesis, learning, timeline, wiki and Vizora surfaces.
-- Export queue/history/retry.
+App shell/navigation; dashboard; books/library and upload/progress; reader/chapters/highlights/notes; sources and processing; Review Center; notes/backlinks/collections; graph; RAG chat/citation cards; vault; settings/security/provider states; Level Up; agents; synthesis; learning; timeline; wiki; Vizora; export queue.
 
 ## UI completion contract
-
-UI completion requires:
-
-1. Foundation tokens and shared states are normalized.
-2. Core workflows are implemented.
-3. Evidence/review states are explicit.
-4. Responsive and accessibility behavior is verified.
+1. Foundation tokens and shared states normalized.
+2. Core workflows implemented.
+3. Evidence/review states explicit.
+4. Responsive and accessibility behavior verified.
 5. Authenticated Playwright smoke passes.
-6. Lighthouse baseline is captured.
-7. Mobile Expo/device smoke is completed.
-8. Production frontend smoke is completed.
+6. Lighthouse baseline captured.
+7. Mobile Expo/device smoke completed.
+8. Production frontend smoke completed.
 
-Implementation status belongs in `CURRENT_STATE.md`; this document owns the design rules.
+Implementation status belongs in CURRENT_STATE.md; this document owns design rules.
