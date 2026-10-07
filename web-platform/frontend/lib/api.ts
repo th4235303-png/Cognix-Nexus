@@ -300,6 +300,12 @@ export function exportKnowledge(status = 'canonical', category?: string) {
   return request<{ status: string; category?: string; total: number; items: ApiKnowledgeItem[]; markdown: string }>(`/brain/knowledge/export?${q.toString()}`);
 }
 export function listLessonPacks() { return request<{items: Array<Record<string, unknown>>; total: number}>('/brain/lessons'); }
+export function generateLessonPack(payload: { title: string; category?: string; topic?: string; book_ids?: string[] }) {
+  return request<Record<string, unknown>>('/brain/lessons/generate', { method: 'POST', body: JSON.stringify(payload) });
+}
+export function generateDerivedBook(payload: { title: string; category?: string; topic?: string; book_ids?: string[] }) {
+  return request<Record<string, unknown>>('/brain/derived-books/generate', { method: 'POST', body: JSON.stringify(payload) });
+}
 export function listDerivedBooks() { return request<{items: Array<Record<string, unknown>>; total: number}>('/brain/derived-books'); }
 export function semanticBrainQuery(q: string, limit = 8) {
   return request<{
