@@ -56,3 +56,9 @@ Paid LLM activation and Google Drive re-authorization are deferred and can be re
 ## Source of truth
 
 Use REMAINING_WORK.md for current actions and PRODUCTION_STATUS.md for verified evidence. UI_PLAN.md is the UI specification; UI_STATUS.md is the UI implementation tracker.
+
+## Book Intelligence product wave
+
+The Long-Book AI Reader is expanded into a background AI reading and knowledge-distillation workflow: Library/Inbox → duplicate gate → AI Reading Room → partial/final knowledge → Knowledge Vault → cross-book lesson packs and derived books.
+
+Locked behaviors include exact-duplicate auto-stop, checkpoint/resume, partial results during processing, durable progress history, source-linked distillation and provenance-preserving cross-book synthesis. This is an implementation expansion of the existing Reader/Second Brain foundation.
