@@ -26,7 +26,7 @@ export default function BooksPage() {
     setSaving(true);
     setError('');
     try {
-      await createBrainBook({ title: title.trim(), text: text.trim(), file_type: 'text' });
+      await createBrainBook({ title: title.trim(), text: text.trim(), file_type: 'text', category });
       setTitle('');
       setText('');
       await load();
