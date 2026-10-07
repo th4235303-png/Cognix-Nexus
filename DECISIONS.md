@@ -26,3 +26,27 @@ Paid LLM activation and Google Drive re-authorization are intentionally deferred
 
 ## ADR-009 — Free-tier Auth limitation
 Supabase leaked-password protection is currently disabled because the active project is on the free tier and the feature is not available to enable there. The warning remains explicitly documented and is not treated as an application-code defect.
+
+## ADR-010 — Background AI reading
+
+Book processing is a durable server-side knowledge-production job. The user may upload a book and leave; the browser is not required for continued reading/extraction.
+
+## ADR-011 — Exact duplicate uploads stop automatically
+
+An exact content fingerprint match must not start another expensive reading run. Possible same-book matches remain reviewable; explicit reprocessing creates a new version.
+
+## ADR-012 — Partial knowledge is visible but not final
+
+Completed chapters may expose summaries and keys before the book finishes. Partial artifacts carry status, timestamps, version and source lineage and cannot masquerade as final synthesis.
+
+## ADR-013 — Derived knowledge is separate from originals
+
+Original books remain traceable/archived. Distilled knowledge, lesson packs and derived books are separate records with source manifests.
+
+## ADR-014 — Cross-book synthesis preserves lineage
+
+Category lessons and derived books must retain contributing source/version references and expose disagreement rather than flattening contradictions.
+
+## ADR-015 — Progress is an auditable timeline
+
+Progress is based on durable completed units/checkpoints, not a client-side timer. Users can inspect the timeline while a book is incomplete.
