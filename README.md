@@ -69,3 +69,21 @@ See PRODUCTION_STATUS.md for evidence, REMAINING_WORK.md for actions, UI_PLAN.md
 - UI_STATUS.md — UI implementation and verification checklist
 
 All implementation and documentation changes land on main.
+
+## Book Intelligence mode
+
+The book workflow is designed as background AI reading, not manual reading as a prerequisite. The current reference corpus is **9 categories / 170 files**:
+
+- Business, Entrepreneurship & Finance
+- Communication & Negotiation
+- Creativity & Tech
+- Future Tech
+- Leadership & Management
+- Productivity, Habits & Discipline
+- Psychology & Critical Thinking
+- Self-Help & Emotional Intelligence
+- Stoicism & Philosophy
+
+The lifecycle is separated into **Library / Inbox → AI Reading Room → Knowledge Vault / Completed**. Exact duplicate uploads stop before expensive processing; incomplete runs resume from checkpoints; partial chapter knowledge is visible before the book finishes; and stable knowledge can later be synthesized into category lesson packs, study guides and derived books with source lineage.
+
+See web-platform/docs/book-intelligence-product-spec.md for the locked product contract.
