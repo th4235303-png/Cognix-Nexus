@@ -243,6 +243,19 @@ class Database:
                        ) VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s)""",
                     chunks,
                 )
+                cur.execute(
+                    """INSERT INTO book_reading_progress(book_id,owner_id,stage,status,total_units,percent)
+                       SELECT id,owner_id,'queued','queued',%s,0 FROM books WHERE id=%s
+                       ON CONFLICT(book_id) DO UPDATE SET
+                         stage='queued',status='queued',total_units=EXCLUDED.total_units,
+                         completed_units=0,percent=0,paused_reason=NULL,updated_at=now()""",
+                    (len(chapters),book_id),
+                )
+                cur.execute(
+                    """INSERT INTO reading_events(id,book_id,owner_id,event_type,stage,percent,message)
+                       SELECT %s,owner_id,'extraction_completed','extraction',0,'Book extraction completed' FROM books WHERE id=%s""",
+                    (f"EV-{uuid4().hex[:8].upper()}",book_id),
+                )
             conn.commit()
         return True
 
