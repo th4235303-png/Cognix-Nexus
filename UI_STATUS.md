@@ -90,3 +90,17 @@
 8. Update PRODUCTION_STATUS.md and REMAINING_WORK.md.
 
 All UI changes land on main. Paid LLM and Google Drive remain deferred and must not block UI completion.
+
+## Book Intelligence verification status — 2026-10-07
+
+| Capability | Status | Notes |
+|---|---|---|
+| 9-category / 170-file reference corpus | 🟡 Product input confirmed | Controlled corpus dry-run remains pending |
+| Library / Inbox lifecycle | 🟡 Foundation exists | Lifecycle state normalization remains |
+| AI Reading Room | 🟡 Spec locked | Background provider-backed E2E remains |
+| Duplicate auto-stop | 🟡 Contract planned | Existing task idempotency foundation; book fingerprint E2E remains |
+| Partial progress/history | 🟡 Spec locked | Durable reading ledger implementation remains |
+| Knowledge distillation | 🟡 Foundation exists | Book-level distillation UI/worker path remains |
+| Category lesson packs | 🟡 Planned | Cross-book synthesis contract documented |
+| Derived books | 🟡 Planned | Provenance/source-manifest contract documented |
+| Markdown/plain-text reading ledger | 🟡 Planned | View/export contract documented |
