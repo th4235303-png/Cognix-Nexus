@@ -260,3 +260,45 @@ The current reference corpus is **9 categories / 170 files**. This is the planni
 - [ ] Multi-book category synthesis preserves citations.
 - [ ] Derived-book provenance verification.
 - [ ] Controlled 9-category / 170-file corpus dry-run.
+
+
+## Book Intelligence implementation checkpoint — 2026-10-07
+
+### Phase 1 — Library / Inbox
+- [x] PDF/EPUB/DOCX/TXT upload contract and extraction support.
+- [x] Category metadata on book records and upload UI.
+- [x] Exact content duplicate detection with owner-scoped fingerprint index.
+- [x] Duplicate upload returns existing book/version without starting another extraction run.
+- [ ] Possible same-book fuzzy duplicate review.
+
+### Phase 2 — AI Reading
+- [x] Background AI reading service and worker stage.
+- [x] Chunk → chapter analysis → book synthesis flow.
+- [x] Source chunk lineage on chapter knowledge.
+- [ ] Real provider quality/evaluation run.
+
+### Phase 3 — Background / overnight execution
+- [x] Worker-side processing; browser is not required.
+- [x] Durable checkpoint/progress records.
+- [x] Provider failure returns work to a resumable queue state.
+- [ ] Provider quota/backoff/fallback policy tuning from live provider behavior.
+
+### Phase 4 — Partial progress / history
+- [x] Chapter-level progress and checkpoints.
+- [x] Durable reading events/timeline.
+- [x] Partial chapter summaries and extracted keys can exist before final book synthesis.
+- [x] Markdown ledger endpoint.
+- [ ] Plain-text export and richer timeline UI.
+
+### Phase 5 — Knowledge distillation
+- [x] Structured knowledge item storage.
+- [x] Keys, principles, lessons, definitions, examples and caveats.
+- [x] Versioned chapter/book summaries with source lineage.
+- [ ] Human review/canonical promotion UI.
+
+### Phase 6 — Cross-book intelligence
+- [x] Category/topic-filtered knowledge retrieval.
+- [x] Lesson-pack synthesis API with source manifests.
+- [x] Derived-book synthesis API with source manifests.
+- [ ] Contradiction detection and incremental lesson refresh.
+- [ ] Controlled multi-book quality evaluation.
