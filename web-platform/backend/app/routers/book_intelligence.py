@@ -77,8 +77,107 @@ def ledger(book_id: str, request: Request):
     return "\n".join(lines)
 
 
+class KnowledgeReviewRequest(BaseModel):
+    status: str = Field(pattern=r"^(draft|canonical|rejected)$")
+    note: str | None = Field(default=None, max_length=2000)
+
+
+@router.get("/knowledge/stats")
+def knowledge_stats(request: Request):
+    own = owner(request)
+    database = db()
+    with database.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT count(*) AS total, "
+                "count(*) FILTER (WHERE status='draft') AS draft, "
+                "count(*) FILTER (WHERE status='canonical') AS canonical, "
+                "count(*) FILTER (WHERE status='rejected') AS rejected "
+                "FROM knowledge_items WHERE owner_id=%s",
+                (own,),
+            )
+            row = cur.fetchone() or {}
+            cur.execute(
+                "SELECT category,count(*) AS total FROM knowledge_items WHERE owner_id=%s "
+                "GROUP BY category ORDER BY total DESC,category",
+                (own,),
+            )
+            categories = cur.fetchall()
+    return {"total": int(row.get("total") or 0), "draft": int(row.get("draft") or 0), "canonical": int(row.get("canonical") or 0), "rejected": int(row.get("rejected") or 0), "categories": categories}
+
+
+@router.patch("/knowledge/{knowledge_id}/review")
+def review_knowledge(knowledge_id: str, payload: KnowledgeReviewRequest, request: Request):
+    own = owner(request)
+    database = db()
+    with database.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id,book_id,chapter_id,status FROM knowledge_items WHERE id=%s AND owner_id=%s FOR UPDATE",
+                (knowledge_id, own),
+            )
+            item = cur.fetchone()
+            if not item:
+                raise HTTPException(status_code=404, detail="Knowledge item not found")
+            if payload.status == "canonical":
+                cur.execute(
+                    "UPDATE knowledge_items SET status='canonical',reviewed_by=%s,reviewed_at=now(),canonical_at=now(),review_note=%s,updated_at=now() "
+                    "WHERE id=%s AND owner_id=%s RETURNING *",
+                    (own, payload.note, knowledge_id, own),
+                )
+            else:
+                cur.execute(
+                    "UPDATE knowledge_items SET status=%s,reviewed_by=%s,reviewed_at=now(),canonical_at=NULL,review_note=%s,updated_at=now() "
+                    "WHERE id=%s AND owner_id=%s RETURNING *",
+                    (payload.status, own, payload.note, knowledge_id, own),
+                )
+            updated = cur.fetchone()
+        conn.commit()
+    return updated
+
+
+@router.get("/knowledge/export")
+def export_knowledge(request: Request, status: str = "canonical", category: str | None = None):
+    own = owner(request)
+    if status not in {"draft", "canonical", "rejected", "all"}:
+        raise HTTPException(status_code=400, detail="Invalid knowledge status")
+    database = db()
+    clauses = ["owner_id=%s"]
+    params: list[object] = [own]
+    if status != "all":
+        clauses.append("status=%s")
+        params.append(status)
+    if category:
+        clauses.append("category=%s")
+        params.append(category)
+    with database.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id,book_id,chapter_id,category,knowledge_type,title,content,confidence,status,model,source_chunk_ids,created_at,updated_at "
+                "FROM knowledge_items WHERE " + " AND ".join(clauses) + " ORDER BY category,title,created_at",
+                tuple(params),
+            )
+            rows = cur.fetchall()
+    lines = ["# Cognix Knowledge Export", "", "Status: " + status, ""]
+    for row in rows:
+        lines.extend([
+            "## " + str(row.get("title") or row.get("knowledge_type") or "Knowledge"),
+            "",
+            str(row.get("content") or ""),
+            "",
+            "- category: " + str(row.get("category") or "Unclassified"),
+            "- type: " + str(row.get("knowledge_type") or ""),
+            "- book_id: " + str(row.get("book_id") or ""),
+            "- chapter_id: " + str(row.get("chapter_id") or ""),
+            "- confidence: " + str(row.get("confidence") or ""),
+            "- status: " + str(row.get("status") or ""),
+            "",
+        ])
+    return {"status": status, "category": category, "total": len(rows), "items": rows, "markdown": "\n".join(lines)}
+
+
 @router.get("/knowledge")
-def knowledge(request: Request, category: str | None = None, book_id: str | None = None, limit: int = 100):
+def knowledge(request: Request, category: str | None = None, book_id: str | None = None, status: str | None = None, limit: int = 100):
     own = owner(request)
     database = db()
     limit = max(1, min(limit, 500))
@@ -90,6 +189,11 @@ def knowledge(request: Request, category: str | None = None, book_id: str | None
     if book_id:
         clauses.append("book_id=%s")
         params.append(book_id)
+    if status:
+        if status not in {"draft", "canonical", "rejected"}:
+            raise HTTPException(status_code=400, detail="Invalid knowledge status")
+        clauses.append("status=%s")
+        params.append(status)
     with database.connect() as conn:
         with conn.cursor() as cur:
             cur.execute(
