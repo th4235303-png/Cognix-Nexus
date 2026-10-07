@@ -144,6 +144,7 @@ export interface ApiBrainBook {
   source_url?: string | null;
   status: string;
   description?: string | null;
+  category?: string | null;
   content_hash?: string | null;
   created_at: string;
   updated_at: string;
@@ -262,14 +263,22 @@ export function queryBrain(q: string) {
 }
 
 
-export function uploadBrainBook(file: File, language = 'en', description?: string) {
+export function uploadBrainBook(file: File, language = 'en', description?: string, category = 'Unclassified') {
   const body = new FormData();
   body.append('file', file);
   body.append('language', language);
   if (description) body.append('description', description);
-  return request<ApiBrainBook>('/brain/books/upload', { method: 'POST', body });
+  body.append('category', category);
+  return request<ApiBookUploadResponse>('/brain/books/upload', { method: 'POST', body });
 }
 
+export interface ApiBookUploadResponse { id: string; status: string; processing_stage: string; content_hash: string; idempotent: boolean; duplicate_of?: string; book: ApiBrainBook; }
+export interface ApiBookProgress { book_id: string; stage: string; status: string; completed_units: number; total_units: number; percent: number; current_chapter_id?: string | null; current_chapter_number?: number | null; last_checkpoint_at?: string | null; paused_reason?: string | null; }
+export function getBookProgress(bookId: string) { return request<ApiBookProgress>(`/brain/books/${bookId}/progress`); }
+export function getBookTimeline(bookId: string) { return request<{items: Array<Record<string, unknown>>; total: number}>(`/brain/books/${bookId}/timeline`); }
+export function listKnowledge(category?: string, bookId?: string) { const q = new URLSearchParams(); if (category) q.set('category',category); if (bookId) q.set('book_id',bookId); return request<{items: Array<Record<string, unknown>>; total: number}>(`/brain/knowledge?${q.toString()}`); }
+export function listLessonPacks() { return request<{items: Array<Record<string, unknown>>; total: number}>('/brain/lessons'); }
+export function listDerivedBooks() { return request<{items: Array<Record<string, unknown>>; total: number}>('/brain/derived-books'); }
 export function semanticBrainQuery(q: string, limit = 8) {
   return request<{
     query: string;
