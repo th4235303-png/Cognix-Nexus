@@ -6,43 +6,32 @@
 > Do NOT put here: product roadmap details, live production evidence, secrets, or domain architecture.
 
 ## 1. Read order
-
-For a new engineering/documentation session:
-
-1. `README.md`
-2. `PROJECT_OVERVIEW.md`
-3. `CURRENT_STATE.md`
-4. `ROADMAP.md`
-5. `UI_DESIGN_SYSTEM.md` for frontend work
-6. `SECURITY.md`
-7. relevant `docs/*`
+1. README.md
+2. PROJECT_OVERVIEW.md
+3. CURRENT_STATE.md
+4. ROADMAP.md
+5. UI_DESIGN_SYSTEM.md for frontend work
+6. SECURITY.md
+7. relevant docs/*
 8. current code/config/evidence before changing status
 
 ## 2. Git workflow
-
-ADR-007: Cognix implementation and documentation changes land on **main**.
-
-Operating sequence:
-
-**verify → implement/fix → test → production verify → update evidence → main**
-
+ADR-007: Cognix implementation and documentation changes land on main.
+Operating sequence: verify → implement/fix → test → production verify → update evidence → main.
 Never commit secrets. Do not convert code-configured state into VERIFIED without real evidence.
 
 ## 3. Phase completion protocol
-
-1. Identify the phase scope and acceptance criteria.
-2. Read the canonical owner documents.
-3. Inspect actual code/config and current evidence.
-4. Implement/fix only within the phase boundary.
-5. Run relevant tests/checks.
+1. Identify scope and acceptance criteria.
+2. Read canonical owner documents.
+3. Inspect actual code/config and evidence.
+4. Implement/fix within phase boundary.
+5. Run relevant checks.
 6. Capture concrete evidence.
 7. Update canonical documentation.
 8. Self-check ownership, links, status labels and remaining gates.
 
 ## 4. Documentation Update Protocol
-
 ### Trigger table
-
 | Change | Canonical owner |
 |---|---|
 | Project identity/short snapshot | README |
@@ -58,25 +47,15 @@ Never commit secrets. Do not convert code-configured state into VERIFIED without
 | Historical material | archive/legacy/* |
 
 ### Session start
-
-- Read the canonical files above.
-- Confirm branch and working scope.
-- Treat unresolved facts as VERIFY.
+Read canonical files, confirm branch/scope, and treat unresolved facts as VERIFY.
 
 ### Session end
-
-- Update status only from evidence.
-- Record new blockers/deferred work.
-- Keep historical decisions traceable.
-- Check links and ownership.
-- Confirm no knowledge became orphaned.
+Update status only from evidence; record blockers/deferred work; keep decisions traceable; check links/ownership; confirm no knowledge became orphaned.
 
 ### Doc drift rule
-
-If a document claims current state, it must point to canonical status/evidence. A stale historical source must not remain an active source of truth.
+If a document claims current state, it must point to canonical status/evidence. A historical source must not remain an active source of truth.
 
 ## 5. Tools matrix
-
 | Tool/service | Role | Status source |
 |---|---|---|
 | GitHub + Actions | source/CI | CURRENT_STATE/evidence |
@@ -92,7 +71,6 @@ If a document claims current state, it must point to canonical status/evidence. 
 | Optional backlog | Upstash/PostHog/Doppler/k6/Better Stack/Mintlify/Cloudflare WAF/R2/vector/search/orchestration | ROADMAP |
 
 ## 6. Definition of done
-
 - Correct canonical owner exists.
 - Code/config matches documented intent.
 - Relevant tests pass.
@@ -103,12 +81,5 @@ If a document claims current state, it must point to canonical status/evidence. 
 - All changes land on main.
 
 ## 7. Evidence rules
-
-Use status labels only as:
-**DONE / VERIFIED / PENDING / BLOCKED / DEFERRED / NEXT / VERIFY**
-
-Distinguish:
-- repository migration head vs live migration head;
-- code-configured vs externally verified;
-- implemented vs production-tested;
-- account availability vs provider verification.
+Status labels: DONE / VERIFIED / PENDING / BLOCKED / DEFERRED / NEXT / VERIFY.
+Always distinguish repository migration head vs live head; code-configured vs externally verified; implemented vs production-tested; account availability vs provider verification.
