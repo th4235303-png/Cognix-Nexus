@@ -55,6 +55,6 @@ The current storage target is tiered: Supabase Storage for artifacts up to 50 MB
 
 ## Runtime documentation
 
-Detailed architecture, data, API, pipeline, deployment, operations, storage, AI/RAG, testing and troubleshooting live under `docs/`.
+Detailed architecture, data, API, pipeline, deployment, operations, storage, AI/RAG, testing and troubleshooting live under docs/.
 
-Release status belongs in `CURRENT_STATE.md`; strategic scope belongs in `ROADMAP.md`; working protocol belongs in `TOOL.md`; security policy belongs in `SECURITY.md`.
+Release status belongs in CURRENT_STATE.md; strategic scope belongs in ROADMAP.md; working protocol belongs in TOOL.md; security policy belongs in SECURITY.md.
