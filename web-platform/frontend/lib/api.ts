@@ -143,6 +143,7 @@ export interface ApiBrainBook {
   source_kind: string;
   source_url?: string | null;
   status: string;
+  processing_stage?: string | null;
   description?: string | null;
   category?: string | null;
   content_hash?: string | null;
