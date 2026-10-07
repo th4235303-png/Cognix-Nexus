@@ -124,10 +124,34 @@ def extract_epub(data: bytes, filename: str) -> ExtractedDocument:
     )
 
 
+def extract_text(data: bytes, filename: str) -> ExtractedDocument:
+    text = _clean_text(data.decode("utf-8", errors="replace"))
+    sections = [{"section_number": 1, "title": "Imported Text", "text": text}] if text else []
+    return ExtractedDocument(title=Path(filename).stem, author=None, file_type="txt", text=text, sections=sections)
+
+
+def extract_docx(data: bytes, filename: str) -> ExtractedDocument:
+    with zipfile.ZipFile(BytesIO(data)) as archive:
+        root = ET.fromstring(archive.read("word/document.xml"))
+    paragraphs = []
+    for node in root.iter():
+        if node.tag.endswith("}p"):
+            value = "".join(part.text or "" for part in node.iter() if part.tag.endswith("}t"))
+            if value.strip():
+                paragraphs.append(_clean_text(value))
+    text = "\n\n".join(paragraphs)
+    sections = [{"section_number": i, "title": f"Paragraph {i}", "text": value} for i, value in enumerate(paragraphs, 1)]
+    return ExtractedDocument(title=Path(filename).stem, author=None, file_type="docx", text=text, sections=sections)
+
+
 def extract_document(data: bytes, filename: str, file_type: str | None = None) -> ExtractedDocument:
     suffix = (file_type or Path(filename).suffix.lstrip(".")).lower()
     if suffix == "pdf":
         return extract_pdf(data, filename)
     if suffix == "epub":
         return extract_epub(data, filename)
-    raise ValueError("Only PDF and EPUB uploads are supported")
+    if suffix == "txt":
+        return extract_text(data, filename)
+    if suffix == "docx":
+        return extract_docx(data, filename)
+    raise ValueError("Only PDF, EPUB, DOCX and TXT uploads are supported")
