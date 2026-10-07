@@ -319,6 +319,7 @@ export function createLanguageCard(payload: { front: string; back: string; langu
 export function reviewLanguageCard(cardId: string, rating: 1 | 2 | 3 | 4) {
   return request<ApiLanguageCard>(`/brain/language/cards/${cardId}/review`, { method: 'POST', body: JSON.stringify({ rating }) });
 }
+export function listBookSummaries(bookId: string) { return request<{items: Array<{id:string;level:string;title?:string|null;content:string;version:number;model?:string|null}>;total:number}>(`/brain/books/${bookId}/summaries`); }
 export function generateBookSummaries(bookId: string, levels = ['L1','L2','L3','L4','L5','L6','L7']) {
   return request<{ book_id: string; model: string; items: Array<{ id: string; level: string; version: number; content: string; source_ids: string[] }> }>(
     `/brain/books/${bookId}/summaries/generate`, { method: 'POST', body: JSON.stringify({ levels }) },
