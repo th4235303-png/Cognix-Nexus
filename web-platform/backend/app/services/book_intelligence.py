@@ -42,7 +42,8 @@ async def advance_book_ai(limit: int = 1) -> int:
                     "SELECT b.id,b.title,b.author,b.category FROM books b JOIN book_reading_progress p ON p.book_id=b.id "
                     "WHERE b.status='processing' AND b.processing_stage='ai_reading' "
                     "AND p.status IN ('queued','running') AND (p.claimed_at IS NULL OR p.claimed_at < now()-interval '20 minutes') "
-                    "ORDER BY p.updated_at LIMIT 1 FOR UPDATE SKIP LOCKED"
+                    "AND (p.next_attempt_at IS NULL OR p.next_attempt_at <= now()) "
+                    "ORDER BY CASE WHEN p.next_attempt_at IS NULL THEN 0 ELSE 1 END, p.updated_at LIMIT 1 FOR UPDATE SKIP LOCKED"
                 )
                 book = cur.fetchone()
                 if not book:
@@ -108,7 +109,7 @@ async def advance_book_ai(limit: int = 1) -> int:
                             "total_units=(SELECT count(*) FROM chapters WHERE book_id=%s),"
                             "percent=round((completed_units+1)*100.0/GREATEST((SELECT count(*) FROM chapters WHERE book_id=%s),1),2),"
                             "current_chapter_id=%s,current_chapter_number=%s,last_checkpoint_at=now(),updated_at=now(),"
-                            "claim_token=NULL,claimed_at=NULL,status='running',paused_reason=NULL WHERE book_id=%s AND claim_token=%s",
+                            "claim_token=NULL,claimed_at=NULL,status='running',paused_reason=NULL,retry_count=0,next_attempt_at=NULL,last_error_type=NULL WHERE book_id=%s AND claim_token=%s",
                             (book["id"], book["id"], chapter["id"], chapter["chapter_number"], book["id"], token),
                         )
                         cur.execute(
@@ -171,11 +172,18 @@ async def advance_book_ai(limit: int = 1) -> int:
             with db.connect() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        "UPDATE book_reading_progress SET status='queued',paused_reason=%s,claim_token=NULL,claimed_at=NULL,updated_at=now() "
+                        "UPDATE book_reading_progress SET status='queued',paused_reason=%s,last_error_type=%s,"
+                        "retry_count=retry_count+1,claim_token=NULL,claimed_at=NULL,"
+                        "next_attempt_at=now() + make_interval(secs => LEAST(3600, POWER(2, LEAST(retry_count+1, 6))*15)),updated_at=now() "
                         "WHERE book_id=%s AND claim_token=%s",
-                        (type(exc).__name__, book["id"], token),
+                        (type(exc).__name__, type(exc).__name__, book["id"], token),
                     )
                     cur.execute("UPDATE books SET ai_reading_paused_reason=%s,updated_at=now() WHERE id=%s", (type(exc).__name__, book["id"]))
+                    cur.execute(
+                        "INSERT INTO ai_provider_events(id,owner_id,book_id,stage,provider_url,model,status,error_type) "
+                        "SELECT %s,owner_id,%s,'ai_reading',%s,%s,'failed',%s FROM books WHERE id=%s",
+                        (f"AI-{uuid4().hex[:8].upper()}", book["id"], llm_provider.last_provider_url, llm_provider.model, type(exc).__name__, book["id"]),
+                    )
                 conn.commit()
             logger.warning("book_ai_reading_paused book_id=%s error_type=%s", book["id"], type(exc).__name__)
     return done
