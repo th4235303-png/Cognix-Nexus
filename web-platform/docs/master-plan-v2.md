@@ -178,3 +178,14 @@ Local-first; user-approved truth; provider abstraction; Vault isolation; structu
 Cognix Brain Vault is one shared foundation for Brain Vault, Cognix Core research intelligence and Vizora Lens media intelligence. The system is considered release-ready only after the remaining implementation phases, real persistence/integration tests, security/evaluation gates, native verification and final deployment smoke tests pass.
 
 **Netlify development deployment remains intentionally paused until final release candidate approval.**
+
+
+## Book Intelligence extension
+
+The Long-Book AI Reader is a background knowledge-production workflow:
+
+**Library/Inbox → fingerprint + duplicate gate → AI Reading Room → partial/final distillation → Knowledge Vault → cross-book lessons/derived books.**
+
+The current reference corpus is 9 categories / 170 files. Exact duplicates stop before expensive processing, incomplete runs resume from durable checkpoints, partial results are viewable while processing, and cross-book synthesis preserves source/version lineage. Free-provider operation is quota-aware and resumable.
+
+The detailed contract is documented in web-platform/docs/book-intelligence-product-spec.md.
