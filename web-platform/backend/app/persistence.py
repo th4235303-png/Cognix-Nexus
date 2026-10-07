@@ -1203,7 +1203,7 @@ class Database:
     def _book_row(row: dict[str, Any]) -> dict[str, Any]:
         return {"id": row["id"], "title": row["title"], "author": row.get("author"), "language": row["language"],
                 "file_type": row["file_type"], "source_kind": row["source_kind"], "source_url": row.get("source_url"),
-                "status": row["status"], "description": row.get("description"), "content_hash": row.get("content_hash"),
+                "status": row["status"], "description": row.get("description"), "category": row.get("category") or "Unclassified", "content_hash": row.get("content_hash"),
                 "binary_storage": row.get("binary_storage"), "binary_path": row.get("binary_path"),
                 "binary_sha256": row.get("binary_sha256"), "original_filename": row.get("original_filename"),
                 "processing_stage": row.get("processing_stage") or "queued",
