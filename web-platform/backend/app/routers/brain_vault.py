@@ -23,6 +23,7 @@ class BookCreate(BaseModel):
     file_type: str = Field(default="text", min_length=1, max_length=16)
     source_url: str | None = None
     description: str | None = None
+    category: str = Field(default="Unclassified", min_length=1, max_length=120)
     text: str = Field(min_length=1)
 
 
@@ -378,6 +379,7 @@ async def upload_book(
     file: UploadFile = File(...),
     language: str = "en",
     description: str | None = None,
+    category: str = "Unclassified",
 ) -> dict:
     """Persist a PDF/EPUB and enqueue worker-owned extraction.
 
@@ -387,8 +389,8 @@ async def upload_book(
     owner_id = owner_for_request(request)
     filename = file.filename or "document"
     suffix = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
-    if suffix not in {"pdf", "epub"}:
-        raise HTTPException(status_code=400, detail="Only PDF and EPUB uploads are supported")
+    if suffix not in {"pdf", "epub", "docx", "txt"}:
+        raise HTTPException(status_code=400, detail="Only PDF, EPUB, DOCX and TXT uploads are supported")
     if store.database is None:
         raise HTTPException(status_code=503, detail="Persistent database is required for book uploads")
 
@@ -404,7 +406,7 @@ async def upload_book(
     existing = store.database.get_book_by_content_hash(content_hash, owner_id)
     if existing:
         return {"id": existing["id"], "status": existing["status"], "processing_stage": existing.get("processing_stage") or "queued",
-                "content_hash": content_hash, "idempotent": True, "book": existing}
+                "content_hash": content_hash, "idempotent": True, "duplicate_of": existing["id"], "book": existing}
 
     book_id = f"BOOK-{uuid4().hex[:8].upper()}"
     binary_path = None
@@ -421,6 +423,7 @@ async def upload_book(
             "source_url": None,
             "status": "queued",
             "description": description,
+            "category": category.strip() or "Unclassified",
             "content_hash": content_hash,
             "created_at": now,
             "updated_at": now,
