@@ -48,6 +48,7 @@ const navSections = [
     label: 'Brain Vault',
     items: [
       { label: 'Book Library', href: '/books', icon: BookOpen },
+      { label: 'Knowledge Vault', href: '/knowledge', icon: CheckCircle2 },
       { label: 'Second Brain', href: '/notes', icon: Brain },
       { label: 'Brain Query', href: '/chat', icon: MessageSquare },
       { label: 'Level Up 20', href: '/level-up', icon: Sparkles },
