@@ -3,7 +3,6 @@ ALTER TABLE public.books
   ADD COLUMN IF NOT EXISTS category TEXT NOT NULL DEFAULT 'Unclassified',
   ADD COLUMN IF NOT EXISTS ai_reading_paused_reason TEXT;
 
-DROP INDEX IF EXISTS public.uq_books_content_hash;
 CREATE UNIQUE INDEX IF NOT EXISTS uq_books_owner_content_hash
   ON public.books(owner_id, content_hash)
   WHERE owner_id IS NOT NULL AND content_hash IS NOT NULL;
