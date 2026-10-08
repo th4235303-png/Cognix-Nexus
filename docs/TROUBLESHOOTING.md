@@ -18,7 +18,7 @@ Verify provider quota/credit and configured base URL, API key and model in the r
 Re-authorize the Google OAuth client using the exact current Drive scope. Replace the stored refresh token after authorization and rerun the provider drill.
 
 ## RLS warning
-Verify the production migration ledger first. Repository migration 032 does not prove the live database has reached 032.
+Verify the production migration ledger first. The repository and live Supabase migration heads are currently both 032, verified 2026-10-08.
 
 ## Storage mismatch
 Check tier threshold, provider prefix, object checksum and durable DB reference before retrying.
@@ -27,4 +27,4 @@ Check tier threshold, provider prefix, object checksum and durable DB reference 
 Do not disable authentication/RLS to make an E2E pass. Fix owner context, policy or provider configuration.
 
 ## Worker deployment discrepancy
-The checked-in Render blueprint indicates commit-triggered deployment, while prior live evidence recorded the worker as manual/off. Treat live state as VERIFY until independently observed.
+The checked-in Render blueprint indicates commit-triggered deployment, while live verification on 2026-10-08 confirmed the worker is manual/off. Treat the live setting as authoritative until an intentional configuration change is made and re-verified.
