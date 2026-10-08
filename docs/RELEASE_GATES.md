@@ -13,8 +13,9 @@ This file defines what can be automated now and what still requires an operator/
 | AI + embeddings + extraction + RRF/citation | `scripts/provider_e2e.py` | All configured provider credentials; LLM matrix is independent, embeddings are probed at persisted 1536 plus non-persisted 1024 for Voyage/Cloudflare |
 | Supabase Storage | `scripts/provider_e2e.py` | Supabase URL/service-role + bucket |
 | Backblaze B2 | `scripts/provider_e2e.py` | B2 credentials |
-| Google Drive | `scripts/provider_e2e.py` | OAuth client + account-owner refresh token |
-| Backup/restore | `scripts/backup_restore_drill.py` | production DATABASE_URL for the real drill |
+| Cloudinary | `scripts/provider_e2e.py` | Cloudinary cloud name + API key/secret |
+| Google Drive | `scripts/provider_e2e.py` | OAuth client + account-owner refresh token; workflow explicitly forces the real Google provider |
+| Backup/restore | `scripts/backup_restore_drill.py` via `recovery-drill` | production DATABASE_URL + isolated recovery target DSN |
 | Book schema/lifecycle contract | `scripts/book_acceptance_contract.py` | test/staging DATABASE_URL |
 | Sentry ingestion probe | `scripts/sentry_live_check.py` | Sentry DSN; UI observation remains manual |
 | Frontend typecheck/lint/build | CI | none |
@@ -44,7 +45,7 @@ Provide values only when requested for a specific gate. Never paste them into th
 4. Google OAuth values and account-owner refresh token.
 5. Sentry DSN.
 6. Browser E2E test account.
-7. Production DATABASE_URL only for the final recovery drill.
+7. Production DATABASE_URL + isolated recovery target DSN only for the final recovery drill.
 
 A preflight can be run first to show exactly which gate is runnable without printing values:
 `python scripts/release_gate_preflight.py`.
