@@ -74,6 +74,10 @@ jobs:
       COGNIX_E2E_PASSWORD: ${{ secrets.COGNIX_E2E_PASSWORD }}
       DATABASE_URL: ${{ secrets.COGNIX_PROD_DATABASE_URL }}
       COGNIX_RECOVERY_TARGET_DATABASE_URL: ${{ secrets.COGNIX_RECOVERY_TARGET_DATABASE_URL }}
+      COGNIX_RUN_PROVIDER_E2E: ${{ inputs.run_provider_e2e }}
+      COGNIX_RUN_BOOK_CONTRACT: ${{ inputs.run_book_contract }}
+      COGNIX_RUN_BROWSER_SMOKE: ${{ inputs.run_browser_smoke }}
+      COGNIX_RUN_SENTRY_PROBE: ${{ inputs.run_sentry_probe }}
       COGNIX_RUN_RECOVERY: ${{ inputs.run_recovery_drill }}
     steps:
       - uses: actions/checkout@v4
