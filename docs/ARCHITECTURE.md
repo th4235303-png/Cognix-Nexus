@@ -40,7 +40,7 @@ Current retrieval is hybrid lexical/semantic retrieval with RRF/ranking and sour
 - Small PDFs/notes/summaries: private Supabase Storage, up to 50 MB tier.
 - Large PDFs/EPUBs/papers: B2, above 50 MB tier.
 - Exports/backups: Google Drive.
-- R2 adapter exists but its production role is VERIFY/optional, not the configured tiered target.
+- R2 adapter exists as a legacy/optional compatibility adapter; it is not the configured production tier.
 
 ## Durable decisions
 ### ADR-001 — Tiered storage
