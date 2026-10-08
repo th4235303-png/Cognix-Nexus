@@ -27,6 +27,16 @@
 - Final production smoke.
 - Release approval/tag after all external gates are green.
 
+### Current execution order
+1. Close the remaining real-world release gates that are executable now: provider/storage drills, authenticated browser smoke, accessibility/performance, recovery, GDPR and observability.
+2. Complete the controlled Book Intelligence acceptance corpus and lifecycle/E2E work listed below.
+3. Complete P1 UI normalization, core workflows, evidence/review states, responsive/accessibility verification and mobile/device checks.
+4. Re-run the full production smoke against the intended main revision.
+5. Approve and tag the release only after all required gates are green.
+6. Then begin Future Phase 13 and subsequent strategic phases; those phases are not substitutes for the current release gates.
+
+The previous four explicit VERIFY items (live migration head, live Render worker policy, current Secret Vault KDF, and R2 production role) were closed on 2026-10-08 and are no longer release-gate work.
+
 ## Pending Verification / Acceptance
 - Real AI provider E2E.
 - Google Drive OAuth/account drill.
