@@ -19,7 +19,7 @@ class MultiProviderRoutingTests(unittest.TestCase):
             "CLOUDFLARE_API_TOKEN": "x",
             "CLOUDFLARE_ACCOUNT_ID": "account",
         }
-        with patch.dict(os.environ, env, clear=False):
+        with patch.dict(os.environ, env, clear=True):
             provider = LLMProvider()
             names = [route.name for route in provider.configured_routes]
         self.assertEqual(
@@ -43,7 +43,7 @@ class MultiProviderRoutingTests(unittest.TestCase):
             provider = LLMProvider()
             first = [route.name for route in provider._schedule()]
             second = [route.name for route in provider._schedule()]
-        self.assertEqual(first, second[1:] + second[:1])
+        self.assertEqual(second, first[1:] + first[:1])
 
     def test_embedding_dimension_selects_compatible_providers(self):
         env = {
