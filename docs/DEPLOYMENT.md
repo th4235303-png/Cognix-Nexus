@@ -12,7 +12,7 @@
 - Database/Auth: Supabase/PostgreSQL.
 - Storage: Cloudinary + Supabase Storage + B2, with Google Drive for user-owned export/backup.
 
-The checked-in Render blueprint declares API and worker services with commit-triggered deployment behavior. Prior live evidence says the worker remained manual/off. Live worker deployment policy is VERIFY.
+The checked-in Render blueprint declares API and worker services with commit-triggered deployment behavior. Live verification on 2026-10-08 confirmed the current worker deployment policy is manual/off. Treat the live setting as authoritative until deployment configuration is intentionally changed and re-verified.
 
 ## Release sequence
 1. CI green on main.
