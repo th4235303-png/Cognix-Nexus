@@ -14,7 +14,7 @@ P0 engineering verification → storage/processing verification → security reg
 ## 3. Overall Status
 Implementation foundation: DONE/VERIFIED where explicitly evidenced. External production gates: PENDING or VERIFY. Final production smoke/release: BLOCKED by unresolved external gates.
 
-Repository migration head is 032. Live database head remains VERIFY and must not be inferred from repository state.
+Repository migration head and live Supabase migration head are both 032, verified 2026-10-08.
 
 ## 4. COMPLETED
 - Book Intelligence Phase 1–6 implementation.
@@ -31,7 +31,7 @@ Repository migration head is 032. Live database head remains VERIFY and must not
 ## 5. VERIFIED
 - Cloudinary live round-trip: VERIFIED by prior production evidence.
 - CI results referenced by source status documents: VERIFIED only where the corresponding run was observed.
-- Repository migration files reach 032: VERIFIED.
+- Repository migration files reach 032 and live Supabase migration history reaches 032: VERIFIED.
 - Confirmed migration numbering defect: 010_agent_active_layer.sql and 010_intelligence_life_reliability.sql.
 - Knowledge Vault implementation exists in main.
 - External provider/browser/device/restore gates are not promoted to PASS from static code inspection.
@@ -99,7 +99,6 @@ Live facts not independently rechecked in this migration remain VERIFY.
 Execute remaining external gates in roadmap order, capture evidence, update this file after each gate, then run final production smoke and release approval.
 
 ### Explicit VERIFY items
-1. Live migration head: repository 032 vs live state.
-2. Live Render worker deployment policy: checked-in blueprint says auto-deploy on commit; prior live evidence says manual/off.
-3. Secret Vault KDF implementation: PBKDF2 vs Argon2id target requires actual verification.
-4. R2 production role: adapter exists, but configured tiered storage is Supabase Storage + B2.
+No unresolved items remain from the previous four-item close-out set.
+
+The 2026-10-08 close-out verified live Supabase migration head, live Render worker deployment policy, current Secret Vault KDF implementation, and the current R2 storage role.
