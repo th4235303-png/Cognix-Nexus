@@ -49,24 +49,24 @@ class MultiProviderRoutingTests(unittest.TestCase):
         env = {
             "OPENROUTER_API_KEY": "x",
             "COHERE_API_KEY": "x",
-            "COHERE_API_KEY": "x",
             "VOYAGE_API_KEY": "x",
             "CLOUDFLARE_API_TOKEN": "x",
             "CLOUDFLARE_ACCOUNT_ID": "account",
             "COGNIX_EMBEDDING_DIMENSION": "1536",
         }
-        with patch.dict(os.environ, env, clear=False):
+        with patch.dict(os.environ, env, clear=True):
             provider = EmbeddingProvider()
             self.assertEqual([r.name for r in provider.configured_routes], ["openrouter", "cohere"])
 
     def test_embedding_dimension_can_enable_voyage_and_cloudflare(self):
         env = {
+            "COHERE_API_KEY": "x",
             "VOYAGE_API_KEY": "x",
             "CLOUDFLARE_API_TOKEN": "x",
             "CLOUDFLARE_ACCOUNT_ID": "account",
             "COGNIX_EMBEDDING_DIMENSION": "1024",
         }
-        with patch.dict(os.environ, env, clear=False):
+        with patch.dict(os.environ, env, clear=True):
             provider = EmbeddingProvider()
             self.assertEqual([r.name for r in provider.configured_routes], ["cohere", "voyage", "cloudflare"])
 
