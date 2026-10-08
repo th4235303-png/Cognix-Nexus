@@ -75,6 +75,22 @@ class ReleaseGatePreflightTests(unittest.TestCase):
         self.assertEqual(payload["preflight"], "READY")
         self.assertTrue(all(g["runnable"] for g in payload["gates"]))
 
+    def test_recovery_target_is_only_required_when_recovery_is_selected(self):
+        os.environ["DATABASE_URL"] = "postgresql://example.invalid/db"
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(main(), 0)
+        payload = json.loads(out.getvalue())
+        self.assertNotIn("database_recovery", {g["gate"] for g in payload["gates"]})
+
+        os.environ["COGNIX_RUN_RECOVERY"] = "true"
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(main(), 0)
+        payload = json.loads(out.getvalue())
+        recovery = next(g for g in payload["gates"] if g["gate"] == "database_recovery")
+        self.assertEqual(recovery["missing_required"], ["COGNIX_RECOVERY_TARGET_DATABASE_URL"])
+
 
 if __name__ == "__main__":
     unittest.main()
