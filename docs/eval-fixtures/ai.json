@@ -1,0 +1,9 @@
+{
+  "dataset": "ai",
+  "version": "1.0",
+  "cases": [
+    {"id":"ai-grounded-001","input":"answer from supplied evidence","expected":"citation_required"},
+    {"id":"ai-hallucination-001","input":"question unsupported by evidence","expected":"state_insufficient_evidence"},
+    {"id":"ai-json-001","input":"structured output request","expected":"valid_schema"}
+  ]
+}
