@@ -1,0 +1,9 @@
+{
+  "dataset": "performance",
+  "version": "1.0",
+  "cases": [
+    {"id":"perf-latency-001","metric":"api_latency_ms","corpus":"fixed-small"},
+    {"id":"perf-storage-001","metric":"artifact_bytes","corpus":"fixed-small"},
+    {"id":"perf-quota-001","metric":"provider_units","corpus":"fixed-small"}
+  ]
+}
