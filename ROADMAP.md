@@ -33,7 +33,7 @@
 3. Complete P1 UI normalization, core workflows, evidence/review states, responsive/accessibility verification and mobile/device checks.
 4. Re-run the full production smoke against the intended main revision.
 5. Approve and tag the release only after all required gates are green.
-6. Then begin Future Phase 13 and subsequent strategic phases; those phases are not substitutes for the current release gates.
+6. Then activate the Phase 13+ implementation slices only after the release is green; non-runtime foundations may be prepared in parallel but never substitute for release gates.
 
 The previous four explicit VERIFY items (live migration head, live Render worker policy, current Secret Vault KDF, and R2 production role) were closed on 2026-10-08 and are no longer release-gate work.
 
@@ -66,6 +66,10 @@ Acceptance: exact duplicate auto-stop; checkpoint/resume; partial results while 
 ## Future Phases
 ### Phase 13 — AI Active Layer
 Agent lifecycle, durable execution, evidence-bound findings, synthesis, decision support, writing and Feynman.
+
+**Foundation prepared:** provider-agnostic `EvidenceRef`, `Finding`, `AgentRun`, and `DecisionRecord` contracts plus evidence/review invariants are present in `web-platform/backend/app/services/active_layer/` and `docs/PHASE_13_FOUNDATION.md`.
+
+**Activation order after release:** persistence/events → lease/heartbeat reuse → evidence validation → provider adapter boundary → evaluation fixtures → runtime orchestration.
 
 ### Phase 14 — Learning Science
 Decay, interleaving, learning paths, knowledge gaps and deep research.
