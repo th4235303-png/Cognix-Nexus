@@ -1,0 +1,9 @@
+{
+  "dataset": "learning",
+  "version": "1.0",
+  "cases": [
+    {"id":"learning-decay-001","age_days":0,"half_life_days":10,"expected_weight":1.0},
+    {"id":"learning-decay-002","age_days":10,"half_life_days":10,"expected_weight":0.5},
+    {"id":"learning-path-001","expected":"source_backed_recommendation"}
+  ]
+}
