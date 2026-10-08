@@ -33,7 +33,7 @@ Library / Inbox → duplicate gate → AI Reading Room → partial/final distill
 - Frontend hosting: Netlify.
 - API/worker hosting: Render.
 
-The current storage target is tiered: Supabase Storage for artifacts up to 50 MB and B2 above 50 MB; Cloudinary remains the media provider. R2 has an adapter but is not the configured tiered target and is treated as optional until live role verification.
+The current storage target is tiered: Supabase Storage for artifacts up to 50 MB and B2 above 50 MB; Cloudinary remains the media provider. R2 has an adapter but is not production-active; it is a legacy/optional compatibility adapter.
 
 ## Trust boundaries
 
