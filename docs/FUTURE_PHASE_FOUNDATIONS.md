@@ -67,6 +67,22 @@ Current CI already contains local database integration and isolated restore cove
 ## Phase 21 — Release
 Release activation remains gated by provider/storage drills, authenticated browser smoke, accessibility/performance, mobile/device verification, GDPR export/delete, production recovery/rollback, observability, final production smoke, and release approval/tag.
 
+
+## Phase 17 — Cognix Core Integration
+Foundation prepared in `app/services/core_integration` and `docs/PHASE_17_FOUNDATION.md`. Activation reuses Phase 13 evidence and review contracts.
+
+## Phase 18 — Vizora Lens
+Foundation boundary documented in `docs/PHASE_18_FOUNDATION.md`; activation remains storage/provider-gated.
+
+## Phase 19 — Native/Product UX
+Foundation boundary documented in `docs/PHASE_19_FOUNDATION.md`; device capabilities remain separate release gates.
+
+## Phase 20 — Production Engineering
+Foundation boundary documented in `docs/PHASE_20_FOUNDATION.md`; production recovery/rollback/observability remain operator gates.
+
+## Phase 21 — Release
+Foundation boundary documented in `docs/PHASE_21_FOUNDATION.md`; final release remains evidence-gated.
+
 ## Parallel-preparation rule
 
 While the current release is blocked on real-world gates:
