@@ -31,6 +31,8 @@ Repository migration head and live Supabase migration head are both 032, verifie
 - Phase 13 lifecycle-event invariants, Phase 18–19 media/native boundary contracts, and Phase 20–21 release-evidence contracts/tests added as non-runtime preparation.
 - Machine-readable phase activation manifest added; it explicitly keeps Phase 13+ runtime blocked and records remaining work by batch.
 - Phase activation matrix expanded with concrete remaining work for every Phase 13–21.
+- Phase 13–21 deterministic prepared-contract implementations and a combined contract test suite added without external-provider calls or runtime activation.
+- Testing documentation now records the Phase 13–21 prepared contract coverage.
 
 ## 5. VERIFIED
 - Cloudinary live round-trip: VERIFIED by prior production evidence.
@@ -55,8 +57,7 @@ Repository migration head and live Supabase migration head are both 032, verifie
 12. Sentry live ingestion.
 13. Controlled Book Intelligence corpus dry-run and lifecycle/E2E.
 14. P1 UI normalization and workflow verification.
-15. Phase 13–17 contracts/tests/persistence/evidence/evaluation preparation in parallel.
-16. Phase 18–21 boundary/release-evidence contract preparation in parallel.
+15. Phase 13–21 persistence/runtime integration work after release approval; deterministic contracts are prepared now.
 
 ## 7. PENDING
 - External/provider/browser/device/recovery drills until real evidence is captured.
@@ -64,6 +65,7 @@ Repository migration head and live Supabase migration head are both 032, verifie
 - Full UI component state normalization and advanced surface verification.
 - Production-like performance evaluation.
 - Final grouped manual verification.
+- Phase 13–21 runtime persistence, provider adapters, native integrations and production automation; foundations are prepared but activation remains blocked.
 
 ## 8. BLOCKED
 - Final production smoke.
@@ -100,15 +102,16 @@ These are intentionally deferred and are not current P0 implementation blockers.
 - Phase 13–17 parallel preparation plan added under `docs/`.
 - Phase 17 evidence-bound artifact contract tests added.
 - Machine-readable activation manifest and expanded phase remaining-work matrix added under `docs/`.
+- Phase 13–21 deterministic prepared contracts cover execution/idempotency, learning planning, privacy restore, Secret Vault boundaries, Document Assistant, Language Tutor, media packaging/metadata, native capability gates, recovery evidence and release checklist evaluation.
 - These are READY/code evidence only; real production gates remain PENDING until their external credentials/browser/device/account actions are executed.
 
 ## 11. LAST VERIFIED
-2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The CI import-path fix is present on `main`. Current `main` HEAD is `8927f2147df213c1e123d4be5b8c68e470fd1f95` after the activation-matrix update; direct combined-status and commit-workflow-run queries do not provide a current PASS record, so CI remains unverified rather than being called PASS.
+2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The CI import-path fix is present on `main`. The latest `main` commit observed is `e5b9e48a6e34f697bb81be4f3a403292104c2ed3` after the Phase 13–21 contract/test/documentation preparation. Direct combined-status and commit-workflow-run queries do not provide a current PASS record, so CI remains unverified rather than being called PASS.
 
 ## 12. NEXT ACTION
 1. Obtain CI PASS on the current `main` revision; no PASS is inferred from missing status records.
 2. Immediately execute the release-gate workflow with available production-safe secrets once CI is green.
-3. Continue Batch 1–4 foundation/tests/persistence/evidence/evaluation preparation in parallel without activating future runtime.
+3. Continue any remaining foundation/test/persistence/evidence/evaluation preparation in parallel without activating future runtime.
 4. Capture provider/storage/Book, authenticated-browser, recovery/GDPR/observability/accessibility/performance/mobile evidence in the declared order.
 5. Perform all manual verification as one final grouped step.
 6. Run final production smoke and release approval.
