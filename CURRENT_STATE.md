@@ -12,7 +12,7 @@ Release-candidate / pre-final-production-verification state on main.
 P0 engineering verification → storage/processing verification → security regression → P1 UI completion/polish → production smoke → release.
 
 ## 3. Overall Status
-Implementation foundation: DONE/VERIFIED where explicitly evidenced. External production gates: PENDING or VERIFY. Final production smoke/release: BLOCKED by unresolved external gates.
+Implementation foundation: DONE/VERIFIED where explicitly evidenced. CI is currently being repaired after the latest observed backend failure. External production gates remain PENDING. Final production smoke/release remains BLOCKED by unresolved gates.
 
 Repository migration head and live Supabase migration head are both 032, verified 2026-10-08.
 
@@ -27,51 +27,44 @@ Repository migration head and live Supabase migration head are both 032, verifie
 - Provider E2E harness for Cloudinary, Supabase Storage, B2, extraction, embeddings, RRF and cited LLM response.
 - Security overrides and CodeQL workflow.
 - Main-only execution rule.
+- Phase 13–17 parallel preparation plan and Phase 17 evidence-bound contract tests added without activating future runtime.
 
 ## 5. VERIFIED
 - Cloudinary live round-trip: VERIFIED by prior production evidence.
-- CI results referenced by source status documents: VERIFIED only where the corresponding run was observed.
 - Repository migration files reach 032 and live Supabase migration history reaches 032: VERIFIED.
-- Confirmed migration numbering defect: 010_agent_active_layer.sql and 010_intelligence_life_reliability.sql.
 - Knowledge Vault implementation exists in main.
-- External provider/browser/device/restore gates are not promoted to PASS from static code inspection.
+- CodeQL run 37739681331 completed successfully on commit f183a8ee.
+- Frontend and mobile jobs of CI run 37739681316 completed successfully.
+- The backend failure in CI run 37739681316 was isolated to the Book Intelligence acceptance command not finding the `app` package because the job working directory was `web-platform/backend` without an import path.
 
 ## 6. IN PROGRESS
-1. Real AI provider E2E.
-2. Google Drive OAuth/account E2E.
-3. Supabase Storage live drill.
-4. Backblaze B2 live drill.
-5. Authenticated Playwright production smoke.
-6. Mobile EAS/device smoke.
-7. Full keyboard/screen-reader/responsive accessibility sweep.
-8. Lighthouse/performance run.
-9. Production backup → restore → rollback drill.
-10. Final production smoke.
+1. Repair CI Book Intelligence acceptance import path and obtain a new full CI PASS.
+2. Real AI provider E2E.
+3. Google Drive OAuth/account E2E.
+4. Supabase Storage live drill.
+5. Backblaze B2 live drill.
+6. Authenticated Playwright production smoke.
+7. Mobile EAS/device smoke.
+8. Full keyboard/screen-reader/responsive accessibility sweep.
+9. Lighthouse/performance run.
+10. Production backup → restore → rollback drill.
 11. GDPR export/delete.
 12. Sentry live ingestion.
-13. UI state normalization.
-14. Core Brain Vault/research workflow UI completion.
-15. Advanced UI surfaces.
-16. Mobile/responsive/a11y verification.
-17. Book Intelligence controlled dry-run.
-18. Book lifecycle state normalization.
-19. AI Reading Room E2E.
-20. Duplicate fingerprint E2E.
-21. Durable reading ledger.
-22. Book-level knowledge distillation.
-23. Category lesson packs.
-24. Derived books.
-25. Reading ledger export.
+13. Controlled Book Intelligence corpus dry-run and lifecycle/E2E.
+14. P1 UI normalization and workflow verification.
+15. Phase 13–17 contracts/tests/persistence/evidence/evaluation preparation in parallel.
 
 ## 7. PENDING
 - External/provider/browser/device/recovery drills until real evidence is captured.
 - Book Intelligence controlled corpus dry-run for the 9-category / 170-file planning corpus.
 - Full UI component state normalization and advanced surface verification.
 - Production-like performance evaluation.
+- Final grouped manual verification.
 
 ## 8. BLOCKED
 - Final production smoke.
 - Final release/tag.
+- Phase 13 runtime activation and all later autonomous/future runtime activation.
 
 ## 9. DEFERRED
 - Paid LLM activation.
@@ -79,6 +72,7 @@ Repository migration head and live Supabase migration head are both 032, verifie
 These are intentionally deferred and are not current P0 implementation blockers.
 
 ## 10. REMAINING RELEASE GATES
+- CI PASS.
 - Real AI provider E2E with production-safe credentials.
 - Google Drive OAuth/account authorization and real export.
 - Supabase Storage and B2 live drills.
@@ -89,6 +83,7 @@ These are intentionally deferred and are not current P0 implementation blockers.
 - Production backup/restore/rollback.
 - GDPR export/delete gate.
 - Sentry live ingestion verification.
+- Grouped manual verification last.
 - Final production smoke and release approval.
 
 ## 10A. RELEASE-GATE CODE READINESS
@@ -96,16 +91,23 @@ These are intentionally deferred and are not current P0 implementation blockers.
 - Book Intelligence synthetic acceptance contract added for schema/lifecycle/duplicate-fingerprint/checkpoint shape.
 - Authenticated Playwright smoke config and workflow-ready test added.
 - Read-only owner-data inventory added for the final GDPR export/delete operator drill.
-- Opt-in GitHub Actions release-gate workflow added for provider E2E, Book Intelligence contract, browser smoke and Sentry probe; its preflight now reads CI secret presence without printing values.
+- Opt-in GitHub Actions release-gate workflow added for provider E2E, Book Intelligence contract, browser smoke and Sentry probe; its preflight reads CI secret presence without printing values.
 - Phase 13 Active Layer foundation added as provider-agnostic evidence/run/decision contracts; runtime orchestration remains deferred until release gates are green.
+- Phase 13–17 parallel preparation plan added under `docs/`.
+- Phase 17 evidence-bound artifact contract tests added.
 - These are READY/code evidence only; real production gates remain PENDING until their external credentials/browser/device/account actions are executed.
 
 ## 11. LAST VERIFIED
-2026-10-08 verification close-out, reconciled into this canonical status on 2026-10-08.
-Only external/provider/browser/device/recovery/compliance facts without live evidence remain PENDING/VERIFY.
+2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The import-path fix was committed as 6f07cf697ff3fe405d02651b88e437d9fa0a33a4.
 
 ## 12. NEXT ACTION
-Execute remaining external gates in roadmap order, capture evidence, update this file after each gate, then run final production smoke and release approval.
+1. Obtain CI PASS on the latest fix.
+2. Immediately execute the release-gate workflow with available production-safe secrets.
+3. Continue future-track contracts/tests/persistence/evidence/evaluation preparation in parallel.
+4. Capture all real-world gate evidence.
+5. Perform grouped manual verification last.
+6. Run final production smoke and release approval.
+7. Only then activate Phase 13, then 14 → 15 → … → 21 one phase at a time with evidence.
 
 ### Explicit VERIFY items
 No unresolved items remain from the previous four-item close-out set.
