@@ -40,6 +40,8 @@ jobs:
             echo "::warning::High-severity npm audit findings remain; scan is recorded but does not block this gate."
           }
       - run: npm run build
+      - name: Validate Playwright harness
+        run: npx --yes playwright@1.51.1 test --list
       - name: Prevent Supabase service role leakage
         run: |
           if grep -R -n 'SUPABASE_SERVICE_ROLE_KEY' . --exclude-dir=node_modules --exclude-dir=.next 2>/dev/null; then
@@ -88,6 +90,12 @@ jobs:
         env:
           COGNIX_DEV_MODE: "true"
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
+      - name: Book Intelligence synthetic acceptance contract
+        env:
+          COGNIX_DEV_MODE: "true"
+          COGNIX_REQUIRE_DATABASE: "true"
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
+        run: python scripts/book_acceptance_contract.py --synthetic
       - name: Install PostgreSQL 17 client
         run: |
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
