@@ -16,6 +16,7 @@ This file defines what can be automated now and what still requires an operator/
 | Google Drive | `scripts/provider_e2e.py` | OAuth client + account-owner refresh token |
 | Backup/restore | `scripts/backup_restore_drill.py` | production DATABASE_URL for the real drill |
 | Book schema/lifecycle contract | `scripts/book_acceptance_contract.py` | test/staging DATABASE_URL |
+| Sentry ingestion probe | `scripts/sentry_live_check.py` | Sentry DSN; UI observation remains manual |
 | Frontend typecheck/lint/build | CI | none |
 | Backend compile/unit/integration | CI | none |
 | Mobile config validation | CI | none |
