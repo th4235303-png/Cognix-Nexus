@@ -15,6 +15,8 @@ Next activation:
 6. runtime orchestration
 
 ## Phase 14 — Learning Science
+Foundation prepared in `app/services/learning_science` and `docs/PHASE_14_FOUNDATION.md`. Activation remains gated by Phase 13 evidence lifecycle.
+
 Preparation boundary:
 - learning signals remain derived from user-owned evidence and explicit user actions
 - decay/interleaving algorithms are deterministic and testable
@@ -24,6 +26,8 @@ Preparation boundary:
 Dependency: Phase 13 evidence/run lifecycle.
 
 ## Phase 15 — Life Integration
+Foundation prepared in `app/services/life_integration` and `docs/PHASE_15_FOUNDATION.md`. Activation remains gated by privacy/recovery evidence.
+
 Preparation boundary:
 - context restoration is explicit and user-triggered
 - local-only/private signals have a separate privacy boundary
@@ -33,6 +37,8 @@ Preparation boundary:
 Dependency: privacy/recovery gates and Phase 13 evidence lifecycle.
 
 ## Phase 16 — Advanced Layer
+Foundation prepared in `app/services/advanced_layer` and `docs/PHASE_16_FOUNDATION.md`. Activation remains gated by Phase 15 privacy/recovery evidence.
+
 Preparation boundary:
 - private wiki entities preserve source lineage
 - growth metrics are derived and explainable
@@ -83,12 +89,13 @@ While the current release is blocked on real-world gates:
 3. Phase 17 shared evidence/API integration
 
 ### Batch C — following
-1. Phase 14 learning-science contracts and evaluation fixtures
-2. Phase 18 media/OCR contract expansion
-3. Phase 19 native capability boundaries
-
+1. Phase 14 learning-science runtime/evaluation activation
+2. Phase 15 privacy/context integration after recovery evidence
+3. Phase 16 advanced-layer activation after Phase 15
+4. Phase 18 media/OCR contract expansion
+5. Phase 19 native capability boundaries
 ### Batch D — later
-1. Phase 15 privacy/context integrations
-2. Phase 16 advanced layer
+1. Phase 20 production engineering expansion
+2. Phase 21 release automation
 3. Phase 20 production engineering expansion
 4. Phase 21 release automation
