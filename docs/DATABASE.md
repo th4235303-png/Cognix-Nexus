@@ -42,6 +42,6 @@ Durable processing/knowledge state includes immutable book versions/fingerprints
 
 Invariants: exact duplicates stop; interrupted work resumes; partial knowledge remains partial; every knowledge item traces to source spans; cross-book synthesis preserves contributing versions/disagreement; originals remain separate; reprocessing creates a new version.
 
-## VERIFY
-- Live migration head.
-- Secret Vault KDF implementation: source documentation contains a PBKDF2 vs Argon2id discrepancy requiring actual verification.
+## Resolved verification
+- Live Supabase migration head is 032, verified 2026-10-08.
+- Current Secret Vault KDF implementation is PBKDF2-SHA256 with 600,000 iterations and AES-GCM in the browser; the historical Argon2id wording is not the current implementation.
