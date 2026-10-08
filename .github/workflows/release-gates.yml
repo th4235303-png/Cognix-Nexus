@@ -54,6 +54,7 @@ jobs:
       GOOGLE_DRIVE_ROOT_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_ROOT_FOLDER_ID }}
       SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
       COGNIX_E2E_BASE_URL: ${{ secrets.COGNIX_E2E_BASE_URL }}
+      COGNIX_E2E_API_URL: ${{ secrets.COGNIX_E2E_API_URL }}
       COGNIX_E2E_EMAIL: ${{ secrets.COGNIX_E2E_EMAIL }}
       COGNIX_E2E_PASSWORD: ${{ secrets.COGNIX_E2E_PASSWORD }}
       DATABASE_URL: ${{ secrets.COGNIX_PROD_DATABASE_URL }}
