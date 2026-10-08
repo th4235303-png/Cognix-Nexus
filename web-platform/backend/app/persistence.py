@@ -253,7 +253,7 @@ class Database:
                 )
                 cur.execute(
                     """INSERT INTO reading_events(id,book_id,owner_id,event_type,stage,percent,message)
-                       SELECT %s,owner_id,'extraction_completed','extraction',0,'Book extraction completed' FROM books WHERE id=%s""",
+                       SELECT %s,id,owner_id,'extraction_completed','extraction',0,'Book extraction completed' FROM books WHERE id=%s""",
                     (f"EV-{uuid4().hex[:8].upper()}",book_id),
                 )
             conn.commit()
