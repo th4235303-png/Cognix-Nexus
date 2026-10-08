@@ -8,17 +8,17 @@ class Phase14LearningContractTests(unittest.TestCase):
         self.assertEqual(decay_weight(0, 30), 1.0)
         self.assertEqual(decay_weight(30, 30), 0.5)
 
-    def test_learning_signal_requires_evidence_shape(self):
+    def test_learning_signal_preserves_subject_and_evidence(self):
         signal = LearningSignal(
             id="signal-1",
             subject_id="subject-1",
             signal_type="recall",
             strength=0.8,
             occurred_at="2026-10-08T00:00:00+00:00",
-            evidence_refs=(),
+            evidence_refs=("chunk-1",),
         )
         self.assertEqual(signal.subject_id, "subject-1")
-        self.assertEqual(signal.evidence_refs, ())
+        self.assertEqual(signal.evidence_refs, ("chunk-1",))
 
 
 if __name__ == "__main__":
