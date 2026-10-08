@@ -118,6 +118,9 @@ Block condition: required external/provider/browser/device/recovery gates remain
 - Dedicated search engine.
 - Workflow orchestration infrastructure.
 
+## Future-phase preparation map
+Detailed non-runtime preparation boundaries and activation batches are tracked in `docs/FUTURE_PHASE_FOUNDATIONS.md`.
+
 ## Non-negotiable principles
 1. AI output is not canonical without required review.
 2. Answers retain evidence/citation lineage.
