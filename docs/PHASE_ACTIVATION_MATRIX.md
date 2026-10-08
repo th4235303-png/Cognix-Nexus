@@ -6,6 +6,8 @@ Status: preparation only. No autonomous production activation is enabled by this
 
 Phase 13+ runtime activation is blocked until the current release gates are green and final manual verification is complete. Foundations, contracts, tests, documentation, and non-runtime adapters may be prepared in parallel.
 
+The machine-readable control surface is `docs/PHASE_ACTIVATION_MANIFEST.json`.
+
 ## Phase sequence
 
 | Phase | Prepared now | Activation gate | First runtime action |
@@ -61,4 +63,47 @@ Phase 13+ runtime activation is blocked until the current release gates are gree
 - observability evidence
 - final release automation and approval controls
 
-This matrix is a planning/activation control surface only; it does not itself activate any runtime.
+## Remaining work by phase
+
+### Phase 13
+- Harden durable agent lifecycle persistence.
+- Add lease/heartbeat recovery and retry fencing.
+- Integrate evidence references into persisted findings/decisions.
+- Keep agent runtime disabled until release approval.
+
+### Phase 14
+- Persist learning events and review scheduling.
+- Implement deterministic decay/interleaving/path generation.
+- Add evaluation and owner-scope persistence checks.
+
+### Phase 15
+- Implement explicit context restore and encrypted time-capsule runtime.
+- Enforce consent, owner scope, recovery, and GDPR evidence.
+- Keep mood/ambient features opt-in and local/privacy-bounded.
+
+### Phase 16
+- Implement Personal Wiki, growth visualization, idea generation, and offline boundaries.
+- Implement Secret Vault TOTP, SSH-key storage, k-anonymity breach checks, emergency kit, and encrypted export/import.
+- Require recovery/privacy evidence before activation.
+
+### Phase 17
+- Implement Document Assistant classifier/OCR review/lifecycle.
+- Implement Language Tutor MM↔JP/KR reading, grammar, romanization, TTS, correction, role-play, quizzes, and CEFR/JLPT/TOPIK mapping.
+- Preserve evidence, review state, ownership, and source lineage for derived artifacts.
+
+### Phase 18
+- Implement batch media upload, richer OCR/vision, metadata normalization, review workflow, media links, and Drive package export.
+- Add successful/partial/failed extraction evidence fixtures.
+
+### Phase 19
+- Implement offline reader, share-sheet/capture, camera OCR, voice capture, push notifications, biometric unlock, and JP/KR localization.
+- Complete WCAG AA, responsive, keyboard/screen-reader, EAS/device evidence.
+
+### Phase 20
+- Complete production recovery/rollback drills, observability correlation/evidence retention, stress testing, and security regression runs.
+- Turn evaluation datasets into repeatable release checks.
+
+### Phase 21
+- Finalize machine-readable release checklist, evidence index, approval/signoff controls, release/tag preconditions, post-release smoke, and rollback decision path.
+
+This matrix and manifest are planning/activation controls only; they do not themselves activate any runtime.
