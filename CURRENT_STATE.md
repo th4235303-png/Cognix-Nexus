@@ -28,6 +28,7 @@ Repository migration head and live Supabase migration head are both 032, verifie
 - Security overrides and CodeQL workflow.
 - Main-only execution rule.
 - Phase 13–17 parallel preparation plan and Phase 17 evidence-bound contract tests added without activating future runtime.
+- Phase 13 lifecycle-event invariants, Phase 18–19 media/native boundary contracts, and Phase 20–21 release-evidence contracts/tests added as non-runtime preparation.
 
 ## 5. VERIFIED
 - Cloudinary live round-trip: VERIFIED by prior production evidence.
@@ -53,6 +54,7 @@ Repository migration head and live Supabase migration head are both 032, verifie
 13. Controlled Book Intelligence corpus dry-run and lifecycle/E2E.
 14. P1 UI normalization and workflow verification.
 15. Phase 13–17 contracts/tests/persistence/evidence/evaluation preparation in parallel.
+16. Phase 18–21 boundary/release-evidence contract preparation in parallel.
 
 ## 7. PENDING
 - External/provider/browser/device/recovery drills until real evidence is captured.
@@ -98,7 +100,7 @@ These are intentionally deferred and are not current P0 implementation blockers.
 - These are READY/code evidence only; real production gates remain PENDING until their external credentials/browser/device/account actions are executed.
 
 ## 11. LAST VERIFIED
-2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The import-path fix was committed as 6f07cf697ff3fe405d02651b88e437d9fa0a33a4.
+2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The CI import-path fix is present on `main`; a new CI PASS has not yet been evidenced by the available workflow-run query, so CI remains unverified.
 
 ## 12. NEXT ACTION
 1. Obtain CI PASS on the latest fix.
