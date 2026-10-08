@@ -19,7 +19,7 @@ Cognix Core is the research/evidence foundation. Brain Vault is the durable pers
 
 ## Current snapshot
 
-The implementation is at release-candidate / pre-final-production-verification state. Repository migration head is 032; live migration head is tracked separately as VERIFY. External provider, OAuth, browser/device, accessibility/performance and restore gates remain pending/VERIFY, so final production smoke and release are blocked until those gates are completed.
+The implementation is at release-candidate / pre-final-production-verification state. Repository and live Supabase migration heads are both 032, and the previously identified four VERIFY items are closed with evidence. External provider, OAuth, browser/device, accessibility/performance, recovery and compliance gates remain pending, so final production smoke and release are still blocked.
 
 See CURRENT_STATE.md for status and evidence, ROADMAP.md for strategic scope, and PROJECT_OVERVIEW.md for architecture/product boundaries.
 
