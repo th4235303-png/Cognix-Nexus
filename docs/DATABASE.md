@@ -25,7 +25,10 @@ Vault items store ciphertext, nonce and KDF metadata; plaintext remains client-s
 Owner-scoped policies exist across core Brain Vault and Level Up user-data tables. Relationship tables are scoped through their owning parent where appropriate. Deny-by-default remains the baseline for tables without frontend access.
 
 ## Migration state
-Repository head: 032. Live head: VERIFY. Repository migration presence does not prove the live database has reached 032.
+Repository migration head: 032.
+Live Supabase migration head: **032**, verified 2026-10-08 against project `Cognix-Core` (`jarfusheiqkfcbeljvhj`) using live migration history. The live history includes `031_book_intelligence_safe` and `032_phase7_12_hardening`.
+
+Evidence: Supabase project migration history was queried live on 2026-10-08.
 
 ### Confirmed migration numbering defect
 Two historical migrations use the 010 number:
