@@ -91,6 +91,14 @@ These are intentionally deferred and are not current P0 implementation blockers.
 - Sentry live ingestion verification.
 - Final production smoke and release approval.
 
+## 10A. RELEASE-GATE CODE READINESS
+- Release-gate preflight runner added; it reports missing required variables without printing secret values.
+- Book Intelligence synthetic acceptance contract added for schema/lifecycle/duplicate-fingerprint/checkpoint shape.
+- Authenticated Playwright smoke config and workflow-ready test added.
+- Read-only owner-data inventory added for the final GDPR export/delete operator drill.
+- Opt-in GitHub Actions release-gate workflow added for provider E2E, Book Intelligence contract and browser smoke.
+- These are READY/code evidence only; real production gates remain PENDING until their external credentials/browser/device/account actions are executed.
+
 ## 11. LAST VERIFIED
 2026-10-08 verification close-out, reconciled into this canonical status on 2026-10-08.
 Only external/provider/browser/device/recovery/compliance facts without live evidence remain PENDING/VERIFY.
