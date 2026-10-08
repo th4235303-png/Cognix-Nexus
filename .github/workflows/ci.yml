@@ -42,7 +42,8 @@ jobs:
       - run: npm run build
       - name: Validate Playwright harness
         run: |
-          npm exec --yes --package=@playwright/test@1.51.1 -- playwright test --list
+          npm install --no-save --no-package-lock @playwright/test@1.51.1 playwright@1.51.1
+          npx playwright test --list
       - name: Prevent Supabase service role leakage
         run: |
           if grep -R -n 'SUPABASE_SERVICE_ROLE_KEY' . --exclude-dir=node_modules --exclude-dir=.next 2>/dev/null; then
