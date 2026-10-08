@@ -36,6 +36,7 @@ GATES = (
     Gate("cloudinary", ("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")),
     Gate("sentry", ("SENTRY_DSN",)),
     Gate("authenticated_browser", ("COGNIX_E2E_BASE_URL", "COGNIX_E2E_API_URL", "COGNIX_E2E_EMAIL", "COGNIX_E2E_PASSWORD")),
+    Gate("production_database", ("DATABASE_URL",)),
     Gate("database_recovery", ("DATABASE_URL", "COGNIX_RECOVERY_TARGET_DATABASE_URL")),
 )
 
@@ -46,10 +47,31 @@ def present(name: str) -> bool:
 
 def main() -> int:
     gates = []
+    selected = {
+        "provider": os.getenv("COGNIX_RUN_PROVIDER_E2E", "").strip().lower() == "true",
+        "book": os.getenv("COGNIX_RUN_BOOK_CONTRACT", "").strip().lower() == "true",
+        "browser": os.getenv("COGNIX_RUN_BROWSER_SMOKE", "").strip().lower() == "true",
+        "sentry": os.getenv("COGNIX_RUN_SENTRY_PROBE", "").strip().lower() == "true",
+        "recovery": os.getenv("COGNIX_RUN_RECOVERY", "").strip().lower() == "true",
+    }
+    any_selected = any(selected.values())
+    provider_gates = {"ai_provider_e2e", "supabase_storage", "backblaze_b2", "google_drive", "cloudinary", "production_database"}
+    group_by_gate = {
+        **{name: "provider" for name in provider_gates},
+        "production_database": "provider",
+        "database_recovery": "recovery",
+        "authenticated_browser": "browser",
+        "sentry": "sentry",
+    }
+    if selected["book"]:
+        provider_gates = provider_gates | {"production_database"}
+        group_by_gate["production_database"] = "book"
     active_gates = [
         gate
         for gate in GATES
-        if gate.name != "database_recovery" or os.getenv("COGNIX_RUN_RECOVERY", "").strip().lower() == "true"
+        if not any_selected or group_by_gate.get(gate.name) in {
+            key for key, value in selected.items() if value
+        }
     ]
     for gate in active_gates:
         missing = [key for key in gate.required if not present(key)]
