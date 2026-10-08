@@ -21,7 +21,7 @@ Repository migration head and live Supabase migration head are both 032, verifie
 - Phase 7–12 Knowledge Vault/review/synthesis foundation.
 - Durable AI reading checkpoint/retry/backoff/provider-event audit foundations.
 - Knowledge Vault UI/API foundation.
-- Supabase migrations 031 and 032 are present in repository/live migration evidence referenced by source status documents; exact live head remains VERIFY.
+- Supabase migrations 031 and 032 are present in the repository, and live Supabase migration head 032 was verified 2026-10-08.
 - Cloudinary upload/read/checksum/delete round-trip previously observed.
 - Google Drive OAuth/export implementation and idempotent upsert path.
 - Provider E2E harness for Cloudinary, Supabase Storage, B2, extraction, embeddings, RRF and cited LLM response.
@@ -92,8 +92,8 @@ These are intentionally deferred and are not current P0 implementation blockers.
 - Final production smoke and release approval.
 
 ## 11. LAST VERIFIED
-2026-10-07 source evidence checkpoint, reconciled into this canonical status on 2026-10-08.
-Live facts not independently rechecked in this migration remain VERIFY.
+2026-10-08 verification close-out, reconciled into this canonical status on 2026-10-08.
+Only external/provider/browser/device/recovery/compliance facts without live evidence remain PENDING/VERIFY.
 
 ## 12. NEXT ACTION
 Execute remaining external gates in roadmap order, capture evidence, update this file after each gate, then run final production smoke and release approval.
