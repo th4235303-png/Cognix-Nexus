@@ -18,6 +18,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_sentry_probe:
+        description: "Send the non-sensitive Sentry ingestion probe"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   preflight:
@@ -145,3 +150,21 @@ jobs:
       - run: npm ci
       - run: npx --yes playwright@1.51.1 install --with-deps chromium
       - run: npm run e2e
+
+  sentry-probe:
+    if: ${{ inputs.run_sentry_probe }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-platform/backend
+    env:
+      SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      SENTRY_ENVIRONMENT: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements.lock
+      - run: python scripts/sentry_live_check.py
