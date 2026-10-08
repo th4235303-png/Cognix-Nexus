@@ -23,6 +23,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_recovery_drill:
+        description: "Run production backup + isolated restore drill"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   preflight:
@@ -68,6 +73,12 @@ jobs:
       COGNIX_E2E_EMAIL: ${{ secrets.COGNIX_E2E_EMAIL }}
       COGNIX_E2E_PASSWORD: ${{ secrets.COGNIX_E2E_PASSWORD }}
       DATABASE_URL: ${{ secrets.COGNIX_PROD_DATABASE_URL }}
+      COGNIX_RECOVERY_TARGET_DATABASE_URL: ${{ secrets.COGNIX_RECOVERY_TARGET_DATABASE_URL }}
+      COGNIX_RUN_PROVIDER_E2E: ${{ inputs.run_provider_e2e }}
+      COGNIX_RUN_BOOK_CONTRACT: ${{ inputs.run_book_contract }}
+      COGNIX_RUN_BROWSER_SMOKE: ${{ inputs.run_browser_smoke }}
+      COGNIX_RUN_SENTRY_PROBE: ${{ inputs.run_sentry_probe }}
+      COGNIX_RUN_RECOVERY: ${{ inputs.run_recovery_drill }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -121,6 +132,7 @@ jobs:
       GOOGLE_REDIRECT_URI: ${{ secrets.GOOGLE_REDIRECT_URI }}
       GOOGLE_REFRESH_TOKEN: ${{ secrets.GOOGLE_REFRESH_TOKEN }}
       GOOGLE_DRIVE_ROOT_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_ROOT_FOLDER_ID }}
+      COGNIX_DRIVE_PROVIDER: google
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -130,6 +142,31 @@ jobs:
           cache-dependency-path: web-platform/backend/requirements.lock
       - run: pip install -r requirements.lock
       - run: python scripts/provider_e2e.py
+
+  recovery-drill:
+    if: ${{ inputs.run_recovery_drill }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-platform/backend
+    env:
+      DATABASE_URL: ${{ secrets.COGNIX_PROD_DATABASE_URL }}
+      COGNIX_RECOVERY_TARGET_DATABASE_URL: ${{ secrets.COGNIX_RECOVERY_TARGET_DATABASE_URL }}
+      COGNIX_ALLOW_RESTORE: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client-17
+      - name: Backup production database
+        run: python scripts/backup_restore_drill.py --dump /tmp/cognix-production.dump
+      - name: Verify backup checksum
+        run: test -s /tmp/cognix-production.dump && python scripts/backup_restore_drill.py --verify /tmp/cognix-production.dump
+      - name: Restore into isolated recovery database
+        run: python scripts/backup_restore_drill.py --restore /tmp/cognix-production.dump --target-dsn "$COGNIX_RECOVERY_TARGET_DATABASE_URL" --allow-restore
 
   book-contract:
     if: ${{ inputs.run_book_contract }}
