@@ -27,7 +27,7 @@ _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
     EmbeddingRoute(
         "cohere",
         "COHERE_API_KEY",
-        "https://api.cohere.ai/compatibility/v1/embeddings",
+        "https://api.cohere.com/v2/embed",
         "embed-v5.0-pro",
         (256, 512, 768, 1024, 1536, 2048),
     ),
@@ -128,8 +128,13 @@ class EmbeddingProvider:
         if route.name == "openrouter":
             payload["dimensions"] = self.dimension
         elif route.name == "cohere":
-            payload["encoding_format"] = "float"
-            payload["dimensions"] = self.dimension
+            payload = {
+                "model": route.model,
+                "texts": list(inputs),
+                "input_type": "search_document",
+                "output_dimension": self.dimension,
+                "embedding_types": ["float"],
+            }
         elif route.name == "voyage":
             payload["output_dimension"] = self.dimension
         async with httpx.AsyncClient(timeout=60.0) as client:
@@ -137,7 +142,9 @@ class EmbeddingProvider:
             response.raise_for_status()
             body = response.json()
 
-        if route.name == "cloudflare":
+        if route.name == "cohere":
+            vectors = body.get("embeddings", {}).get("float", [])
+        elif route.name == "cloudflare":
             data = body.get("data", [])
             vectors = data if data and isinstance(data[0], list) else body.get("result", {}).get("data", [])
             if vectors and isinstance(vectors[0], dict):
