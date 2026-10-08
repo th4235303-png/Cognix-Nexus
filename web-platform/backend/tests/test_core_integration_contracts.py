@@ -29,7 +29,7 @@ class CoreIntegrationContractTests(unittest.TestCase):
             source_type="chunk",
             source_id="chunk-1",
             locator="page:1",
-            excerpt_hash="hash-1",
+            excerpt="supported excerpt",
         )
         artifact = EvidenceBoundArtifact(
             id="artifact-1",
@@ -55,7 +55,7 @@ class CoreIntegrationContractTests(unittest.TestCase):
             source_type="chunk",
             source_id="chunk-1",
             locator="page:1",
-            excerpt_hash="hash-1",
+            excerpt="supported excerpt",
         )
         artifact = EvidenceBoundArtifact(
             id="artifact-1",
