@@ -20,6 +20,9 @@ Cognix Nexus handles personal knowledge, research sources, user-owned records, e
 - Durable data does not silently fall back to in-memory persistence.
 - Provider failures are explicit.
 
+## Secret Vault cryptography
+The current implementation uses **PBKDF2-SHA256 with 600,000 iterations** to derive a 256-bit AES-GCM key in the browser. Evidence checked 2026-10-08 in `web-platform/frontend/app/vault/page.tsx`. The historical Argon2id statement is a future/target design claim and is not the current implementation.
+
 ## Durable security decisions
 ### ADR-003 — Owner isolation
 Owner-scoped RLS/persistence context protects user data; legacy ownerless records fail closed.
