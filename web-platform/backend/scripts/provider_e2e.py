@@ -84,6 +84,60 @@ async def run(run_id: str) -> dict:
     chunk_id = None
 
     try:
+        # 0. Prove every configured provider independently before the integrated drill.
+        # LLM routes: all eight providers must answer directly; this is not satisfied
+        # by router fallback because a fallback could hide a broken provider.
+        llm_routes = llm_provider.configured_routes
+        expected_llm = {
+            "gemini", "openrouter", "huggingface", "cerebras",
+            "mistral", "cohere", "groq", "cloudflare",
+        }
+        _assert(
+            {route.name for route in llm_routes} == expected_llm,
+            "not all required LLM providers are configured",
+        )
+        llm_probe_results: dict[str, object] = {}
+        for route in llm_routes:
+            answer = await llm_provider.complete_on_route(
+                route,
+                "Return only the exact token E2E-OK.",
+                "Provider connectivity probe.",
+            )
+            _assert("E2E-OK" in answer, f"{route.name} did not return the E2E probe token")
+            llm_probe_results[route.name] = {"ok": True}
+
+        # At the persisted 1536 dimension, OpenRouter/Cohere are active.
+        embedding_1536 = embedding_provider
+        embedding_1536_routes = embedding_1536.configured_routes
+        _assert(
+            {route.name for route in embedding_1536_routes} == {"openrouter", "cohere"},
+            "1536-dimension embedding routes are not exactly OpenRouter+Cohere",
+        )
+        embedding_probe_results: dict[str, object] = {}
+        for route in embedding_1536_routes:
+            vectors = await embedding_1536.embed_on_route(route, ["provider connectivity probe"])
+            _assert(len(vectors) == 1 and len(vectors[0]) == 1536, f"{route.name} 1536 embedding probe failed")
+            embedding_probe_results[route.name] = {"ok": True, "dimension": 1536}
+
+        # Voyage and Cloudflare require 1024 in the current implementation. Probe
+        # them at 1024 without changing the production persisted vector schema.
+        embedding_1024 = type(embedding_provider)()
+        embedding_1024.dimension = 1024
+        embedding_1024_routes = embedding_1024.configured_routes
+        _assert(
+            {route.name for route in embedding_1024_routes} == {"cohere", "voyage", "cloudflare"},
+            "1024-dimension embedding routes are not exactly Cohere+Voyage+Cloudflare",
+        )
+        for route in embedding_1024_routes:
+            vectors = await embedding_1024.embed_on_route(route, ["provider connectivity probe"])
+            _assert(len(vectors) == 1 and len(vectors[0]) == 1024, f"{route.name} 1024 embedding probe failed")
+            embedding_probe_results[route.name] = {"ok": True, "dimension": 1024}
+
+        results["provider_matrix"] = {
+            "llm": llm_probe_results,
+            "embedding": embedding_probe_results,
+        }
+
         # 1. Real provider round trips.
         for label, storage, key in (
             ("cloudinary", cloudinary_storage(), f"e2e/{run_id}/cloudinary.txt"),
