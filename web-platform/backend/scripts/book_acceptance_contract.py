@@ -14,6 +14,8 @@ import os
 import sys
 from uuid import uuid4
 
+from psycopg.errors import UniqueViolation
+
 from app.store import store
 
 
@@ -118,7 +120,7 @@ def run(synthetic: bool) -> dict:
                     "SELECT count(*) AS n FROM books WHERE owner_id=%s AND content_hash=%s",
                     (owner, "fixture-hash-" + book_id),
                 )
-                result["duplicate_fingerprint_visible"] = int(cur.fetchone()["n"]) == 2
+                result["duplicate_fingerprint_visible"] = int(cur.fetchone()["n"]) == 1
                 cur.execute(
                     "SELECT status,percent,completed_units,total_units FROM book_reading_progress WHERE book_id=%s AND owner_id=%s",
                     (book_id, owner),
@@ -133,7 +135,7 @@ def run(synthetic: bool) -> dict:
                 )
 
         result["status"] = "PASS" if all(
-            result.get(k, False) for k in ("duplicate_fingerprint_visible", "checkpoint_shape_ok")
+            result.get(k, False) for k in ("duplicate_fingerprint_visible", "duplicate_fingerprint_rejected", "checkpoint_shape_ok")
         ) else "FAIL"
         return result
     finally:
