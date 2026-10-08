@@ -94,8 +94,7 @@ While the current release is blocked on real-world gates:
 3. Phase 16 advanced-layer activation after Phase 15
 4. Phase 18 media/OCR contract expansion
 5. Phase 19 native capability boundaries
+
 ### Batch D — later
 1. Phase 20 production engineering expansion
 2. Phase 21 release automation
-3. Phase 20 production engineering expansion
-4. Phase 21 release automation
