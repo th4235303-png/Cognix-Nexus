@@ -82,6 +82,7 @@ class ReleaseGatePreflightTests(unittest.TestCase):
 
     def test_recovery_target_is_only_required_when_recovery_is_selected(self):
         os.environ["DATABASE_URL"] = "postgresql://example.invalid/db"
+        os.environ["COGNIX_RUN_PROVIDER_E2E"] = "true"
         out = io.StringIO()
         with redirect_stdout(out):
             self.assertEqual(main(), 0)
