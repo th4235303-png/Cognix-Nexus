@@ -21,8 +21,8 @@ Storage writes retain durable object references and checksums where supported. R
 ## Google Drive
 Drive is the user-owned export/backup destination. OAuth/export implementation exists; real account authorization and provider verification remain pending/deferred.
 
-## R2
-An R2-compatible adapter exists and historical completion material referenced R2 verification. The configured tiered target is Supabase Storage + B2. R2 is optional/VERIFY, not a current production dependency unless live configuration proves otherwise.
+## R2 role — resolved
+R2 is **not production-active in the current storage path**. The repository R2 adapter is explicitly backward-compatible/legacy, while current routing assigns small artifacts to Supabase Storage and large originals to Backblaze B2. The backend environment example also labels Cloudflare R2 compatibility as legacy optional.
 
 ## Provider drills
 Supabase Storage and B2 live write/read/checksum drills remain pending. Cloudinary round-trip evidence was previously observed.
