@@ -134,8 +134,9 @@ class LLMProvider:
                             {"role": "system", "content": system},
                             {"role": "user", "content": user},
                         ],
-                        "temperature": 0.1,
                     }
+                    if route.name != "gemini":
+                        payload["temperature"] = 0.1
                     async with httpx.AsyncClient(timeout=self.timeout) as client:
                         response = await client.post(route.url, headers=headers, json=payload)
                         response.raise_for_status()
