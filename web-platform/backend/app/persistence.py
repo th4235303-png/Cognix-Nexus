@@ -456,6 +456,10 @@ class Database:
             "026_level_up_owner_isolation.sql",
             "027_rls_helper_performance.sql",
             "028_rls_policy_dedup.sql",
+            "029_latest_action_wins.sql",
+            "030_processing_task_superseded_index.sql",
+            "031_book_intelligence.sql",
+            "032_phase7_12_hardening.sql",
         )
         with self.connect() as conn:
             with conn.cursor() as cur:
