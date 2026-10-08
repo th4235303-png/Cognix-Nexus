@@ -36,3 +36,15 @@ Authenticated upload → processing → review → retrieval; citation/source na
 
 ## Release evidence
 Use CURRENT_STATE.md for current gate state. Historical acceptance contracts are retained under archive/legacy/.
+
+
+## Future evaluation datasets
+
+Deterministic seed fixtures are maintained under `docs/eval-fixtures/` and scoped by domain:
+- AI: grounding, hallucination resistance, citations, structured output.
+- Agent: finding/synthesis quality, ownership, evidence lineage and idempotency.
+- Learning: decay and learning-path effectiveness.
+- Performance: latency, storage and provider quota usage.
+- Security: prompt injection, RLS ownership and SSRF.
+
+These fixtures are preparation assets only. They never substitute for real production gate evidence.
