@@ -17,6 +17,8 @@ Activation order:
 5. evaluation fixtures
 6. runtime orchestration
 
+Preparation detail: [PHASE_13_17_PREPARATION_PLAN.md](./PHASE_13_17_PREPARATION_PLAN.md).
+
 ## Phase 14 — Learning Science
 
 Foundation is prepared in `app/services/learning_science` and `docs/PHASE_14_FOUNDATION.md`.
@@ -26,6 +28,8 @@ Boundary:
 - decay/interleaving algorithms remain deterministic and testable
 - learning-path generation retains source/evidence references
 - autonomous learning state is never canonical without an auditable event
+
+Contract tests are prepared in `backend/tests/test_phase14_learning_contracts.py`.
 
 Dependency: Phase 13 evidence/run lifecycle.
 
@@ -39,6 +43,8 @@ Boundary:
 - encrypted capsules never become an implicit cross-feature data source
 - ambient behavior remains opt-in
 
+Contract tests are prepared in `backend/tests/test_phase15_life_integration_contracts.py`.
+
 Dependency: privacy/recovery gates and Phase 13 evidence lifecycle.
 
 ## Phase 16 — Advanced Layer
@@ -51,6 +57,8 @@ Boundary:
 - offline/local-model boundaries are explicit
 - encrypted handoff is exportable and recoverable
 
+Contract tests are prepared in `backend/tests/test_phase16_advanced_contracts.py`.
+
 Dependency: Phase 15 privacy boundary and production recovery evidence.
 
 ## Phase 17 — Cognix Core Integration
@@ -62,11 +70,15 @@ Boundary:
 - review states remain compatible with the existing human-review lifecycle
 - generated API contracts remain typechecked in CI
 
+Contract tests are prepared in `backend/tests/test_core_integration_contracts.py`.
+
 Dependency: Phase 13 evidence contracts and current P1 UI/release evidence.
 
 ## Phase 18 — Vizora Lens
 
 Foundation boundary is documented in `docs/PHASE_18_FOUNDATION.md`.
+
+Preparation detail: [PHASE_18_19_PREPARATION_PLAN.md](./PHASE_18_19_PREPARATION_PLAN.md).
 
 Preparation should reuse existing object-storage and evidence-lineage boundaries. Media/OCR additions remain provider-failure explicit.
 
@@ -79,6 +91,8 @@ Preparation should reuse web design-system tokens and existing API contracts. De
 ## Phase 20 — Production Engineering
 
 Foundation boundary is documented in `docs/PHASE_20_FOUNDATION.md`.
+
+Preparation detail: [PHASE_20_21_PREPARATION_PLAN.md](./PHASE_20_21_PREPARATION_PLAN.md).
 
 CI already contains local database integration and isolated restore coverage. Production activation still requires real backup/restore, rollback, observability and stress evidence.
 
@@ -95,11 +109,12 @@ While the current release is blocked on real-world gates:
 - do not activate autonomous execution
 - do not claim production PASS from static code
 - do not introduce future-phase providers unless required by an approved gate
+- keep every new fixture deterministic and owner/evidence aware
 
 ## Recommended execution batches
 
 ### Batch 0 — current release
-1. resolve CI failures
+1. obtain CI PASS
 2. run provider/storage/Book acceptance with supplied secrets
 3. run authenticated Playwright
 4. close external release gates with evidence
@@ -107,20 +122,31 @@ While the current release is blocked on real-world gates:
 6. final production smoke/release approval
 
 ### Batch 1 — Phase 13 + 17
-1. Phase 13 durable persistence/events
-2. Phase 13 evidence validation
-3. Phase 17 shared evidence/API integration
-4. evaluation fixtures
+1. durable persistence/events
+2. lease/heartbeat lifecycle
+3. evidence validation/citation checks
+4. shared evidence-bound API integration
+5. evaluation fixtures
 
 ### Batch 2 — Phase 14 + 15 + 16
-1. Phase 14 learning runtime/evaluation
-2. Phase 15 privacy/context integration after recovery evidence
-3. Phase 16 advanced-layer activation after Phase 15
+1. deterministic learning signals/path evaluation
+2. explicit context restore/privacy integration
+3. advanced artifacts/offline handoff
+4. activation evidence before moving to the next phase
 
 ### Batch 3 — Phase 18 + 19
-1. Phase 18 media/OCR contract expansion
-2. Phase 19 native capability boundaries and device evidence
+1. media/OCR lineage adapters
+2. native capability boundaries
+3. accessibility/performance/device evidence
 
 ### Batch 4 — Phase 20 + 21
-1. Phase 20 production engineering expansion
-2. Phase 21 release automation and approval controls
+1. production recovery/rollback automation
+2. observability evidence
+3. release checklist/approval automation
+4. final release/tag only after every required gate is PASS
+
+## Gate invariant
+
+The current release order is unchanged:
+
+**CI PASS → provider/storage/Book acceptance → authenticated browser → recovery/GDPR/observability/accessibility/performance/mobile → grouped manual verification → final production smoke → release approval → Phase 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21.**
