@@ -80,17 +80,29 @@ Timeline, local-only mood, user-triggered ambient, context restoration and encry
 ### Phase 16 — Advanced Layer
 Private wiki, growth metrics, evidence-backed ideas, offline/local-model boundary and encrypted legacy handoff.
 
+**Master Plan additions reconciled:** Secret Vault advanced features are Phase 16 scope: TOTP generation, SSH-key storage, breach checking via privacy-preserving k-anonymity, emergency kit generation, and encrypted export/import. These are implementation scope, not current production claims.
+
 ### Phase 17 — Cognix Core Integration
 Source inbox expansion, claim review, translation versioning, fact-check workflow, research reports and export integration.
+
+**Master Plan additions reconciled:** Document Assistant detail is Phase 17 scope: document-type classification (contract/letter/form/invoice/receipt/meeting note/study material/medical report/legal notice/business card), OCR review UI, low-confidence highlighting, medical/legal disclaimers, and Inbox → Processing → Review → Approved → Indexed → Archived → Deleted lifecycle.
+
+**Language Tutor detail is Phase 17 scope:** MM↔JP/KR reading/vocabulary/translation, parallel text, grammar explanations/examples, JP furigana/romaji and KR romanization support, TTS, writing correction, role-play conversations, grammar/vocabulary/translation quizzes, and CEFR/JLPT/TOPIK mapping.
 
 ### Phase 18 — Vizora Lens
 Batch media, richer OCR/vision, metadata, review, media links and Drive package.
 
+**Master Plan additions reconciled:** batch upload, diagram/chart/infographic analysis, EXIF/document metadata extraction, human review, media↔notes/concepts links, and Drive package export containing original + OCR text + metadata JSON + thumbnail.
+
 ### Phase 19 — Native/Product UX
 Offline-first reader, share-sheet/capture, camera OCR, voice, push, biometric boundary, JP/KR, accessibility and responsive polish.
 
+**Master Plan additions reconciled:** full native offline reading, iOS/Android share-sheet capture, camera OCR, voice-note capture, review/digest push notifications, biometric Vault unlock, JP/KR native UI, and WCAG AA/keyboard/screen-reader/responsive polish.
+
 ### Phase 20 — Production Engineering
 Durable leases, backup/restore, migrations, observability, evaluation datasets, E2E, stress, security and rollback.
+
+**Evaluation scope:** AI grounding/hallucination/JSON, agent finding/synthesis quality, learning decay/path effectiveness, latency/storage/quota benchmarks, and prompt-injection/RLS/SSRF security suites.
 
 ### Phase 21 — Release
 Re-enable frontend deployment, configure domains/TLS/secrets, smoke-test and tag release.
@@ -104,6 +116,17 @@ These are not current P0 blockers.
 - Final production smoke.
 - Final release/tag.
 Block condition: required external/provider/browser/device/recovery gates remain unresolved.
+
+## Master Plan reconciliation / newly tracked scope
+The following items from the supplied Master Plan v4.0 are now explicitly tracked above rather than treated as “missing from the roadmap”: Document Assistant detail, Language Tutor detail, Secret Vault advanced features, Phase 13–16 feature-level scope, Vizora Lens detail, Native/Product UX detail, evaluation datasets, and documentation coverage.
+
+These items are intentionally **not marked complete**. Existing Phase 13–21 contracts/foundations count only as preparation. Runtime activation remains behind the release gate invariant.
+
+### Documentation coverage
+Canonical documentation now includes `docs/ARCHITECTURE.md`, `docs/DATA_MODEL.md`, `docs/PIPELINE.md`, `docs/PROMPTS.md`, `docs/TROUBLESHOOTING.md`, `docs/CHANGELOG.md`, `docs/USER_GUIDE.md`, and `docs/AGENT.md`. Existing docs are authoritative; duplicated legacy docs should not be created.
+
+### Evaluation datasets
+Evaluation fixture work is Phase 20 scope and may be prepared in parallel. It must remain deterministic, owner/evidence aware, and separate from production PASS evidence.
 
 ## Backlog / Optional
 - R2 as a production provider only if scale/requirements justify it and live configuration verifies it.
