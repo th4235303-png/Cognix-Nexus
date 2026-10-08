@@ -78,5 +78,8 @@
     "next": {
       "postcss": "8.5.23"
     }
+  },
+  "devDependencies": {
+    "@playwright/test": "1.51.1"
   }
 }
