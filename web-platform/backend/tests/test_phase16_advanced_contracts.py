@@ -9,6 +9,7 @@ class Phase16AdvancedContractTests(unittest.TestCase):
             id="entity-1",
             owner_id="owner-1",
             name="Example",
+            entity_type="concept",
             source_refs=("chunk-1",),
         )
         self.assertEqual(entity.source_refs, ("chunk-1",))
@@ -17,9 +18,10 @@ class Phase16AdvancedContractTests(unittest.TestCase):
         metric = GrowthMetric(
             id="metric-1",
             owner_id="owner-1",
-            metric_type="consistency",
+            metric="consistency",
             value=0.75,
-            evidence_refs=(),
+            unit="score",
+            evidence_refs=("chunk-1",),
         )
         self.assertEqual(metric.owner_id, "owner-1")
 
@@ -27,10 +29,11 @@ class Phase16AdvancedContractTests(unittest.TestCase):
         handoff = OfflineHandoff(
             id="handoff-1",
             owner_id="owner-1",
-            encrypted_payload_ref="capsule-1",
-            signature="sig-1",
+            format="encrypted_archive",
+            artifact_ref="capsule-1",
         )
-        self.assertEqual(handoff.encrypted_payload_ref, "capsule-1")
+        self.assertEqual(handoff.artifact_ref, "capsule-1")
+        self.assertTrue(handoff.recoverable)
 
 
 if __name__ == "__main__":
