@@ -100,16 +100,16 @@ These are intentionally deferred and are not current P0 implementation blockers.
 - These are READY/code evidence only; real production gates remain PENDING until their external credentials/browser/device/account actions are executed.
 
 ## 11. LAST VERIFIED
-2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The CI import-path fix is present on `main`. Current HEAD is `a8786227812d4247c24955214cd99c232e80b3ab`; the available workflow-run/status queries return no current status records for that HEAD, so CI remains unverified rather than being called PASS.
+2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The CI import-path fix is present on `main`. Current HEAD is `aef5dc8f2a128e820e88994ed66a0bee2b0f32ed`; direct combined-status and commit-workflow-run queries return no current status records for this HEAD, so CI remains unverified rather than being called PASS.
 
 ## 12. NEXT ACTION
-1. Obtain CI PASS on the latest fix.
-2. Immediately execute the release-gate workflow with available production-safe secrets.
-3. Continue future-track contracts/tests/persistence/evidence/evaluation preparation in parallel.
-4. Capture all real-world gate evidence.
-5. Perform grouped manual verification last.
+1. Obtain CI PASS on the current `main` revision; no PASS is inferred from missing status records.
+2. Immediately execute the release-gate workflow with available production-safe secrets once CI is green.
+3. Continue Batch 1–4 foundation/tests/persistence/evidence/evaluation preparation in parallel without activating future runtime.
+4. Capture provider/storage/Book, authenticated-browser, recovery/GDPR/observability/accessibility/performance/mobile evidence in the declared order.
+5. Perform all manual verification as one final grouped step.
 6. Run final production smoke and release approval.
-7. Only then activate Phase 13, then 14 → 15 → … → 21 one phase at a time with evidence.
+7. Only then activate Phase 13, then 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 one phase at a time with evidence.
 
 ### Explicit VERIFY items
 No unresolved items remain from the previous four-item close-out set.
