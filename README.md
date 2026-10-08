@@ -32,6 +32,9 @@ See CURRENT_STATE.md for status and evidence, ROADMAP.md for strategic scope, an
 - TOOL.md — engineering/documentation workflow
 - SECURITY.md — security policy
 - docs/ARCHITECTURE.md — detailed architecture and ADR history
+- docs/DATA_MODEL.md — schema, ownership, RLS and migration discipline
+- docs/PIPELINE.md — processing pipeline and lifecycle boundaries
+- docs/PROMPTS.md — AI prompt governance and evaluation rules
 - docs/DEVELOPMENT.md — development setup/checks
 - docs/TESTING.md — testing and acceptance
 - docs/DEPLOYMENT.md — deployment/release operations
@@ -41,6 +44,10 @@ See CURRENT_STATE.md for status and evidence, ROADMAP.md for strategic scope, an
 - docs/AI_RAG.md — processing, AI and retrieval
 - docs/STORAGE.md — storage provider roles
 - docs/TROUBLESHOOTING.md — operational troubleshooting
+- docs/CHANGELOG.md — release history
+- docs/USER_GUIDE.md — end-user workflow and roadmap boundaries
+- docs/AGENT.md — AI agent behavior and activation guard
+- docs/EVALUATION_DATASETS.md — deterministic evaluation corpus plan
 - docs/features/ — feature-specific behavior
 - docs/runbooks/ — operational procedures
 - archive/legacy/ — historical source documents retained for traceability
