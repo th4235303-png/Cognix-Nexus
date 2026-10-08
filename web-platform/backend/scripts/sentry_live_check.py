@@ -9,8 +9,6 @@ separate operator gate.
 
 import json
 import os
-import uuid
-
 import sentry_sdk
 
 
@@ -19,20 +17,19 @@ def main() -> int:
     if not dsn:
         print(json.dumps({"status": "NOT_RUN", "missing": ["SENTRY_DSN"]}))
         return 1
-    probe_id = uuid.uuid4().hex
     sentry_sdk.init(
         dsn=dsn,
         environment=os.getenv("SENTRY_ENVIRONMENT", "production"),
         traces_sample_rate=0.0,
         send_default_pii=False,
     )
-    sentry_sdk.capture_message("Cognix Nexus release-gate Sentry ingestion probe", level="info")
+    event_id = sentry_sdk.capture_message("Cognix Nexus release-gate Sentry ingestion probe", level="info")
     sentry_sdk.flush(timeout=10)
     sentry_sdk.close()
     print(json.dumps({
         "status": "FLUSHED",
         "event_label": "cognix-release-gate-probe",
-        "probe_id": probe_id,
+        "event_id": event_id,
         "secret_values_printed": False,
     }, sort_keys=True))
     return 0
