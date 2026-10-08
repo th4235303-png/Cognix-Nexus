@@ -99,13 +99,22 @@ def run(synthetic: bool) -> dict:
                     ) VALUES(%s,'Acceptance fixture','en','text','acceptance','queued',%s,now(),now(),%s,'queued')""",
                     (book_id, "fixture-hash-" + book_id, owner),
                 )
-                cur.execute(
-                    """INSERT INTO books(
-                       id,title,language,file_type,source_kind,status,content_hash,
-                       created_at,updated_at,owner_id,processing_stage
-                    ) VALUES(%s,'Duplicate fixture','en','text','acceptance','queued',%s,now(),now(),%s,'queued')""",
-                    (duplicate_id, "fixture-hash-" + book_id, owner),
-                )
+                cur.execute("SAVEPOINT duplicate_fingerprint_check")
+                try:
+                    cur.execute(
+                        """INSERT INTO books(
+                           id,title,language,file_type,source_kind,status,content_hash,
+                           created_at,updated_at,owner_id,processing_stage
+                        ) VALUES(%s,'Duplicate fixture','en','text','acceptance','queued',%s,now(),now(),%s,'queued')""",
+                        (duplicate_id, "fixture-hash-" + book_id, owner),
+                    )
+                except UniqueViolation:
+                    cur.execute("ROLLBACK TO SAVEPOINT duplicate_fingerprint_check")
+                    result["duplicate_fingerprint_rejected"] = True
+                else:
+                    cur.execute("ROLLBACK TO SAVEPOINT duplicate_fingerprint_check")
+                    result["duplicate_fingerprint_rejected"] = False
+                cur.execute("RELEASE SAVEPOINT duplicate_fingerprint_check")
                 cur.execute(
                     """INSERT INTO book_reading_progress(
                        book_id,owner_id,status,percent,completed_units,total_units
