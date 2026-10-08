@@ -11,7 +11,7 @@ class ReleaseGatePreflightTests(unittest.TestCase):
     def setUp(self):
         self.original = dict(os.environ)
         for key in {
-            "COGNIX_AI_API_KEY", "COGNIX_EMBEDDING_API_KEY",
+            "COGNIX_AI_API_KEY", "COGNIX_EMBEDDING_API_KEY", "CLOUDFLARE_ACCOUNT_ID",
             "COGNIX_EMBEDDING_API_URL", "COGNIX_EMBEDDING_MODEL",
             "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY",
             "COGNIX_SUPABASE_STORAGE_BUCKET", "COGNIX_B2_ENDPOINT",
@@ -56,6 +56,16 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "COGNIX_E2E_API_URL": "https://api.example.invalid",
             "COGNIX_E2E_EMAIL": "e2e@example.invalid",
             "COGNIX_E2E_PASSWORD": "password",
+            "GEMINI_API_KEY": "gemini",
+            "OPENROUTER_API_KEY": "openrouter",
+            "HUGGINGFACE_API_KEY": "huggingface",
+            "CEREBRAS_API_KEY": "cerebras",
+            "MISTRAL_API_KEY": "mistral",
+            "COHERE_API_KEY": "cohere",
+            "GROQ_API_KEY": "groq",
+            "VOYAGE_API_KEY": "voyage",
+            "CLOUDFLARE_API_TOKEN": "cloudflare",
+            "CLOUDFLARE_ACCOUNT_ID": "account",
             "DATABASE_URL": "postgresql://example.invalid/db",
         })
         out = io.StringIO()
