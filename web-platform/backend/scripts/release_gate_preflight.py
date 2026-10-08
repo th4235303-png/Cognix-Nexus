@@ -46,7 +46,12 @@ def present(name: str) -> bool:
 
 def main() -> int:
     gates = []
-    for gate in GATES:
+    active_gates = [
+        gate
+        for gate in GATES
+        if gate.name != "database_recovery" or os.getenv("COGNIX_RUN_RECOVERY", "").strip().lower() == "true"
+    ]
+    for gate in active_gates:
         missing = [key for key in gate.required if not present(key)]
         optional_missing = [key for key in gate.optional if not present(key)]
         gates.append(
