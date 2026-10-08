@@ -117,9 +117,9 @@ class MigrationSecurityContractTests(unittest.TestCase):
             "revoke all privileges on all sequences in schema public from public, anon, authenticated",
             sql,
         )
-        self.assertNotRegex(sql, r"alter\s+table\s+public\.\w+\s+enable\s+row\s+level\s+security")
         self.assertNotRegex(sql, r"grant\s+")
         rls_sql = (MIGRATIONS / "025_rls_owner_isolation.sql").read_text(encoding="utf-8").lower()
+        self.assertIn("alter table public.sources enable row level security", rls_sql)
         self.assertIn("create policy cognix_authenticated_sources", rls_sql)
         self.assertIn("current_setting('request.jwt.claim.sub', true)", rls_sql)
         self.assertIn("using (false) with check (false)", rls_sql)
