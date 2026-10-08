@@ -3,14 +3,15 @@
 > Preparation only. Runtime activation remains gated.
 
 ## Phase 18 — Vizora Lens
-
 Prepare:
-- media/OCR provider-neutral request/result contracts
-- object-storage lineage and owner-scope checks
-- explicit provider failure states
-- deterministic metadata normalization
-- review-required OCR/media findings
-- fixtures for successful, partial and failed extraction
+- batch media upload
+- media/OCR/vision provider-neutral contracts
+- richer diagram/chart/infographic analysis
+- EXIF/document metadata extraction and deterministic normalization
+- human review for OCR/image-analysis results and low confidence
+- media↔notes/concepts links with owner/evidence lineage
+- Drive package export: original + OCR text + metadata JSON + thumbnail
+- successful/partial/failed extraction fixtures
 
 Activation prerequisites:
 1. storage provider live evidence
@@ -21,14 +22,15 @@ Activation prerequisites:
 No automatic media/OCR production processing is enabled by this preparation.
 
 ## Phase 19 — Native/Product UX
-
 Prepare:
-- shared design-system/API contract reuse
-- offline handoff boundaries
-- camera/OCR and voice capability interfaces
-- push/notification consent boundary
-- biometric boundary without server-side secret storage
-- accessibility/responsive test matrix
+- full offline-first reader boundary
+- iOS/Android share-sheet capture
+- camera OCR interface
+- voice-note capture
+- push/reminder/digest notification consent and delivery boundary
+- biometric Vault unlock boundary without server-side secret storage
+- native JP/KR UI localization
+- WCAG AA, keyboard, screen-reader and responsive test matrix
 - EAS/device smoke checklist
 
 Activation prerequisites:
@@ -38,5 +40,4 @@ Activation prerequisites:
 4. explicit platform capability consent
 
 ## Parallel rule
-
 Phase 18–19 preparation may continue while release gates are pending, but device/provider runtime activation stays behind its corresponding external gate.
