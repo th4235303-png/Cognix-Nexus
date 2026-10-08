@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "mode": "preparation_only",
+  "production_activation_allowed": false,
+  "activation_guard": [
+    "CI_PASS",
+    "provider_storage_book_acceptance",
+    "authenticated_browser",
+    "recovery_gdpr_observability_accessibility_performance_mobile",
+    "grouped_manual_verification",
+    "final_production_smoke",
+    "release_approval"
+  ],
+  "phase_order": [13, 14, 15, 16, 17, 18, 19, 20, 21],
+  "batches": [
+    {
+      "batch": 1,
+      "phases": [13, 17],
+      "prepared_scope": [
+        "evidence-bound contracts",
+        "agent lifecycle events and terminal fencing",
+        "core integration review contracts",
+        "evaluation fixtures"
+      ],
+      "remaining_before_activation": [
+        "durable lifecycle persistence",
+        "lease and heartbeat recovery",
+        "idempotent terminal execution",
+        "shared evidence API integration"
+      ]
+    },
+    {
+      "batch": 2,
+      "phases": [14, 15, 16],
+      "prepared_scope": [
+        "learning contracts and deterministic decay",
+        "privacy-bounded context restore",
+        "advanced artifact and offline handoff contracts",
+        "Secret Vault advanced scope"
+      ],
+      "remaining_before_activation": [
+        "learning event persistence and schedulers",
+        "explicit restore and capsule runtime",
+        "wiki/growth/idea/offline runtime",
+        "TOTP/SSH/breach-check/emergency-kit/export-import implementations"
+      ]
+    },
+    {
+      "batch": 3,
+      "phases": [18, 19],
+      "prepared_scope": [
+        "media/OCR lineage contracts",
+        "native capability boundaries",
+        "device and accessibility preparation"
+      ],
+      "remaining_before_activation": [
+        "batch media/OCR runtime adapters",
+        "metadata and review workflow",
+        "Drive package export",
+        "EAS/device smoke",
+        "offline/share-sheet/camera/voice/push/biometric implementation"
+      ]
+    },
+    {
+      "batch": 4,
+      "phases": [20, 21],
+      "prepared_scope": [
+        "recovery/rollback/observability foundations",
+        "evaluation datasets",
+        "release evidence contracts"
+      ],
+      "remaining_before_activation": [
+        "production recovery drill evidence",
+        "rollback rehearsal evidence",
+        "observability production evidence",
+        "machine-verified release evidence and approval"
+      ]
+    }
+  ],
+  "current_release_status": {
+    "ci": "unverified",
+    "release_gate_workflow": "prepared_not_run",
+    "manual_verification": "pending_and_grouped_last",
+    "phase_13_plus_runtime": "blocked"
+  }
+}
