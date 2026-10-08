@@ -34,7 +34,7 @@ GATES = (
         ("GOOGLE_REFRESH_TOKEN", "GOOGLE_DRIVE_ROOT_FOLDER_ID"),
     ),
     Gate("sentry", ("SENTRY_DSN",)),
-    Gate("authenticated_browser", ("COGNIX_E2E_BASE_URL", "COGNIX_E2E_EMAIL", "COGNIX_E2E_PASSWORD")),
+    Gate("authenticated_browser", ("COGNIX_E2E_BASE_URL", "COGNIX_E2E_API_URL", "COGNIX_E2E_EMAIL", "COGNIX_E2E_PASSWORD")),
     Gate("database_recovery", ("DATABASE_URL",)),
 )
 
