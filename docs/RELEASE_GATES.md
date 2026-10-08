@@ -10,7 +10,7 @@ This file defines what can be automated now and what still requires an operator/
 
 | Gate | Runner | Operator input |
 |---|---|---|
-| AI + embeddings + extraction + RRF/citation | `scripts/provider_e2e.py` | AI/embedding credentials |
+| AI + embeddings + extraction + RRF/citation | `scripts/provider_e2e.py` | All configured provider credentials; LLM matrix is independent, embeddings are probed at persisted 1536 plus non-persisted 1024 for Voyage/Cloudflare |
 | Supabase Storage | `scripts/provider_e2e.py` | Supabase URL/service-role + bucket |
 | Backblaze B2 | `scripts/provider_e2e.py` | B2 credentials |
 | Google Drive | `scripts/provider_e2e.py` | OAuth client + account-owner refresh token |
