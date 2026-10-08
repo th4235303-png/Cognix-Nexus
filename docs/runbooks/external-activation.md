@@ -21,7 +21,7 @@ Use the backend Google authorization endpoint. The account owner must consent an
 Paid LLM activation is intentionally deferred. When resumed, configure the OpenAI-compatible AI endpoint/model and embedding provider in backend secrets, then run the real provider E2E.
 
 ## Render
-Reconcile live API/worker environment with the checked-in render.yaml, including DATABASE_URL and database-required mode. Worker deployment policy is VERIFY because source config and prior live evidence disagree.
+Reconcile live API/worker environment with the checked-in render.yaml, including DATABASE_URL and database-required mode. Live verification on 2026-10-08 confirmed the worker deployment policy is manual/off; the checked-in blueprint remains commit-triggered, so any intentional change must be explicitly re-verified.
 
 ## Netlify
 Set public API/Supabase variables in the frontend environment and promote only after UI smoke, accessibility/performance and release gates pass.
