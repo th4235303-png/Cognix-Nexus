@@ -115,6 +115,39 @@ class LLMProvider:
         self._cursor += 1
         return expanded[start:] + expanded[:start]
 
+    async def complete_on_route(self, route: LLMRoute, system: str, user: str) -> str:
+        """Call one concrete configured route without failover.
+
+        Release E2E uses this to prove each configured provider independently.
+        Secret values are never included in errors or logs.
+        """
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {os.getenv(route.api_key_env, '').strip()}",
+        }
+        payload = {
+            "model": route.model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+        }
+        if route.name != "gemini":
+            payload["temperature"] = 0.1
+        async with httpx.AsyncClient(timeout=self.timeout) as client:
+            response = await client.post(route.url, headers=headers, json=payload)
+            response.raise_for_status()
+            body = response.json()
+        try:
+            content = body["choices"][0]["message"]["content"]
+        except (KeyError, IndexError, TypeError) as exc:
+            raise RuntimeError("LLM provider returned an unexpected response") from exc
+        if not isinstance(content, str) or not content.strip():
+            raise RuntimeError("LLM provider returned empty content")
+        self.last_provider = route.name
+        self.last_provider_url = route.url
+        return content.strip()
+
     async def complete(self, system: str, user: str) -> str:
         if not self.configured:
             raise RuntimeError("LLM synthesis is not configured")
@@ -124,32 +157,7 @@ class LLMProvider:
         if routes:
             for route in routes:
                 try:
-                    headers = {
-                        "Content-Type": "application/json",
-                        "Authorization": f"Bearer {os.getenv(route.api_key_env, '').strip()}",
-                    }
-                    payload = {
-                        "model": route.model,
-                        "messages": [
-                            {"role": "system", "content": system},
-                            {"role": "user", "content": user},
-                        ],
-                    }
-                    if route.name != "gemini":
-                        payload["temperature"] = 0.1
-                    async with httpx.AsyncClient(timeout=self.timeout) as client:
-                        response = await client.post(route.url, headers=headers, json=payload)
-                        response.raise_for_status()
-                        body = response.json()
-                    try:
-                        content = body["choices"][0]["message"]["content"]
-                    except (KeyError, IndexError, TypeError) as exc:
-                        raise RuntimeError("LLM provider returned an unexpected response") from exc
-                    if not isinstance(content, str) or not content.strip():
-                        raise RuntimeError("LLM provider returned empty content")
-                    self.last_provider = route.name
-                    self.last_provider_url = route.url
-                    return content.strip()
+                    return await self.complete_on_route(route, system, user)
                 except Exception as exc:
                     errors.append(f"{route.name}: {type(exc).__name__}")
             raise RuntimeError("All configured LLM providers failed: " + "; ".join(errors))
