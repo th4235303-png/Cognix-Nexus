@@ -12,7 +12,7 @@ Release-candidate / pre-final-production-verification state on main.
 P0 engineering verification → storage/processing verification → security regression → P1 UI completion/polish → production smoke → release.
 
 ## 3. Overall Status
-Implementation foundation: DONE/VERIFIED where explicitly evidenced. CI is currently being repaired after the latest observed backend failure. External production gates remain PENDING. Final production smoke/release remains BLOCKED by unresolved gates.
+Implementation foundation: DONE/VERIFIED where explicitly evidenced. The previously observed CI Book Intelligence import-path failure has been fixed on main, but a new PASS is not evidenced by the available workflow-run/status queries. External production gates remain PENDING. Final production smoke/release remains BLOCKED by unresolved gates.
 
 Repository migration head and live Supabase migration head are both 032, verified 2026-10-08.
 
@@ -39,7 +39,7 @@ Repository migration head and live Supabase migration head are both 032, verifie
 - The backend failure in CI run 37739681316 was isolated to the Book Intelligence acceptance command not finding the `app` package because the job working directory was `web-platform/backend` without an import path.
 
 ## 6. IN PROGRESS
-1. Repair CI Book Intelligence acceptance import path and obtain a new full CI PASS.
+1. Obtain a new full CI PASS for the current main revision; the Book Intelligence import-path fix is already on main.
 2. Real AI provider E2E.
 3. Google Drive OAuth/account E2E.
 4. Supabase Storage live drill.
@@ -100,7 +100,7 @@ These are intentionally deferred and are not current P0 implementation blockers.
 - These are READY/code evidence only; real production gates remain PENDING until their external credentials/browser/device/account actions are executed.
 
 ## 11. LAST VERIFIED
-2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The CI import-path fix is present on `main`; a new CI PASS has not yet been evidenced by the available workflow-run query, so CI remains unverified.
+2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The CI import-path fix is present on `main`. Current HEAD is `a8786227812d4247c24955214cd99c232e80b3ab`; the available workflow-run/status queries return no current status records for that HEAD, so CI remains unverified rather than being called PASS.
 
 ## 12. NEXT ACTION
 1. Obtain CI PASS on the latest fix.
