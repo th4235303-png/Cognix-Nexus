@@ -30,12 +30,13 @@ GATES = (
     Gate("backblaze_b2", ("COGNIX_B2_ENDPOINT", "COGNIX_B2_BUCKET", "COGNIX_B2_KEY_ID", "COGNIX_B2_APPLICATION_KEY")),
     Gate(
         "google_drive",
-        ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI"),
-        ("GOOGLE_REFRESH_TOKEN", "GOOGLE_DRIVE_ROOT_FOLDER_ID"),
+        ("GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "GOOGLE_REFRESH_TOKEN"),
+        ("GOOGLE_DRIVE_ROOT_FOLDER_ID",),
     ),
+    Gate("cloudinary", ("CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET")),
     Gate("sentry", ("SENTRY_DSN",)),
     Gate("authenticated_browser", ("COGNIX_E2E_BASE_URL", "COGNIX_E2E_API_URL", "COGNIX_E2E_EMAIL", "COGNIX_E2E_PASSWORD")),
-    Gate("database_recovery", ("DATABASE_URL",)),
+    Gate("database_recovery", ("DATABASE_URL", "COGNIX_RECOVERY_TARGET_DATABASE_URL")),
 )
 
 
