@@ -161,6 +161,10 @@ class EmbeddingProvider:
         self.last_provider = route.name
         return vectors
 
+    async def embed_on_route(self, route: EmbeddingRoute, inputs: Sequence[str]) -> list[list[float]]:
+        """Call one concrete embedding route without failover."""
+        return await self._request(route, inputs)
+
     async def embed(self, inputs: Sequence[str]) -> list[list[float]]:
         if not self.configured:
             raise RuntimeError("Semantic embeddings are not configured")
@@ -170,7 +174,7 @@ class EmbeddingProvider:
         if routes:
             for route in routes:
                 try:
-                    return await self._request(route, inputs)
+                    return await self.embed_on_route(route, inputs)
                 except Exception as exc:
                     errors.append(f"{route.name}: {type(exc).__name__}")
             raise RuntimeError("All configured embedding providers failed: " + "; ".join(errors))
