@@ -1,0 +1,9 @@
+{
+  "dataset": "agent",
+  "version": "1.0",
+  "cases": [
+    {"id":"agent-evidence-001","expected":"finding_needs_review"},
+    {"id":"agent-owner-001","expected":"cross_owner_rejected"},
+    {"id":"agent-idempotency-001","expected":"duplicate_event_no_duplicate_terminal_transition"}
+  ]
+}
