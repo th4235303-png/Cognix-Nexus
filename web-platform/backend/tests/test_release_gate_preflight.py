@@ -53,6 +53,7 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "GOOGLE_REDIRECT_URI": "https://example.invalid/callback",
             "SENTRY_DSN": "https://example.invalid/1",
             "COGNIX_E2E_BASE_URL": "https://example.invalid",
+            "COGNIX_E2E_API_URL": "https://api.example.invalid",
             "COGNIX_E2E_EMAIL": "e2e@example.invalid",
             "COGNIX_E2E_PASSWORD": "password",
             "DATABASE_URL": "postgresql://example.invalid/db",
