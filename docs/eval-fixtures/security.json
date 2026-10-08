@@ -1,0 +1,9 @@
+{
+  "dataset": "security",
+  "version": "1.0",
+  "cases": [
+    {"id":"security-injection-001","expected":"instruction_not_trusted_as_data"},
+    {"id":"security-rls-001","expected":"cross_owner_rejected"},
+    {"id":"security-ssrf-001","expected":"unsafe_destination_rejected"}
+  ]
+}
