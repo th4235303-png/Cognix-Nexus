@@ -97,7 +97,7 @@ jobs:
           COGNIX_DEV_MODE: "true"
           COGNIX_REQUIRE_DATABASE: "true"
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
-        run: python scripts/book_acceptance_contract.py --synthetic
+        run: PYTHONPATH=. python scripts/book_acceptance_contract.py --synthetic
       - name: Install PostgreSQL 17 client
         run: |
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg
@@ -115,7 +115,7 @@ jobs:
           python scripts/backup_restore_drill.py --dump /tmp/cognix-test.dump
           test -s /tmp/cognix-test.dump
           python scripts/backup_restore_drill.py --verify /tmp/cognix-test.dump
-          python scripts/backup_restore_drill.py --restore /tmp/cognix-test.dump             --target-dsn postgresql://postgres:postgres@localhost:5432/cognix_restore_drill             --allow-restore
+          python scripts/backup_restore_drill.py --restore /tmp/cognix-test.dump --target-dsn postgresql://postgres:postgres@localhost:5432/cognix_restore_drill --allow-restore
       - run: env -u DATABASE_URL python -m coverage run --branch -m unittest discover -s tests -p 'test_*.py'
         env:
           COGNIX_DEV_MODE: "true"
