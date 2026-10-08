@@ -15,10 +15,10 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "COGNIX_EMBEDDING_API_URL", "COGNIX_EMBEDDING_MODEL",
             "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY",
             "COGNIX_SUPABASE_STORAGE_BUCKET", "COGNIX_B2_ENDPOINT",
-            "COGNIX_B2_BUCKET", "COGNIX_B2_KEY_ID", "COGNIX_B2_APPLICATION_KEY",
-            "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI",
+            "COGNIX_B2_BUCKET", "COGNIX_B2_KEY_ID", "COGNIX_B2_APPLICATION_KEY", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET",
+            "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "GOOGLE_REFRESH_TOKEN",
             "SENTRY_DSN", "COGNIX_E2E_BASE_URL", "COGNIX_E2E_EMAIL",
-            "COGNIX_E2E_PASSWORD", "DATABASE_URL",
+            "COGNIX_E2E_PASSWORD", "DATABASE_URL", "COGNIX_RECOVERY_TARGET_DATABASE_URL",
         }:
             os.environ.pop(key, None)
 
@@ -48,9 +48,13 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "COGNIX_B2_BUCKET": "bucket",
             "COGNIX_B2_KEY_ID": "key",
             "COGNIX_B2_APPLICATION_KEY": "secret",
+            "CLOUDINARY_CLOUD_NAME": "cloud",
+            "CLOUDINARY_API_KEY": "cloud-key",
+            "CLOUDINARY_API_SECRET": "cloud-secret",
             "GOOGLE_CLIENT_ID": "client",
             "GOOGLE_CLIENT_SECRET": "secret",
             "GOOGLE_REDIRECT_URI": "https://example.invalid/callback",
+            "GOOGLE_REFRESH_TOKEN": "refresh",
             "SENTRY_DSN": "https://example.invalid/1",
             "COGNIX_E2E_BASE_URL": "https://example.invalid",
             "COGNIX_E2E_API_URL": "https://api.example.invalid",
@@ -67,6 +71,7 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "CLOUDFLARE_API_TOKEN": "cloudflare",
             "CLOUDFLARE_ACCOUNT_ID": "account",
             "DATABASE_URL": "postgresql://example.invalid/db",
+            "COGNIX_RECOVERY_TARGET_DATABASE_URL": "postgresql://example.invalid/recovery",
         })
         out = io.StringIO()
         with redirect_stdout(out):
