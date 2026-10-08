@@ -82,6 +82,8 @@ Preparation detail: [PHASE_18_19_PREPARATION_PLAN.md](./PHASE_18_19_PREPARATION_
 
 Preparation should reuse existing object-storage and evidence-lineage boundaries. Media/OCR additions remain provider-failure explicit.
 
+Non-runtime contracts/tests now cover media ownership/source lineage and explicit native device-gate boundaries.
+
 ## Phase 19 — Native/Product UX
 
 Foundation boundary is documented in `docs/PHASE_19_FOUNDATION.md`.
@@ -95,6 +97,8 @@ Foundation boundary is documented in `docs/PHASE_20_FOUNDATION.md`.
 Preparation detail: [PHASE_20_21_PREPARATION_PLAN.md](./PHASE_20_21_PREPARATION_PLAN.md).
 
 CI already contains local database integration and isolated restore coverage. Production activation still requires real backup/restore, rollback, observability and stress evidence.
+
+Non-runtime release-evidence contracts/tests now require approved revision + evidence-backed PASS for every required gate.
 
 ## Phase 21 — Release
 
@@ -122,7 +126,7 @@ While the current release is blocked on real-world gates:
 6. final production smoke/release approval
 
 ### Batch 1 — Phase 13 + 17
-1. durable persistence/events
+1. durable persistence/events and lifecycle event invariants
 2. lease/heartbeat lifecycle
 3. evidence validation/citation checks
 4. shared evidence-bound API integration
