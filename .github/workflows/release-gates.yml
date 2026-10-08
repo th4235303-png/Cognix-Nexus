@@ -26,7 +26,6 @@ jobs:
       run:
         working-directory: web-platform/backend
     env:
-    env:
       COGNIX_AI_API_KEY: ${{ secrets.COGNIX_AI_API_KEY }}
       COGNIX_AI_BASE_URL: ${{ secrets.COGNIX_AI_BASE_URL }}
       COGNIX_AI_MODEL: ${{ secrets.COGNIX_AI_MODEL }}
