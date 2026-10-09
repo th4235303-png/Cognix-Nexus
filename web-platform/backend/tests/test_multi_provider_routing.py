@@ -22,6 +22,8 @@ class MultiProviderRoutingTests(unittest.TestCase):
         with patch.dict(os.environ, env, clear=True):
             provider = LLMProvider()
             names = [route.name for route in provider.configured_routes]
+            openrouter_model = next(route.model for route in provider.configured_routes if route.name == "openrouter")
+        self.assertEqual(openrouter_model, "openrouter/free")
         self.assertEqual(
             names,
             ["gemini", "openrouter", "huggingface", "cerebras", "mistral", "cohere", "groq", "cloudflare"],
@@ -56,7 +58,7 @@ class MultiProviderRoutingTests(unittest.TestCase):
         }
         with patch.dict(os.environ, env, clear=True):
             provider = EmbeddingProvider()
-            self.assertEqual([r.name for r in provider.configured_routes], ["openrouter", "cohere"])
+            self.assertEqual([r.name for r in provider.configured_routes], ["cohere"])
 
     def test_embedding_dimension_can_enable_voyage_and_cloudflare(self):
         env = {
@@ -64,11 +66,14 @@ class MultiProviderRoutingTests(unittest.TestCase):
             "VOYAGE_API_KEY": "x",
             "CLOUDFLARE_API_TOKEN": "x",
             "CLOUDFLARE_ACCOUNT_ID": "account",
+            "OPENROUTER_API_KEY": "x",
             "COGNIX_EMBEDDING_DIMENSION": "1024",
         }
         with patch.dict(os.environ, env, clear=True):
             provider = EmbeddingProvider()
-            self.assertEqual([r.name for r in provider.configured_routes], ["cohere", "voyage", "cloudflare"])
+            self.assertEqual([r.name for r in provider.configured_routes], ["cohere", "voyage", "cloudflare", "openrouter"])
+            openrouter = next(r for r in provider.configured_routes if r.name == "openrouter")
+            self.assertEqual(openrouter.model, "liquid/lfm-2.5-embedding-350m:free")
 
 
 if __name__ == "__main__":
