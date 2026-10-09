@@ -82,6 +82,10 @@ jobs:
           cache-dependency-path: web-platform/backend/requirements.lock
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements.lock
+      - name: Verify direct release-script imports without production credentials
+        run: |
+          env -u COGNIX_PROVIDER_E2E_RUN_ID python scripts/provider_e2e.py
+          python -c "import runpy; runpy.run_path('scripts/privacy_inventory.py')"
       - run: python -m compileall app
       - run: env -u DATABASE_URL python -m unittest discover -s tests
         env:
@@ -97,7 +101,7 @@ jobs:
           COGNIX_DEV_MODE: "true"
           COGNIX_REQUIRE_DATABASE: "true"
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
-        run: PYTHONPATH=. python scripts/book_acceptance_contract.py --synthetic
+        run: python scripts/book_acceptance_contract.py --synthetic
       - name: Install PostgreSQL 17 client
         run: |
           curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo gpg --dearmor -o /usr/share/keyrings/postgresql.gpg

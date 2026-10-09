@@ -12,7 +12,15 @@ import hashlib
 import json
 import logging
 import os
+import sys
 from datetime import date, datetime, timezone
+from pathlib import Path
+
+# Running `python scripts/provider_e2e.py` puts scripts/ on sys.path, not the
+# backend project root. Add the root explicitly so `app.*` imports are stable.
+BACKEND_ROOT = Path(__file__).resolve().parents[1]
+if str(BACKEND_ROOT) not in sys.path:
+    sys.path.insert(0, str(BACKEND_ROOT))
 
 from app.services.book_processing import process_book
 from app.services.book_storage import BookBinaryStorage

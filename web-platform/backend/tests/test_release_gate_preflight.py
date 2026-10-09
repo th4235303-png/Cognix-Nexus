@@ -85,14 +85,14 @@ class ReleaseGatePreflightTests(unittest.TestCase):
         os.environ["COGNIX_RUN_PROVIDER_E2E"] = "true"
         out = io.StringIO()
         with redirect_stdout(out):
-            self.assertEqual(main(), 0)
+            self.assertEqual(main(), 1)  # selected provider gate is incomplete
         payload = json.loads(out.getvalue())
         self.assertNotIn("database_recovery", {g["gate"] for g in payload["gates"]})
 
         os.environ["COGNIX_RUN_RECOVERY"] = "true"
         out = io.StringIO()
         with redirect_stdout(out):
-            self.assertEqual(main(), 0)
+            self.assertEqual(main(), 1)  # recovery target is missing
         payload = json.loads(out.getvalue())
         recovery = next(g for g in payload["gates"] if g["gate"] == "database_recovery")
         self.assertEqual(recovery["missing_required"], ["COGNIX_RECOVERY_TARGET_DATABASE_URL"])
