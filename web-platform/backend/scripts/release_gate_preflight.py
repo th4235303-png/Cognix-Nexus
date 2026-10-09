@@ -91,7 +91,9 @@ def main() -> int:
         "gates": gates,
     }
     print(json.dumps(result, indent=2, sort_keys=True))
-    return 0
+    # Fail fast only for explicitly selected gates. With no selection this is
+    # an informational inventory and must not block the default workflow run.
+    return 1 if any_selected and any(not gate["runnable"] for gate in gates) else 0
 
 
 if __name__ == "__main__":
