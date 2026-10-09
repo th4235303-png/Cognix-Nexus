@@ -18,7 +18,7 @@ class LLMRoute:
 
 _DEFAULT_ROUTES: tuple[LLMRoute, ...] = (
     LLMRoute("gemini", "GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-3.8-flash"),
-    LLMRoute("openrouter", "OPENROUTER_API_KEY", "https://openrouter.ai/api/v1/chat/completions", "~openai/gpt-sol-latest"),
+    LLMRoute("openrouter", "OPENROUTER_API_KEY", "https://openrouter.ai/api/v1/chat/completions", "openrouter/free"),
     LLMRoute("huggingface", "HUGGINGFACE_API_KEY", "https://router.huggingface.co/v1/chat/completions", "deepseek-ai/DeepSeek-V3-0324:fastest"),
     LLMRoute("cerebras", "CEREBRAS_API_KEY", "https://api.cerebras.ai/v1/chat/completions", "gpt-oss-120b"),
     LLMRoute("mistral", "MISTRAL_API_KEY", "https://api.mistral.ai/v1/chat/completions", "mistral-large-latest"),

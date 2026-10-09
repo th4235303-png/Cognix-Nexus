@@ -92,59 +92,89 @@ async def run(run_id: str) -> dict:
     chunk_id = None
 
     try:
-        # 0. Prove every configured provider independently before the integrated drill.
-        # LLM routes: all eight providers must answer directly; this is not satisfied
-        # by router fallback because a fallback could hide a broken provider.
-        llm_routes = llm_provider.configured_routes
+        # 0. Probe every configured LLM and embedding route in one pass.
+        # Record individual failures instead of aborting at the first bad provider,
+        # so the workflow produces a useful provider matrix without exposing secrets.
+        provider_failures: list[str] = []
+        llm_probe_results: dict[str, object] = {}
         expected_llm = {
             "gemini", "openrouter", "huggingface", "cerebras",
             "mistral", "cohere", "groq", "cloudflare",
         }
-        _assert(
-            {route.name for route in llm_routes} == expected_llm,
-            "not all required LLM providers are configured",
-        )
-        llm_probe_results: dict[str, object] = {}
-        for route in llm_routes:
-            answer = await llm_provider.complete_on_route(
-                route,
-                "Return only the exact token E2E-OK.",
-                "Provider connectivity probe.",
-            )
-            _assert("E2E-OK" in answer, f"{route.name} did not return the E2E probe token")
-            llm_probe_results[route.name] = {"ok": True}
+        llm_routes = llm_provider.configured_routes
+        configured_llm = {route.name for route in llm_routes}
+        for missing in sorted(expected_llm - configured_llm):
+            llm_probe_results[missing] = {"ok": False, "error": "not_configured"}
+            provider_failures.append(f"llm.{missing}: not_configured")
 
-        # At the persisted 1536 dimension, OpenRouter/Cohere are active.
+        for route in llm_routes:
+            try:
+                answer = await llm_provider.complete_on_route(
+                    route,
+                    "Return only the exact token E2E-OK.",
+                    "Provider connectivity probe.",
+                )
+                if "E2E-OK" not in answer:
+                    raise RuntimeError("probe token missing from response")
+                llm_probe_results[route.name] = {"ok": True}
+            except Exception as exc:
+                status_code = getattr(getattr(exc, "response", None), "status_code", None)
+                error = type(exc).__name__
+                if status_code is not None:
+                    error = f"{error}:HTTP_{status_code}"
+                llm_probe_results[route.name] = {"ok": False, "error": error}
+                provider_failures.append(f"llm.{route.name}: {error}")
+
+        embedding_probe_results: dict[str, object] = {}
+        expected_embedding_1536 = {"cohere"}
         embedding_1536 = embedding_provider
         embedding_1536_routes = embedding_1536.configured_routes
-        _assert(
-            {route.name for route in embedding_1536_routes} == {"openrouter", "cohere"},
-            "1536-dimension embedding routes are not exactly OpenRouter+Cohere",
-        )
-        embedding_probe_results: dict[str, object] = {}
+        configured_1536 = {route.name for route in embedding_1536_routes}
+        for missing in sorted(expected_embedding_1536 - configured_1536):
+            embedding_probe_results[f"{missing}_1536"] = {"ok": False, "error": "not_configured"}
+            provider_failures.append(f"embedding.{missing}.1536: not_configured")
         for route in embedding_1536_routes:
-            vectors = await embedding_1536.embed_on_route(route, ["provider connectivity probe"])
-            _assert(len(vectors) == 1 and len(vectors[0]) == 1536, f"{route.name} 1536 embedding probe failed")
-            embedding_probe_results[route.name] = {"ok": True, "dimension": 1536}
+            try:
+                vectors = await embedding_1536.embed_on_route(route, ["provider connectivity probe"])
+                if len(vectors) != 1 or len(vectors[0]) != 1536:
+                    raise RuntimeError("embedding dimension mismatch")
+                embedding_probe_results[f"{route.name}_1536"] = {"ok": True, "dimension": 1536}
+            except Exception as exc:
+                status_code = getattr(getattr(exc, "response", None), "status_code", None)
+                error = type(exc).__name__
+                if status_code is not None:
+                    error = f"{error}:HTTP_{status_code}"
+                embedding_probe_results[f"{route.name}_1536"] = {"ok": False, "error": error}
+                provider_failures.append(f"embedding.{route.name}.1536: {error}")
 
-        # Voyage and Cloudflare require 1024 in the current implementation. Probe
-        # them at 1024 without changing the production persisted vector schema.
         embedding_1024 = type(embedding_provider)()
         embedding_1024.dimension = 1024
         embedding_1024_routes = embedding_1024.configured_routes
-        _assert(
-            {route.name for route in embedding_1024_routes} == {"cohere", "voyage", "cloudflare"},
-            "1024-dimension embedding routes are not exactly Cohere+Voyage+Cloudflare",
-        )
+        expected_embedding_1024 = {"cohere", "voyage", "cloudflare", "openrouter"}
+        configured_1024 = {route.name for route in embedding_1024_routes}
+        for missing in sorted(expected_embedding_1024 - configured_1024):
+            embedding_probe_results[f"{missing}_1024"] = {"ok": False, "error": "not_configured"}
+            provider_failures.append(f"embedding.{missing}.1024: not_configured")
         for route in embedding_1024_routes:
-            vectors = await embedding_1024.embed_on_route(route, ["provider connectivity probe"])
-            _assert(len(vectors) == 1 and len(vectors[0]) == 1024, f"{route.name} 1024 embedding probe failed")
-            embedding_probe_results[route.name] = {"ok": True, "dimension": 1024}
+            try:
+                vectors = await embedding_1024.embed_on_route(route, ["provider connectivity probe"])
+                if len(vectors) != 1 or len(vectors[0]) != 1024:
+                    raise RuntimeError("embedding dimension mismatch")
+                embedding_probe_results[f"{route.name}_1024"] = {"ok": True, "dimension": 1024}
+            except Exception as exc:
+                status_code = getattr(getattr(exc, "response", None), "status_code", None)
+                error = type(exc).__name__
+                if status_code is not None:
+                    error = f"{error}:HTTP_{status_code}"
+                embedding_probe_results[f"{route.name}_1024"] = {"ok": False, "error": error}
+                provider_failures.append(f"embedding.{route.name}.1024: {error}")
 
         results["provider_matrix"] = {
             "llm": llm_probe_results,
             "embedding": embedding_probe_results,
         }
+        results["provider_probe_failures"] = provider_failures
+        log.info("provider_e2e_probe_matrix=%s", json.dumps(results["provider_matrix"], sort_keys=True))
 
         # 1. Real provider round trips.
         for label, storage, key in (
@@ -346,7 +376,7 @@ async def run(run_id: str) -> dict:
         ref2 = upload_export(source, build_export_package(source_id, date.today().isoformat()))
         _assert(ref1 == ref2, "Google Drive retry was not idempotent")
         results["google_drive"] = {"ok": True, "reference": ref1}
-        results["status"] = "PASS"
+        results["status"] = "PASS" if not provider_failures else "FAIL"
 
         with store.database.connect() as conn:
             with conn.cursor() as cur:
@@ -388,6 +418,9 @@ def main() -> None:
     except RuntimeError:
         result = asyncio.run(run(run_id))
         log.info("provider_e2e_result=%s", json.dumps(result, sort_keys=True))
+        if result.get("status") != "PASS":
+            failures = result.get("provider_probe_failures", [])
+            raise RuntimeError(f"provider E2E completed with {len(failures)} provider probe failure(s)")
         return
 
     import threading
@@ -406,6 +439,9 @@ def main() -> None:
     if "error" in outcome:
         raise outcome["error"]
     log.info("provider_e2e_result=%s", json.dumps(outcome["result"], sort_keys=True))
+    if outcome["result"].get("status") != "PASS":
+        failures = outcome["result"].get("provider_probe_failures", [])
+        raise RuntimeError(f"provider E2E completed with {len(failures)} provider probe failure(s)")
 
 
 if __name__ == "__main__":
