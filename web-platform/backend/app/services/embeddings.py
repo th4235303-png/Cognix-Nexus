@@ -21,8 +21,8 @@ _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
         "openrouter",
         "OPENROUTER_API_KEY",
         "https://openrouter.ai/api/v1/embeddings",
-        "openai/text-embedding-3-small",
-        (1536,),
+        "liquid/lfm-2.5-embedding-350m:free",
+        (1024,),
     ),
     EmbeddingRoute(
         "cohere",
@@ -125,7 +125,7 @@ class EmbeddingProvider:
             "Authorization": f"Bearer {os.getenv(route.api_key_env, '').strip()}",
         }
         payload = {"model": route.model, "input": list(inputs)}
-        if route.name == "openrouter":
+        if route.name == "openrouter" and route.model.startswith("openai/"):
             payload["dimensions"] = self.dimension
         elif route.name == "cohere":
             payload = {
