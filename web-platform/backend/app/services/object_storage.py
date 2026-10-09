@@ -41,7 +41,7 @@ class S3ObjectStorage:
             raise ValueError("Invalid object key")
         if any(ord(char) < 32 or ord(char) == 127 for char in normalized):
             raise ValueError("Object key contains control characters")
-        if "\\\\" in normalized or any(part == ".." for part in normalized.split("/")):
+        if "\\" in normalized or any(part == ".." for part in normalized.split("/")):
             raise ValueError("Object key contains an unsafe path segment")
         return normalized
 
