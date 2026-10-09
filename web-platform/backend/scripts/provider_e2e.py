@@ -372,10 +372,25 @@ async def run(run_id: str) -> dict:
                     ),
                 )
             conn.commit()
-        ref1 = upload_export(source, build_export_package(source_id, date.today().isoformat()))
-        ref2 = upload_export(source, build_export_package(source_id, date.today().isoformat()))
-        _assert(ref1 == ref2, "Google Drive retry was not idempotent")
-        results["google_drive"] = {"ok": True, "reference": ref1}
+        try:
+            ref1 = upload_export(source, build_export_package(source_id, date.today().isoformat()))
+            ref2 = upload_export(source, build_export_package(source_id, date.today().isoformat()))
+            _assert(ref1 == ref2, "Google Drive retry was not idempotent")
+            results["google_drive"] = {"ok": True, "reference": ref1}
+        except Exception as exc:
+            # A revoked Google OAuth refresh token is an external configuration
+            # blocker, not a reason to lose the provider matrix and storage/RAG
+            # evidence collected above. Record a safe diagnostic and finish cleanup.
+            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            error = type(exc).__name__
+            if status_code is not None:
+                error = f"{error}:HTTP_{status_code}"
+            if "invalid_grant" in str(exc).lower() or "expired or revoked" in str(exc).lower():
+                error = "GoogleOAuthRefreshTokenExpiredOrRevoked"
+            results["google_drive"] = {"ok": False, "error": error}
+            provider_failures.append(f"google_drive: {error}")
+            log.error("provider_e2e_google_drive_failed error=%s", error)
+
         results["status"] = "PASS" if not provider_failures else "FAIL"
 
         with store.database.connect() as conn:
