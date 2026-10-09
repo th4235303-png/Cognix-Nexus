@@ -41,7 +41,7 @@ class S3ObjectStorage:
             raise ValueError("Invalid object key")
         if any(ord(char) < 32 or ord(char) == 127 for char in normalized):
             raise ValueError("Object key contains control characters")
-        if "\\" in normalized or any(part == ".." for part in normalized.split("/")):
+        if "\\\\" in normalized or any(part == ".." for part in normalized.split("/")):
             raise ValueError("Object key contains an unsafe path segment")
         return normalized
 
@@ -97,7 +97,10 @@ class B2ObjectStorage(S3ObjectStorage):
 
     def __init__(self) -> None:
         super().__init__(label="Backblaze B2", endpoint_env="COGNIX_B2_ENDPOINT", bucket_env="COGNIX_B2_BUCKET", access_env="COGNIX_B2_KEY_ID", secret_env="COGNIX_B2_APPLICATION_KEY", region_env="COGNIX_B2_REGION", default_region="us-east-005")
-        if not os.getenv("COGNIX_B2_REGION", "").strip() and self.endpoint:
+        # The S3 endpoint identifies the B2 region. Prefer it over a stale or
+        # malformed COGNIX_B2_REGION value so a secret typo cannot make boto3
+        # reject the client before the storage connectivity check runs.
+        if self.endpoint:
             host = urllib.parse.urlparse(self.endpoint).hostname or ""
             prefix = "s3."
             suffix = ".backblazeb2.com"
