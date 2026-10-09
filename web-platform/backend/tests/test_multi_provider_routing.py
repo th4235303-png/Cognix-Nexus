@@ -71,7 +71,7 @@ class MultiProviderRoutingTests(unittest.TestCase):
         }
         with patch.dict(os.environ, env, clear=True):
             provider = EmbeddingProvider()
-            self.assertEqual([r.name for r in provider.configured_routes], ["cohere", "voyage", "cloudflare", "openrouter"])
+            self.assertEqual([r.name for r in provider.configured_routes], ["openrouter", "cohere", "voyage", "cloudflare"])
             openrouter = next(r for r in provider.configured_routes if r.name == "openrouter")
             self.assertEqual(openrouter.model, "liquid/lfm-2.5-embedding-350m:free")
 
