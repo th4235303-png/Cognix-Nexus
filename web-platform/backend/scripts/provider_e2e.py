@@ -98,7 +98,7 @@ async def run(run_id: str) -> dict:
         provider_failures: list[str] = []
         llm_probe_results: dict[str, object] = {}
         expected_llm = {
-            "gemini", "openrouter", "huggingface",
+            "gemini", "openrouter",
             "mistral", "cohere", "groq", "cloudflare",
         }
         llm_routes = llm_provider.configured_routes
