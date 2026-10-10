@@ -11,7 +11,6 @@ class MultiProviderRoutingTests(unittest.TestCase):
         env = {
             "GEMINI_API_KEY": "x",
             "OPENROUTER_API_KEY": "x",
-            "HUGGINGFACE_API_KEY": "x",
             "MISTRAL_API_KEY": "x",
             "COHERE_API_KEY": "x",
             "GROQ_API_KEY": "x",
@@ -21,13 +20,15 @@ class MultiProviderRoutingTests(unittest.TestCase):
         with patch.dict(os.environ, env, clear=True):
             provider = LLMProvider()
             names = [route.name for route in provider.configured_routes]
-            openrouter_model = next(route.model for route in provider.configured_routes if route.name == "openrouter")
-            huggingface_model = next(route.model for route in provider.configured_routes if route.name == "huggingface")
-        self.assertEqual(openrouter_model, "openrouter/free")
-        self.assertEqual(huggingface_model, "openai/gpt-oss-120b:cheapest")
+            models = {route.name: route.model for route in provider.configured_routes}
+        self.assertEqual(models["openrouter"], "openrouter/free")
+        self.assertEqual(models["groq"], "qwen/qwen3.8-27b")
+        self.assertEqual(models["mistral"], "ministral-8b-latest")
+        self.assertEqual(models["cohere"], "command-r7b-12-2024")
+        self.assertEqual(models["cloudflare"], "@cf/meta/llama-3.1-8b-instruct")
         self.assertEqual(
             names,
-            ["gemini", "openrouter", "huggingface", "mistral", "cohere", "groq", "cloudflare"],
+            ["gemini", "openrouter", "mistral", "cohere", "groq", "cloudflare"],
         )
 
     def test_weighted_schedule_defaults_to_equal_distribution(self):
