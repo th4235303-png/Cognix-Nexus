@@ -35,7 +35,6 @@ class MultiProviderRoutingTests(unittest.TestCase):
             "GEMINI_API_KEY": "x",
             "OPENROUTER_API_KEY": "x",
             "HUGGINGFACE_API_KEY": "x",
-            "CEREBRAS_API_KEY": "x",
             "MISTRAL_API_KEY": "x",
             "COHERE_API_KEY": "x",
             "GROQ_API_KEY": "x",
