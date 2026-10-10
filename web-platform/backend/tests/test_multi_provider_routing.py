@@ -63,7 +63,7 @@ class MultiProviderRoutingTests(unittest.TestCase):
             provider = EmbeddingProvider()
             self.assertEqual(provider.dimension, 1536)
             self.assertEqual([route.name for route in provider.configured_routes], ["cohere"])
-            self.assertEqual(provider.configured_routes[0].model, "embed-v5.0-pro")
+            self.assertEqual(provider.configured_routes[0].model, "embed-v4.0")
 
 
 class CloudflareEmbeddingResponseTests(unittest.IsolatedAsyncioTestCase):
