@@ -35,7 +35,7 @@ _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
         "cohere",
         "COHERE_API_KEY",
         "https://api.cohere.com/v2/embed",
-        "embed-v5.0-pro",
+        "embed-v4.0",
         (256, 512, 768, 1024, 1536, 2048),
     ),
     EmbeddingRoute(
