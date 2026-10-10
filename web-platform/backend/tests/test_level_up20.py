@@ -70,8 +70,8 @@ class LevelUpTests(unittest.TestCase):
             clear=True,
         ):
             provider = LLMProvider()
-        self.assertTrue(provider.configured)
-        self.assertEqual(provider.configured_routes[0].model, "qwen/qwen3.8-27b")
+            self.assertTrue(provider.configured)
+            self.assertEqual(provider.configured_routes[0].model, "qwen/qwen3.8-27b")
 
     def test_feature_matrix_contains_all_20(self):
         response = self.client.get("/brain/level-up/feature-matrix")
