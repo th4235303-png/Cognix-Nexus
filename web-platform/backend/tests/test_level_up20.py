@@ -58,11 +58,20 @@ class LevelUpTests(unittest.TestCase):
         self.assertTrue(writing_citation_check(["s1", "s2"], ["s1"])["valid"])
         self.assertEqual(writing_citation_check(["s1"], ["s2"])["missing_source_ids"], ["s2"])
 
-    def test_llm_provider_accepts_production_ai_environment(self):
-        with patch.dict(os.environ, {"COGNIX_AI_BASE_URL": "https://ai.invalid", "COGNIX_AI_MODEL": "test-model"}, clear=False):
+    def test_llm_provider_uses_provider_key_not_render_model_overrides(self):
+        with patch.dict(
+            os.environ,
+            {
+                "GROQ_API_KEY": "test-key",
+                "COGNIX_AI_BASE_URL": "https://ai.invalid",
+                "COGNIX_AI_MODEL": "test-model",
+                "COGNIX_GROQ_MODEL": "override-model",
+            },
+            clear=True,
+        ):
             provider = LLMProvider()
         self.assertTrue(provider.configured)
-        self.assertEqual(provider.model, "test-model")
+        self.assertEqual(provider.configured_routes[0].model, "qwen/qwen3.8-27b")
 
     def test_feature_matrix_contains_all_20(self):
         response = self.client.get("/brain/level-up/feature-matrix")
