@@ -44,7 +44,6 @@ jobs:
       COGNIX_LLM_MODEL: ${{ secrets.COGNIX_LLM_MODEL }}
       GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       OPENROUTER_API_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-      HUGGINGFACE_API_KEY: ${{ secrets.HUGGINGFACE_API_KEY }}
       MISTRAL_API_KEY: ${{ secrets.MISTRAL_API_KEY }}
       COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
       GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
