@@ -35,7 +35,7 @@ _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
         "voyage",
         "VOYAGE_API_KEY",
         "https://api.voyageai.com/v1/embeddings",
-        "voyage-4",
+        "voyage-3-lite",
         (256, 512, 1024, 2048),
     ),
     EmbeddingRoute(
