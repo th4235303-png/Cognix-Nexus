@@ -19,11 +19,10 @@ class LLMRoute:
 _DEFAULT_ROUTES: tuple[LLMRoute, ...] = (
     LLMRoute("gemini", "GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-3.8-flash"),
     LLMRoute("openrouter", "OPENROUTER_API_KEY", "https://openrouter.ai/api/v1/chat/completions", "openrouter/free"),
-    # Small, supported model + cheapest-provider policy keeps HF routed usage lower.
+    # Hugging Face documents this model and the cheapest-provider routing suffix.
     # HF Free accounts still have a small monthly credit allowance; model choice
     # cannot make an exhausted account's HTTP 402 free again.
-    LLMRoute("huggingface", "HUGGINGFACE_API_KEY", "https://router.huggingface.co/v1/chat/completions", "google/gemma-2-2b-it:cheapest"),
-    LLMRoute("cerebras", "CEREBRAS_API_KEY", "https://api.cerebras.ai/v1/chat/completions", "gpt-oss-120b"),
+    LLMRoute("huggingface", "HUGGINGFACE_API_KEY", "https://router.huggingface.co/v1/chat/completions", "openai/gpt-oss-120b:cheapest"),
     # Mistral Studio Free mode is limited; use the documented small API model.
     LLMRoute("mistral", "MISTRAL_API_KEY", "https://api.mistral.ai/v1/chat/completions", "mistral-small-latest"),
     LLMRoute("cohere", "COHERE_API_KEY", "https://api.cohere.ai/compatibility/v1/chat/completions", "command-a-plus-05-2026"),
