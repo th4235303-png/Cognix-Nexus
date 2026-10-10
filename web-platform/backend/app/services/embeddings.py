@@ -42,7 +42,7 @@ _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
         "cloudflare",
         "CLOUDFLARE_API_TOKEN",
         "",
-        "@cf/baai/bge-large-en-v1.5",
+        "@cf/baai/bge-m3",
         (1024,),
     ),
 )

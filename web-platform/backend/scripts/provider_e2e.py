@@ -388,8 +388,16 @@ async def run(run_id: str) -> dict:
             error = type(exc).__name__
             if status_code is not None:
                 error = f"{error}:HTTP_{status_code}"
-            if "invalid_grant" in str(exc).lower() or "expired or revoked" in str(exc).lower():
+            # Google auth libraries sometimes expose the OAuth error in args
+            # rather than in str(exc). Keep diagnostics categorical and never log
+            # the raw exception, which could contain provider response details.
+            safe_oauth_detail = " ".join(str(part) for part in getattr(exc, "args", ())).lower()
+            if any(marker in safe_oauth_detail for marker in (
+                "invalid_grant", "expired or revoked", "token has been expired",
+            )):
                 error = "GoogleOAuthRefreshTokenExpiredOrRevoked"
+            elif type(exc).__name__ == "RefreshError":
+                error = "GoogleOAuthRefreshError"
             results["google_drive"] = {"ok": False, "error": error}
             provider_failures.append(f"google_drive: {error}")
             log.error("provider_e2e_google_drive_failed error=%s", error)
@@ -431,36 +439,17 @@ def main() -> None:
     if not run_id:
         return
 
-    try:
-        asyncio.get_running_loop()
-    except RuntimeError:
-        result = asyncio.run(run(run_id))
-        log.info("provider_e2e_result=%s", json.dumps(result, sort_keys=True))
-        if result.get("status") != "PASS":
-            failures = result.get("provider_probe_failures", [])
-            raise RuntimeError(f"provider E2E completed with {len(failures)} provider probe failure(s)")
-        return
-
-    import threading
-
-    outcome: dict[str, object] = {}
-
-    def runner() -> None:
-        try:
-            outcome["result"] = asyncio.run(run(run_id))
-        except Exception as exc:
-            outcome["error"] = exc
-
-    thread = threading.Thread(target=runner, name="provider-e2e", daemon=True)
-    thread.start()
-    thread.join()
-    if "error" in outcome:
-        raise outcome["error"]
-    log.info("provider_e2e_result=%s", json.dumps(outcome["result"], sort_keys=True))
-    if outcome["result"].get("status") != "PASS":
-        failures = outcome["result"].get("provider_probe_failures", [])
-        raise RuntimeError(f"provider E2E completed with {len(failures)} provider probe failure(s)")
-
+    # This file is a synchronous CLI entry point, so there is no running event
+    # loop to preserve. asyncio.run() is the correct single entry point here;
+    # avoid catching the expected get_running_loop() RuntimeError and then
+    # raising a second error from inside that exception handler.
+    result = asyncio.run(run(run_id))
+    log.info("provider_e2e_result=%s", json.dumps(result, sort_keys=True))
+    if result.get("status") != "PASS":
+        failures = result.get("provider_probe_failures", [])
+        raise RuntimeError(
+            f"provider E2E completed with {len(failures)} provider probe failure(s)"
+        )
 
 if __name__ == "__main__":
     main()

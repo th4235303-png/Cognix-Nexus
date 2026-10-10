@@ -19,12 +19,18 @@ class LLMRoute:
 _DEFAULT_ROUTES: tuple[LLMRoute, ...] = (
     LLMRoute("gemini", "GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-3.8-flash"),
     LLMRoute("openrouter", "OPENROUTER_API_KEY", "https://openrouter.ai/api/v1/chat/completions", "openrouter/free"),
-    LLMRoute("huggingface", "HUGGINGFACE_API_KEY", "https://router.huggingface.co/v1/chat/completions", "deepseek-ai/DeepSeek-V3-0324:fastest"),
+    # Small, supported model + cheapest-provider policy keeps HF routed usage lower.
+    # HF Free accounts still have a small monthly credit allowance; model choice
+    # cannot make an exhausted account's HTTP 402 free again.
+    LLMRoute("huggingface", "HUGGINGFACE_API_KEY", "https://router.huggingface.co/v1/chat/completions", "google/gemma-2-2b-it:cheapest"),
     LLMRoute("cerebras", "CEREBRAS_API_KEY", "https://api.cerebras.ai/v1/chat/completions", "gpt-oss-120b"),
-    LLMRoute("mistral", "MISTRAL_API_KEY", "https://api.mistral.ai/v1/chat/completions", "mistral-large-latest"),
+    # Mistral Studio Free mode is limited; use the documented small API model.
+    LLMRoute("mistral", "MISTRAL_API_KEY", "https://api.mistral.ai/v1/chat/completions", "mistral-small-latest"),
     LLMRoute("cohere", "COHERE_API_KEY", "https://api.cohere.ai/compatibility/v1/chat/completions", "command-a-plus-05-2026"),
     LLMRoute("groq", "GROQ_API_KEY", "https://api.groq.com/openai/v1/chat/completions", "openai/gpt-oss-120b"),
-    LLMRoute("cloudflare", "CLOUDFLARE_API_TOKEN", "", "@cf/zai-org/glm-5.2"),
+    # GLM-5.2 requires a paid Workers plan/AI Gateway credits. Use a model eligible
+    # for Workers AI's 10,000-neuron daily free allocation instead.
+    LLMRoute("cloudflare", "CLOUDFLARE_API_TOKEN", "", "@cf/meta/llama-3.1-8b-instruct-fp8-fast"),
 )
 
 
