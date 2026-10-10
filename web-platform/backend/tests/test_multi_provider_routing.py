@@ -2,7 +2,7 @@ import os
 import unittest
 from unittest.mock import patch
 
-from app.services.embeddings import EmbeddingProvider
+from app.services.embeddings import EmbeddingProvider, EmbeddingRoute
 from app.services.llm import LLMProvider
 
 
@@ -74,6 +74,45 @@ class MultiProviderRoutingTests(unittest.TestCase):
             self.assertEqual([r.name for r in provider.configured_routes], ["openrouter", "cohere", "voyage", "cloudflare"])
             openrouter = next(r for r in provider.configured_routes if r.name == "openrouter")
             self.assertEqual(openrouter.model, "liquid/lfm-2.5-embedding-350m:free")
+
+
+
+class CloudflareEmbeddingResponseTests(unittest.IsolatedAsyncioTestCase):
+    async def test_cloudflare_openai_compatible_embedding_response(self):
+        vector = [0.25] * 1024
+
+        class FakeResponse:
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return {"data": [{"embedding": vector, "index": 0}]}
+
+        class FakeClient:
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, exc_type, exc, traceback):
+                return False
+
+            async def post(self, *args, **kwargs):
+                return FakeResponse()
+
+        route = EmbeddingRoute(
+            "cloudflare",
+            "CLOUDFLARE_API_TOKEN",
+            "https://example.invalid/ai/v1/embeddings",
+            "@cf/baai/bge-large-en-v1.5",
+            (1024,),
+        )
+        with patch.dict(os.environ, {"CLOUDFLARE_API_TOKEN": "test-token"}, clear=True):
+            with patch("app.services.embeddings.httpx.AsyncClient", return_value=FakeClient()):
+                provider = EmbeddingProvider()
+                provider.dimension = 1024
+                vectors = await provider.embed_on_route(route, ["probe"])
+        self.assertEqual(len(vectors), 1)
+        self.assertEqual(len(vectors[0]), 1024)
+        self.assertEqual(vectors[0][0], 0.25)
 
 
 if __name__ == "__main__":
