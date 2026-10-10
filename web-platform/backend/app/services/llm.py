@@ -21,7 +21,7 @@ _DEFAULT_ROUTES: tuple[LLMRoute, ...] = (
     LLMRoute("openrouter", "OPENROUTER_API_KEY", "https://openrouter.ai/api/v1/chat/completions", "openrouter/free"),
     # Keep Hugging Face enabled; availability depends on account inference credit
     # and the providers currently serving the selected model.
-    LLMRoute("huggingface", "HUGGINGFACE_API_KEY", "https://router.huggingface.co/v1/chat/completions", "openai/gpt-oss-120b:cheapest"),
+    LLMRoute("huggingface", "HUGGINGFACE_API_KEY", "https://router.huggingface.co/v1/chat/completions", "Qwen/Qwen2.5-7B-Instruct"),
     LLMRoute("mistral", "MISTRAL_API_KEY", "https://api.mistral.ai/v1/chat/completions", "ministral-8b-latest"),
     LLMRoute("cohere", "COHERE_API_KEY", "https://api.cohere.ai/compatibility/v1/chat/completions", "command-a-03-2025"),
     LLMRoute("groq", "GROQ_API_KEY", "https://api.groq.com/openai/v1/chat/completions", "qwen/qwen3.8-27b"),
