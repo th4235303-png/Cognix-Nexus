@@ -145,10 +145,26 @@ class EmbeddingProvider:
         if route.name == "cohere":
             vectors = body.get("embeddings", {}).get("float", [])
         elif route.name == "cloudflare":
+            # The OpenAI-compatible /ai/v1/embeddings endpoint returns
+            # data=[{"embedding": [...], "index": 0}], while the native
+            # Workers AI endpoint returns result.data=[[...]]. Accept both.
             data = body.get("data", [])
-            vectors = data if data and isinstance(data[0], list) else body.get("result", {}).get("data", [])
-            if vectors and isinstance(vectors[0], dict):
-                vectors = [item.get("embedding", []) for item in vectors]
+            if data and isinstance(data[0], dict):
+                vectors = [
+                    item.get("embedding", [])
+                    for item in sorted(data, key=lambda item: item.get("index", 0))
+                ]
+            elif data and isinstance(data[0], list):
+                vectors = data
+            else:
+                result_data = body.get("result", {}).get("data", [])
+                if result_data and isinstance(result_data[0], dict):
+                    vectors = [
+                        item.get("embedding", [])
+                        for item in sorted(result_data, key=lambda item: item.get("index", 0))
+                    ]
+                else:
+                    vectors = result_data
         else:
             vectors = [
                 item["embedding"]
