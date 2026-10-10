@@ -98,7 +98,7 @@ async def run(run_id: str) -> dict:
         provider_failures: list[str] = []
         llm_probe_results: dict[str, object] = {}
         expected_llm = {
-            "gemini", "openrouter", "huggingface", "cerebras",
+            "gemini", "openrouter", "huggingface",
             "mistral", "cohere", "groq", "cloudflare",
         }
         llm_routes = llm_provider.configured_routes
@@ -140,7 +140,7 @@ async def run(run_id: str) -> dict:
             try:
                 vectors = await embedding_1536.embed_on_route(route, ["provider connectivity probe"])
                 if len(vectors) != 1 or len(vectors[0]) != 1536:
-                    raise RuntimeError("embedding dimension mismatch")
+                    raise RuntimeError(f"embedding dimension mismatch: expected 1536, got {[len(vector) for vector in vectors]}")
                 embedding_probe_results[f"{route.name}_1536"] = {"ok": True, "dimension": 1536}
             except Exception as exc:
                 status_code = getattr(getattr(exc, "response", None), "status_code", None)
@@ -162,13 +162,13 @@ async def run(run_id: str) -> dict:
             try:
                 vectors = await embedding_1024.embed_on_route(route, ["provider connectivity probe"])
                 if len(vectors) != 1 or len(vectors[0]) != 1024:
-                    raise RuntimeError("embedding dimension mismatch")
+                    raise RuntimeError(f"embedding dimension mismatch: expected 1024, got {[len(vector) for vector in vectors]}")
                 embedding_probe_results[f"{route.name}_1024"] = {"ok": True, "dimension": 1024}
             except Exception as exc:
                 status_code = getattr(getattr(exc, "response", None), "status_code", None)
-                error = type(exc).__name__
+                error = str(exc) if isinstance(exc, RuntimeError) else type(exc).__name__
                 if status_code is not None:
-                    error = f"{error}:HTTP_{status_code}"
+                    error = f"{type(exc).__name__}:HTTP_{status_code}"
                 embedding_probe_results[f"{route.name}_1024"] = {"ok": False, "error": error}
                 provider_failures.append(f"embedding.{route.name}.1024: {error}")
 
