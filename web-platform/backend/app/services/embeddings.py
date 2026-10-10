@@ -7,6 +7,11 @@ from typing import Sequence
 import httpx
 
 
+# The persisted PostgreSQL schema uses vector(1536). Keep this dimension aligned
+# with the database schema; changing it requires a migration and re-embedding.
+VECTOR_DIMENSION = 1536
+
+
 @dataclass(frozen=True)
 class EmbeddingRoute:
     name: str
@@ -16,6 +21,8 @@ class EmbeddingRoute:
     dimensions: tuple[int, ...]
 
 
+# Endpoints and model IDs live in code. A route is enabled only if its provider
+# key is present and it supports the database's fixed vector dimension.
 _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
     EmbeddingRoute(
         "openrouter",
@@ -28,7 +35,7 @@ _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
         "cohere",
         "COHERE_API_KEY",
         "https://api.cohere.com/v2/embed",
-        "embed-v5.0-pro",
+        "embed-v4.0",
         (256, 512, 768, 1024, 1536, 2048),
     ),
     EmbeddingRoute(
@@ -48,76 +55,51 @@ _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
 )
 
 
-def _weights() -> dict[str, int]:
-    weights: dict[str, int] = {}
-    raw = os.getenv("COGNIX_EMBEDDING_PROVIDER_WEIGHTS", "")
-    for item in raw.split(","):
-        if "=" not in item:
-            continue
-        name, value = item.split("=", 1)
-        try:
-            parsed = int(value.strip())
-        except ValueError:
-            continue
-        if parsed > 0:
-            weights[name.strip().lower()] = parsed
-    return weights
-
-
 class EmbeddingProvider:
-    """Weighted embedding router constrained by the persisted vector dimension.
-
-    The current Cognix schema uses vector(1536), so only routes that can emit
-    1536-dimensional vectors are eligible by default. Voyage and Cloudflare
-    become eligible automatically if the configured dimension is changed to a
-    dimension those providers support.
-    """
+    """Code-configured embedding router compatible with persisted vector(1536)."""
 
     def __init__(self) -> None:
-        self.dimension = int(os.getenv("COGNIX_EMBEDDING_DIMENSION", "1536"))
-        self.url = os.getenv("COGNIX_EMBEDDING_API_URL", "").strip()
-        self.api_key = os.getenv("COGNIX_EMBEDDING_API_KEY", "").strip()
-        self.model = os.getenv("COGNIX_EMBEDDING_MODEL", "").strip()
+        self.dimension = VECTOR_DIMENSION
         self.last_provider: str | None = None
         self._cursor = 0
 
     @property
     def configured_routes(self) -> list[EmbeddingRoute]:
-        weights = _weights()
         routes: list[EmbeddingRoute] = []
         for route in _DEFAULT_ROUTES:
             if self.dimension not in route.dimensions:
                 continue
-            key = os.getenv(route.api_key_env, "").strip()
-            if not key:
+            if not os.getenv(route.api_key_env, "").strip():
                 continue
-            url = (os.getenv(f"COGNIX_{route.name.upper()}_EMBEDDING_API_URL") or route.url).strip()
-            model = (os.getenv(f"COGNIX_{route.name.upper()}_EMBEDDING_MODEL") or route.model).strip()
+            url = route.url
             if route.name == "cloudflare":
                 account_id = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
                 if not account_id:
                     continue
-                url = url or f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1/embeddings"
-            routes.append(route.__class__(route.name, route.api_key_env, url, model, route.dimensions))
+                url = f"https://api.cloudflare.com/client/v4/accounts/{account_id}/ai/v1/embeddings"
+            routes.append(EmbeddingRoute(route.name, route.api_key_env, url, route.model, route.dimensions))
         return routes
 
     @property
     def configured(self) -> bool:
-        return bool(self.configured_routes) or bool(self.url and self.model)
+        return bool(self.configured_routes)
+
+    @property
+    def model(self) -> str:
+        routes = self.configured_routes
+        if self.last_provider:
+            for route in routes:
+                if route.name == self.last_provider:
+                    return route.model
+        return routes[0].model if routes else ""
 
     def _schedule(self) -> list[EmbeddingRoute]:
         routes = self.configured_routes
         if not routes:
             return []
-        # Equal distribution by default; optional provider weights allow deliberate
-        # cost/latency tuning without changing code.
-        weighted = []
-        weights = _weights()
-        for route in routes:
-            weighted.extend([route] * max(1, weights.get(route.name, 1)))
-        start = self._cursor % len(weighted)
+        start = self._cursor % len(routes)
         self._cursor += 1
-        return weighted[start:] + weighted[:start]
+        return routes[start:] + routes[:start]
 
     async def _request(self, route: EmbeddingRoute, inputs: Sequence[str]) -> list[list[float]]:
         headers = {
@@ -125,9 +107,7 @@ class EmbeddingProvider:
             "Authorization": f"Bearer {os.getenv(route.api_key_env, '').strip()}",
         }
         payload = {"model": route.model, "input": list(inputs)}
-        if route.name == "openrouter" and route.model.startswith("openai/"):
-            payload["dimensions"] = self.dimension
-        elif route.name == "cohere":
+        if route.name == "cohere":
             payload = {
                 "model": route.model,
                 "texts": list(inputs),
@@ -135,8 +115,6 @@ class EmbeddingProvider:
                 "output_dimension": self.dimension,
                 "embedding_types": ["float"],
             }
-        elif route.name == "voyage":
-            payload["output_dimension"] = self.dimension
         async with httpx.AsyncClient(timeout=60.0) as client:
             response = await client.post(route.url, headers=headers, json=payload)
             response.raise_for_status()
@@ -145,9 +123,6 @@ class EmbeddingProvider:
         if route.name == "cohere":
             vectors = body.get("embeddings", {}).get("float", [])
         elif route.name == "cloudflare":
-            # The OpenAI-compatible /ai/v1/embeddings endpoint returns
-            # data=[{"embedding": [...], "index": 0}], while the native
-            # Workers AI endpoint returns result.data=[[...]]. Accept both.
             data = body.get("data", [])
             if data and isinstance(data[0], dict):
                 vectors = [
@@ -173,7 +148,9 @@ class EmbeddingProvider:
         if len(vectors) != len(inputs):
             raise RuntimeError(f"Embedding provider returned {len(vectors)} vectors; expected {len(inputs)}")
         if any(len(vector) != self.dimension for vector in vectors):
-            raise RuntimeError(f"Embedding dimension mismatch; expected {self.dimension}, got {[len(vector) for vector in vectors]}")
+            raise RuntimeError(
+                f"Embedding dimension mismatch; expected {self.dimension}, got {[len(vector) for vector in vectors]}"
+            )
         self.last_provider = route.name
         return vectors
 
@@ -182,36 +159,19 @@ class EmbeddingProvider:
         return await self._request(route, inputs)
 
     async def embed(self, inputs: Sequence[str]) -> list[list[float]]:
-        if not self.configured:
-            raise RuntimeError("Semantic embeddings are not configured")
+        routes = self._schedule()
+        if not routes:
+            raise RuntimeError(
+                "No embedding provider supports the database's 1536 dimensions; configure COHERE_API_KEY"
+            )
 
         errors: list[str] = []
-        routes = self._schedule()
-        if routes:
-            for route in routes:
-                try:
-                    return await self.embed_on_route(route, inputs)
-                except Exception as exc:
-                    errors.append(f"{route.name}: {type(exc).__name__}")
-            raise RuntimeError("All configured embedding providers failed: " + "; ".join(errors))
-
-        # Legacy single-provider configuration remains supported.
-        headers = {"Content-Type": "application/json"}
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-        payload = {"model": self.model, "input": list(inputs), "dimensions": self.dimension}
-        async with httpx.AsyncClient(timeout=60.0) as client:
-            response = await client.post(self.url, headers=headers, json=payload)
-            response.raise_for_status()
-            body = response.json()
-        vectors = [
-            item["embedding"]
-            for item in sorted(body.get("data", []), key=lambda item: item.get("index", 0))
-        ]
-        if len(vectors) != len(inputs) or any(len(vector) != self.dimension for vector in vectors):
-            raise RuntimeError(f"Embedding dimension mismatch; expected {self.dimension}, got {[len(vector) for vector in vectors]}")
-        self.last_provider = "legacy"
-        return vectors
+        for route in routes:
+            try:
+                return await self.embed_on_route(route, inputs)
+            except Exception as exc:
+                errors.append(f"{route.name}: {type(exc).__name__}")
+        raise RuntimeError("All configured embedding providers failed: " + "; ".join(errors))
 
 
 embedding_provider = EmbeddingProvider()

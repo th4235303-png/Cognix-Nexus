@@ -30,26 +30,24 @@ services:
         sync: false
       - key: COGNIX_PROCESSING_PROVIDER
         value: "ai"
-      - key: COGNIX_AI_BASE_URL
-        value: "https://openrouter.ai/api/v1/chat/completions"
-      - key: COGNIX_AI_API_KEY
+      - key: GEMINI_API_KEY
         sync: false
-      - key: COGNIX_AI_MODEL
-        value: "openai/gpt-chat-latest"
-      - key: COGNIX_LLM_API_URL
-        value: "https://openrouter.ai/api/v1/chat/completions"
-      - key: COGNIX_LLM_API_KEY
+      - key: OPENROUTER_API_KEY
         sync: false
-      - key: COGNIX_LLM_MODEL
-        value: "openai/gpt-chat-latest"
-      - key: COGNIX_EMBEDDING_API_URL
+      - key: HUGGINGFACE_API_KEY
         sync: false
-      - key: COGNIX_EMBEDDING_API_KEY
+      - key: MISTRAL_API_KEY
         sync: false
-      - key: COGNIX_EMBEDDING_MODEL
+      - key: COHERE_API_KEY
         sync: false
-      - key: COGNIX_EMBEDDING_DIMENSION
-        value: "1536"
+      - key: GROQ_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
+        sync: false
+      - key: CLOUDFLARE_API_TOKEN
+        sync: false
+      - key: CLOUDFLARE_ACCOUNT_ID
+        sync: false
       - key: COGNIX_DRIVE_PROVIDER
         value: "google"
       - key: COGNIX_BOOK_STORAGE_PROVIDER
@@ -117,11 +115,23 @@ services:
         value: "2"
       - key: COGNIX_PROCESSING_PROVIDER
         value: "ai"
-      - key: COGNIX_AI_BASE_URL
+      - key: GEMINI_API_KEY
         sync: false
-      - key: COGNIX_AI_API_KEY
+      - key: OPENROUTER_API_KEY
         sync: false
-      - key: COGNIX_AI_MODEL
+      - key: HUGGINGFACE_API_KEY
+        sync: false
+      - key: MISTRAL_API_KEY
+        sync: false
+      - key: COHERE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: VOYAGE_API_KEY
+        sync: false
+      - key: CLOUDFLARE_API_TOKEN
+        sync: false
+      - key: CLOUDFLARE_ACCOUNT_ID
         sync: false
       - key: COGNIX_BOOK_STORAGE_PROVIDER
         value: "tiered"

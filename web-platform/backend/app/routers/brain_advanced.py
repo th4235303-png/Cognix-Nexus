@@ -574,7 +574,7 @@ async def semantic_query(payload: SemanticQuery, request: Request) -> dict:
 
     answer = None
     citations: list[str] = []
-    message = "Evidence retrieved with hybrid semantic + lexical ranking. Configure COGNIX_LLM_API_URL and COGNIX_LLM_MODEL to enable cited answer synthesis."
+    message = "Evidence retrieved with hybrid semantic + lexical ranking. Configure at least one supported provider API key to enable cited answer synthesis."
     if llm_provider.configured and items:
         evidence = "\n\n".join(
             f"[chunk:{item['chunk_id']}] rrf={item['rrf_score']:.5f}\\n{item['content'][:5000]}"

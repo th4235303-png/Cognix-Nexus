@@ -11,8 +11,7 @@ class ReleaseGatePreflightTests(unittest.TestCase):
     def setUp(self):
         self.original = dict(os.environ)
         for key in {
-            "COGNIX_AI_API_KEY", "COGNIX_EMBEDDING_API_KEY", "CLOUDFLARE_ACCOUNT_ID",
-            "COGNIX_EMBEDDING_API_URL", "COGNIX_EMBEDDING_MODEL",
+            "CLOUDFLARE_ACCOUNT_ID",
             "SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY",
             "COGNIX_SUPABASE_STORAGE_BUCKET", "COGNIX_B2_ENDPOINT",
             "COGNIX_B2_BUCKET", "COGNIX_B2_KEY_ID", "COGNIX_B2_APPLICATION_KEY", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET",
@@ -37,10 +36,6 @@ class ReleaseGatePreflightTests(unittest.TestCase):
 
     def test_all_required_gates_become_runnable(self):
         os.environ.update({
-            "COGNIX_AI_API_KEY": "ai",
-            "COGNIX_EMBEDDING_API_KEY": "embed",
-            "COGNIX_EMBEDDING_API_URL": "https://example.invalid/embed",
-            "COGNIX_EMBEDDING_MODEL": "model",
             "SUPABASE_URL": "https://example.invalid",
             "SUPABASE_SERVICE_ROLE_KEY": "supabase",
             "COGNIX_SUPABASE_STORAGE_BUCKET": "bucket",

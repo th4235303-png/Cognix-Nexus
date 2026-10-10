@@ -104,8 +104,10 @@ async def run(run_id: str) -> dict:
         llm_routes = llm_provider.configured_routes
         configured_llm = {route.name for route in llm_routes}
         for missing in sorted(expected_llm - configured_llm):
+            # Provider keys are optional individually. Report missing routes, but
+            # only fail this gate when configured routes fail or the required
+            # production embedding route is unavailable.
             llm_probe_results[missing] = {"ok": False, "error": "not_configured"}
-            provider_failures.append(f"llm.{missing}: not_configured")
 
         for route in llm_routes:
             try:
@@ -156,8 +158,9 @@ async def run(run_id: str) -> dict:
         expected_embedding_1024 = {"cohere", "voyage", "cloudflare", "openrouter"}
         configured_1024 = {route.name for route in embedding_1024_routes}
         for missing in sorted(expected_embedding_1024 - configured_1024):
+            # Alternate-dimension routes are optional probes, not production
+            # prerequisites; the persisted application schema remains vector(1536).
             embedding_probe_results[f"{missing}_1024"] = {"ok": False, "error": "not_configured"}
-            provider_failures.append(f"embedding.{missing}.1024: not_configured")
         for route in embedding_1024_routes:
             try:
                 vectors = await embedding_1024.embed_on_route(route, ["provider connectivity probe"])

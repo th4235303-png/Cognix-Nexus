@@ -21,10 +21,13 @@ class Gate:
 
 
 GATES = (
+    # The persisted vector schema is vector(1536), so Cohere is currently
+    # the only configured embedding route compatible with production data.
+    # Other LLM providers are optional and automatically join routing when keyed.
     Gate(
         "ai_provider_e2e",
-        ("GEMINI_API_KEY", "OPENROUTER_API_KEY", "HUGGINGFACE_API_KEY", "MISTRAL_API_KEY", "COHERE_API_KEY", "GROQ_API_KEY", "VOYAGE_API_KEY", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"),
-        ("COGNIX_AI_BASE_URL", "COGNIX_AI_MODEL", "COGNIX_LLM_API_KEY", "COGNIX_LLM_API_URL", "COGNIX_LLM_MODEL"),
+        ("COHERE_API_KEY",),
+        ("GEMINI_API_KEY", "OPENROUTER_API_KEY", "HUGGINGFACE_API_KEY", "MISTRAL_API_KEY", "GROQ_API_KEY", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID", "VOYAGE_API_KEY"),
     ),
     Gate("supabase_storage", ("SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "COGNIX_SUPABASE_STORAGE_BUCKET")),
     Gate("backblaze_b2", ("COGNIX_B2_ENDPOINT", "COGNIX_B2_BUCKET", "COGNIX_B2_KEY_ID", "COGNIX_B2_APPLICATION_KEY")),
