@@ -42,7 +42,7 @@ _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
         "cloudflare",
         "CLOUDFLARE_API_TOKEN",
         "",
-        "@cf/baai/bge-m3",
+        "@cf/baai/bge-large-en-v1.5",
         (1024,),
     ),
 )
@@ -155,9 +155,9 @@ class EmbeddingProvider:
                 for item in sorted(body.get("data", []), key=lambda item: item.get("index", 0))
             ]
         if len(vectors) != len(inputs):
-            raise RuntimeError("Embedding provider returned an unexpected number of vectors")
+            raise RuntimeError(f"Embedding provider returned {len(vectors)} vectors; expected {len(inputs)}")
         if any(len(vector) != self.dimension for vector in vectors):
-            raise RuntimeError(f"Embedding dimension mismatch; expected {self.dimension}")
+            raise RuntimeError(f"Embedding dimension mismatch; expected {self.dimension}, got {[len(vector) for vector in vectors]}")
         self.last_provider = route.name
         return vectors
 
@@ -193,7 +193,7 @@ class EmbeddingProvider:
             for item in sorted(body.get("data", []), key=lambda item: item.get("index", 0))
         ]
         if len(vectors) != len(inputs) or any(len(vector) != self.dimension for vector in vectors):
-            raise RuntimeError(f"Embedding dimension mismatch; expected {self.dimension}")
+            raise RuntimeError(f"Embedding dimension mismatch; expected {self.dimension}, got {[len(vector) for vector in vectors]}")
         self.last_provider = "legacy"
         return vectors
 
