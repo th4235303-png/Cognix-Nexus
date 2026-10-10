@@ -63,7 +63,6 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "GEMINI_API_KEY": "gemini",
             "OPENROUTER_API_KEY": "openrouter",
             "HUGGINGFACE_API_KEY": "huggingface",
-            "CEREBRAS_API_KEY": "cerebras",
             "MISTRAL_API_KEY": "mistral",
             "COHERE_API_KEY": "cohere",
             "GROQ_API_KEY": "groq",
