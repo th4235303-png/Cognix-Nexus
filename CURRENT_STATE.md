@@ -1,123 +1,99 @@
 # Cognix Nexus — Current State
 
 > Owner: Release/status tracking
-> Update when: any status, evidence, gate, blocker, deferral, or next action changes
-> Last Updated: 2026-10-08
+> Update when: status, evidence, gate, blocker, deferral, or next action changes
+> Last Updated: 2026-10-11
 > Do NOT put here: architecture specifications, full design-system rules, historical source documents, or unverified claims presented as facts.
 
 ## 1. Current Release
-Release-candidate / pre-final-production-verification state on main.
+
+Release-candidate / pre-final-production-verification. Final production smoke and release approval are still blocked by external gates and configuration reconciliation.
 
 ## 2. Current Phase
-P0 engineering verification → storage/processing verification → security regression → P1 UI completion/polish → production smoke → release.
+
+P0 engineering verification → provider/storage/Book acceptance → authenticated browser → recovery/GDPR/observability/accessibility/performance/mobile → grouped manual verification → final production smoke → release approval.
+
+Future Phase 13–21 runtime activation remains blocked until the current release guard is satisfied.
 
 ## 3. Overall Status
-Implementation foundation: DONE/VERIFIED where explicitly evidenced. The previously observed CI Book Intelligence import-path failure has been fixed on main, but a new PASS is not evidenced by the available workflow-run/status queries. External production gates remain PENDING. Final production smoke/release remains BLOCKED by unresolved gates.
 
-Repository migration head and live Supabase migration head are both 032, verified 2026-10-08.
+- **CI:** PASS on current main revision `538520aa908c8fdadef0a38c7fba23fea8ca3fae`. Cognix Core CI run [38071211914](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211914) and CodeQL run [38071211816](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211816) completed successfully on 2026-10-10.
+- **AI routing code:** provider endpoints and model IDs are code-defined; LLM routes are enabled by provider-key presence. The production vector schema is `vector(1536)`; Cohere is currently the only embedding route compatible with the persisted dimension.
+- **Render deployment:** API deploy `dep-db57ii67bikc7397fh8g` and worker deploy `dep-db5772ijnfac739fp1p0` were reported `live` on commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae` when checked 2026-10-11.
+- **Render configuration:** actual service settings do not fully match the checked-in `render.yaml` service names/root directories/deploy policies. Reconcile carefully before changing blueprint or deployment policy.
+- **Render environment cleanup:** obsolete variable names have not been verified against the live service environment and have not been deleted. Do not infer that a variable is present from the blueprint alone.
+- **Database migration head:** repository and live Supabase migration history were both verified at 032 on 2026-10-08; re-check before final release.
 
-## 4. COMPLETED
-- Book Intelligence Phase 1–6 implementation.
-- Phase 7–12 Knowledge Vault/review/synthesis foundation.
+External production gates remain pending until fresh evidence is captured. CI PASS and a live deployment do not equal release PASS.
+
+## 4. COMPLETED / CODE-READY
+
+- Book Intelligence Phase 1–6 implementation and Phase 7–12 Knowledge Vault/review/synthesis foundations.
 - Durable AI reading checkpoint/retry/backoff/provider-event audit foundations.
 - Knowledge Vault UI/API foundation.
-- Supabase migrations 031 and 032 are present in the repository, and live Supabase migration head 032 was verified 2026-10-08.
-- Cloudinary upload/read/checksum/delete round-trip previously observed.
+- Supabase migrations 031 and 032 are present in the repository; live migration head 032 was verified 2026-10-08.
+- Cloudinary upload/read/checksum/delete round-trip was previously observed.
 - Google Drive OAuth/export implementation and idempotent upsert path.
-- Provider E2E harness for Cloudinary, Supabase Storage, B2, extraction, embeddings, RRF and cited LLM response.
+- Provider E2E harness for provider, extraction, embedding, retrieval/citation and storage checks.
 - Security overrides and CodeQL workflow.
-- Main-only execution rule.
-- Phase 13–17 parallel preparation plan and Phase 17 evidence-bound contract tests added without activating future runtime.
-- Phase 13 lifecycle-event invariants, Phase 18–19 media/native boundary contracts, and Phase 20–21 release-evidence contracts/tests added as non-runtime preparation.
-- Machine-readable phase activation manifest added; it explicitly keeps Phase 13+ runtime blocked and records remaining work by batch.
-- Phase activation matrix expanded with concrete remaining work for every Phase 13–21.
-- Phase 13–21 deterministic prepared-contract implementations and a combined contract test suite added without external-provider calls or runtime activation.
-- Testing documentation now records the Phase 13–21 prepared contract coverage.
+- Phase 13–21 deterministic contracts, preparation plans, activation matrix/manifest and test coverage; these do not activate future runtime.
+- Provider-key-only LLM routing and fixed 1536-dimension production embedding compatibility refactor merged as commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae`.
+- CI and CodeQL succeeded on that commit.
+- API and worker deploys for that commit were observed live at the time checked.
 
-## 5. VERIFIED
-- Cloudinary live round-trip: VERIFIED by prior production evidence.
-- Repository migration files reach 032 and live Supabase migration history reaches 032: VERIFIED.
-- Knowledge Vault implementation exists in main.
-- CodeQL run 37739681331 completed successfully on commit f183a8ee.
-- Frontend and mobile jobs of CI run 37739681316 completed successfully.
-- The backend failure in CI run 37739681316 was isolated to the Book Intelligence acceptance command not finding the `app` package because the job working directory was `web-platform/backend` without an import path.
+## 5. VERIFIED EVIDENCE
 
-## 6. IN PROGRESS
-1. Obtain a new full CI PASS for the current main revision; the Book Intelligence import-path fix is already on main.
-2. Real AI provider E2E.
-3. Google Drive OAuth/account E2E.
-4. Supabase Storage live drill.
-5. Backblaze B2 live drill.
-6. Authenticated Playwright production smoke.
-7. Mobile EAS/device smoke.
-8. Full keyboard/screen-reader/responsive accessibility sweep.
-9. Lighthouse/performance run.
-10. Production backup → restore → rollback drill.
-11. GDPR export/delete.
-12. Sentry live ingestion.
-13. Controlled Book Intelligence corpus dry-run and lifecycle/E2E.
-14. P1 UI normalization and workflow verification.
-15. Phase 13–21 persistence/runtime integration work after release approval; deterministic contracts are prepared now.
+- Current main CI run [38071211914](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211914): success on `538520aa908c8fdadef0a38c7fba23fea8ca3fae`.
+- Current main CodeQL run [38071211816](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211816): success on the same commit.
+- Render API deploy `dep-db57ii67bikc7397fh8g`: `live` on the same commit when checked 2026-10-11.
+- Render worker deploy `dep-db5772ijnfac739fp1p0`: `live` on the same commit when checked 2026-10-11.
+- Cloudinary live round-trip: previously verified; re-run if required by the current release evidence policy.
+- Repository/live Supabase migration head 032: verified 2026-10-08, not re-verified on 2026-10-11.
+- Previous four-item VERIFY close-out (migration head, worker deployment policy, Secret Vault KDF, R2 role) was recorded on 2026-10-08. The worker policy must be revisited because the checked-in blueprint and live setting differ.
 
-## 7. PENDING
-- External/provider/browser/device/recovery drills until real evidence is captured.
-- Book Intelligence controlled corpus dry-run for the 9-category / 170-file planning corpus.
-- Full UI component state normalization and advanced surface verification.
-- Production-like performance evaluation.
-- Final grouped manual verification.
-- Phase 13–21 runtime persistence, provider adapters, native integrations and production automation; foundations are prepared but activation remains blocked.
+## 6. PENDING — CURRENT RELEASE
 
-## 8. BLOCKED
-- Final production smoke.
-- Final release/tag.
-- Phase 13 runtime activation and all later autonomous/future runtime activation.
+1. Inspect and reconcile live Render API/worker settings against `render.yaml`, including service identity, root directory, runtime/build command and deploy policy. Do not change these blindly.
+2. Inventory actual live Render environment-variable names and compare with the current code/blueprint. Remove only verified obsolete overrides; preserve API keys, database, auth, storage, Google, release-gate and test variables. The connected Render action cannot currently enumerate or delete individual variables.
+3. Re-verify current Supabase migration head and database readiness.
+4. Run real AI provider E2E with production-safe credentials; verify Cohere embedding at 1536 dimensions and LLM routing/failover. Optional provider keys must not be treated as verified merely because configured.
+5. Run Google Drive account-owner OAuth/refresh-token and real export/idempotency drill.
+6. Run Supabase Storage live write/read/checksum drill.
+7. Run Backblaze B2 >50 MB write/read/checksum drill and cleanup.
+8. Run controlled Book Intelligence 9-category / 170-file dry-run, duplicate fingerprint E2E, checkpoint/resume, durable ledger, distillation/lesson packs/derived-book lineage and export acceptance.
+9. Run authenticated Playwright production smoke.
+10. Run mobile EAS/device smoke.
+11. Complete WCAG keyboard/screen-reader/responsive sweep.
+12. Capture Lighthouse/performance baseline.
+13. Run production backup → isolated restore → rollback drill.
+14. Complete GDPR owner-data export/delete drill and cleanup.
+15. Verify Sentry live ingestion.
+16. Complete P1 UI state normalization and grouped manual verification **last**.
+17. Run final production smoke against the intended revision and obtain release approval before tagging.
 
-## 9. DEFERRED
+## 7. BLOCKED
+
+- Final production smoke and release/tag until required gates have evidence-backed PASS.
+- Phase 13–21 production runtime activation until release approval and each phase's own activation evidence.
+
+## 8. DEFERRED
+
 - Paid LLM activation.
-- Google Drive re-authorization/account-owner consent.
-These are intentionally deferred and are not current P0 implementation blockers.
+- Google Drive re-authorization/account-owner consent until the owner performs the external authorization step.
+- Future-phase autonomous/native/device runtime until the release guard is satisfied.
 
-## 10. REMAINING RELEASE GATES
-- CI PASS.
-- Real AI provider E2E with production-safe credentials.
-- Google Drive OAuth/account authorization and real export.
-- Supabase Storage and B2 live drills.
-- Authenticated Playwright.
-- Mobile EAS/device smoke.
-- WCAG/accessibility sweep.
-- Lighthouse.
-- Production backup/restore/rollback.
-- GDPR export/delete gate.
-- Sentry live ingestion verification.
-- Grouped manual verification last.
-- Final production smoke and release approval.
+Deferred items are not reported as completed.
 
-## 10A. RELEASE-GATE CODE READINESS
-- Release-gate preflight runner added; it reports missing required variables without printing secret values.
-- Book Intelligence synthetic acceptance contract added for schema/lifecycle/duplicate-fingerprint/checkpoint shape.
-- Authenticated Playwright smoke config and workflow-ready test added.
-- Read-only owner-data inventory added for the final GDPR export/delete operator drill.
-- Opt-in GitHub Actions release-gate workflow added for provider E2E, Book Intelligence contract, browser smoke and Sentry probe; its preflight reads CI secret presence without printing values.
-- Phase 13 Active Layer foundation added as provider-agnostic evidence/run/decision contracts; runtime orchestration remains deferred until release gates are green.
-- Phase 13–17 parallel preparation plan added under `docs/`.
-- Phase 17 evidence-bound artifact contract tests added.
-- Machine-readable activation manifest and expanded phase remaining-work matrix added under `docs/`.
-- Phase 13–21 deterministic prepared contracts cover execution/idempotency, learning planning, privacy restore, Secret Vault boundaries, Document Assistant, Language Tutor, media packaging/metadata, native capability gates, recovery evidence and release checklist evaluation.
-- These are READY/code evidence only; real production gates remain PENDING until their external credentials/browser/device/account actions are executed.
+## 9. NEXT ACTION ORDER
 
-## 11. LAST VERIFIED
-2026-10-08 CI run 37739681316 and CodeQL run 37739681331 were inspected. CI was not PASS because the Book Intelligence acceptance step failed with `ModuleNotFoundError: No module named 'app'`; CodeQL PASS and frontend/mobile PASS were observed. The CI import-path fix is present on `main`. The latest `main` commit observed is `e5b9e48a6e34f697bb81be4f3a403292104c2ed3` after the Phase 13–21 contract/test/documentation preparation. Direct combined-status and commit-workflow-run queries do not provide a current PASS record, so CI remains unverified rather than being called PASS.
+1. Reconcile Render live service/blueprint drift and safely inventory live environment-variable names.
+2. Run release-gate preflight without printing secrets; provide only missing gate names.
+3. Run provider/storage/Book acceptance using production-safe credentials and capture revision/time/result/cleanup evidence.
+4. Run authenticated browser and remaining external gates.
+5. Complete grouped manual verification last.
+6. Run final production smoke and obtain release approval.
+7. Only after release approval, activate Phase 13, then 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 one phase at a time.
 
-## 12. NEXT ACTION
-1. Obtain CI PASS on the current `main` revision; no PASS is inferred from missing status records.
-2. Immediately execute the release-gate workflow with available production-safe secrets once CI is green.
-3. Continue any remaining foundation/test/persistence/evidence/evaluation preparation in parallel without activating future runtime.
-4. Capture provider/storage/Book, authenticated-browser, recovery/GDPR/observability/accessibility/performance/mobile evidence in the declared order.
-5. Perform all manual verification as one final grouped step.
-6. Run final production smoke and release approval.
-7. Only then activate Phase 13, then 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 one phase at a time with evidence.
+## 10. EVIDENCE RULE
 
-### Explicit VERIFY items
-No unresolved items remain from the previous four-item close-out set.
-
-The 2026-10-08 close-out verified live Supabase migration head, live Render worker deployment policy, current Secret Vault KDF implementation, and the current R2 storage role.
+Static code, prepared contracts, configured secrets, or a live deployment are not production PASS by themselves. Record only observed results, include the revision and cleanup status, and never record secret values.
