@@ -1,7 +1,7 @@
 # Cognix Nexus — Release Gate Matrix
 
 > Owner: Release engineering
-> Last Updated: 2026-10-08
+> Last Updated: 2026-10-11
 > Secrets and secret values never belong in this file.
 
 This file defines what can be automated now and what still requires an operator/browser/device.
@@ -10,7 +10,7 @@ This file defines what can be automated now and what still requires an operator/
 
 | Gate | Runner | Operator input |
 |---|---|---|
-| AI + embeddings + extraction + RRF/citation | `scripts/provider_e2e.py` | All configured provider credentials; LLM matrix is independent, embeddings are probed at persisted 1536 plus non-persisted 1024 for Voyage/Cloudflare |
+| AI + embeddings + extraction + RRF/citation | `scripts/provider_e2e.py` | `COHERE_API_KEY` is required by current preflight for production-compatible 1536-dimensional embeddings; other LLM provider keys are optional and must be E2E-verified if configured. 1024-dimensional alternate embedding probes are non-production and cannot write to the persisted `vector(1536)` schema |
 | Supabase Storage | `scripts/provider_e2e.py` | Supabase URL/service-role + bucket |
 | Backblaze B2 | `scripts/provider_e2e.py` | B2 credentials |
 | Cloudinary | `scripts/provider_e2e.py` | Cloudinary cloud name + API key/secret |
@@ -21,6 +21,11 @@ This file defines what can be automated now and what still requires an operator/
 | Frontend typecheck/lint/build | CI | none |
 | Backend compile/unit/integration | CI | none |
 | Mobile config validation | CI | none |
+
+## Additional configuration checks
+
+- Reconcile live Render service identity/root directory/build/runtime/deploy policy against `render.yaml`; current API/worker settings differ from the blueprint.
+- Inventory live Render environment-variable names before deleting any override. Remove only verified-unused model/URL/legacy routing variables; preserve provider keys and database/auth/storage/Google/E2E/recovery/release-gate variables.
 
 ## Operator/browser/device gates — intentionally last
 
