@@ -19,9 +19,9 @@ Cognix Core is the research/evidence foundation. Brain Vault is the durable pers
 
 ## Current snapshot
 
-The implementation is at release-candidate / pre-final-production-verification state. Repository and live Supabase migration heads are both 032, and the previously identified four VERIFY items are closed with evidence. External provider, OAuth, browser/device, accessibility/performance, recovery and compliance gates remain pending, so final production smoke and release are still blocked.
+The implementation is at release-candidate / pre-final-production-verification state. CI and CodeQL passed on main commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae`; the API and worker deployments for that commit were observed live on 2026-10-11. The repository and live Supabase migration heads were both verified at 032 on 2026-10-08, and must be rechecked before release. External provider, OAuth, browser/device, accessibility/performance, recovery and compliance gates remain pending. Live Render settings also need reconciliation against `render.yaml`, and live environment-variable cleanup has not yet been verified. Final production smoke and release remain blocked.
 
-See CURRENT_STATE.md for status and evidence, ROADMAP.md for strategic scope, and PROJECT_OVERVIEW.md for architecture/product boundaries.
+AI provider endpoints and model IDs are maintained in backend code; Render should store provider credentials and required service/integration configuration, not model/URL overrides. Production embeddings remain fixed at 1536 dimensions, so Cohere is currently the compatible production embedding route. See CURRENT_STATE.md for status/evidence, ROADMAP.md for strategic scope, and PROJECT_OVERVIEW.md for architecture/product boundaries.
 
 ## Documentation map
 
