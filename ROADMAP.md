@@ -2,7 +2,7 @@
 
 > Owner: Product/engineering roadmap
 > Update when: phase scope, priority, acceptance, deferral, blocker, or backlog changes
-> Last Updated: 2026-10-08
+> Last Updated: 2026-10-11
 > Do NOT put here: live evidence details or step-by-step operational runbooks.
 
 ## Completed Phases
@@ -12,9 +12,10 @@
 
 ## Active Phase
 ### P0 engineering verification
-- Engineering verification.
-- Storage/processing verification.
-- Security regression.
+- CI is verified PASS on main commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae` (CI run 38071211914; CodeQL run 38071211816).
+- Reconcile live Render API/worker settings with `render.yaml` before changing any live configuration.
+- Inventory actual Render environment-variable names; remove only verified obsolete model/URL/legacy overrides while preserving provider keys, test/release gates, database/auth/storage and account integrations.
+- Storage/processing verification and security regression remain evidence-gated.
 
 ### P1 UI completion/polish
 - UI foundation/state normalization.
@@ -35,9 +36,11 @@
 5. Approve and tag the release only after all required gates are green.
 6. Then activate the Phase 13+ implementation slices only after the release is green; non-runtime foundations may be prepared in parallel but never substitute for release gates.
 
-The previous four explicit VERIFY items (live migration head, live Render worker policy, current Secret Vault KDF, and R2 production role) were closed on 2026-10-08 and are no longer release-gate work.
+The 2026-10-08 close-out verified the migration head, worker policy, Secret Vault KDF and R2 role at that time. The Render worker policy must be rechecked because live manual/off differs from the checked-in commit-triggered blueprint; do not treat that configuration drift as permanently closed.
 
 ## Pending Verification / Acceptance
+- Live Render service/blueprint reconciliation and safe environment-variable inventory.
+- Re-verify the live Supabase migration head before release.
 - Real AI provider E2E.
 - Google Drive OAuth/account drill.
 - Supabase Storage drill.

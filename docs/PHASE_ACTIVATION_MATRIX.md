@@ -34,7 +34,8 @@ The machine-readable control surface is `docs/PHASE_ACTIVATION_MANIFEST.json`.
 ## Current execution batches
 
 ### Batch 0 — Current release
-- CI failure resolution
+- CI PASS confirmed on main commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae` (run 38071211914); CodeQL PASS (run 38071211816)
+- reconcile live Render service/blueprint drift and safely inventory environment variables
 - release-gate preflight
 - provider/storage/Book acceptance evidence
 - authenticated browser smoke

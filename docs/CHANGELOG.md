@@ -1,5 +1,11 @@
 # Cognix Nexus — Changelog
 
+## 2026-10-11
+- Recorded current main CI PASS (run 38071211914) and CodeQL PASS (run 38071211816) for commit 538520aa908c8fdadef0a38c7fba23fea8ca3fae.
+- Recorded live Render API and worker deploy evidence for that commit, while explicitly tracking live-vs-blueprint configuration drift and unverified environment-variable cleanup.
+- Updated release status and roadmap to keep external provider/storage/Book/browser/device/accessibility/performance/recovery/GDPR/observability/manual gates pending until evidence is captured.
+- Reconciled provider setup instructions with provider-key-only LLM routing and the persisted vector(1536) embedding schema.
+
 ## 2026-10-08
 - Closed the four explicit VERIFY items with evidence: migration head 032, live Render worker deployment policy manual/off, Secret Vault PBKDF2-SHA256 600k implementation, and R2 non-production role.
 - Added release-gate preflight and Book Intelligence acceptance contracts.

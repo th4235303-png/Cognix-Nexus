@@ -118,12 +118,13 @@ While the current release is blocked on real-world gates:
 ## Recommended execution batches
 
 ### Batch 0 — current release
-1. obtain CI PASS
-2. run provider/storage/Book acceptance with supplied secrets
-3. run authenticated Playwright
-4. close external release gates with evidence
-5. perform grouped manual verification last
-6. final production smoke/release approval
+1. CI PASS is confirmed on main commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae` (CI run 38071211914; CodeQL run 38071211816)
+2. reconcile live Render service/blueprint drift and inventory actual environment-variable names safely
+3. run provider/storage/Book acceptance with production-safe credentials
+4. run authenticated Playwright
+5. close external release gates with evidence
+6. perform grouped manual verification last
+7. final production smoke/release approval
 
 ### Batch 1 — Phase 13 + 17
 1. durable persistence/events and lifecycle event invariants

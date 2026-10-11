@@ -29,7 +29,7 @@ API docs are available at /docs; health is available at /health; readiness is av
 
 ## Production configuration
 
-Set DATABASE_URL, authentication/JWKS settings, AI provider settings, Google Drive settings, and trusted frontend origins through the hosting provider secret manager. Keep COGNIX_AUTH_REQUIRED=false only for local development.
+Set DATABASE_URL, authentication/JWKS settings, provider API keys, Google Drive settings, storage credentials, and trusted frontend origins through the hosting provider secret manager. LLM endpoints and model IDs are code-defined; do not set model/URL override variables. `COHERE_API_KEY` is required by the current AI release-gate preflight because production embeddings use the persisted 1536-dimensional schema. Keep `COGNIX_AUTH_REQUIRED=false` only for local development.
 
 The Google OAuth callback never renders the refresh token. The resulting credential must be stored securely as GOOGLE_REFRESH_TOKEN on the backend.
 
