@@ -20,7 +20,7 @@ Future Phase 13–21 runtime activation remains blocked until the current releas
 - **Last verified implementation CI:** PASS on application commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae`. Cognix Core CI run [38071211914](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211914) and CodeQL run [38071211816](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211816) completed successfully on 2026-10-10. Documentation-only PR #34 also passed CI and CodeQL on head `42afd633c848c604d673b8fb5385a0592740f76b`; post-merge checks must be read from the linked Actions runs before treating the new main revision as verified.
 - **AI routing code:** provider endpoints and model IDs are code-defined; LLM routes are enabled by provider-key presence. The production vector schema is `vector(1536)`; Cohere is currently the only embedding route compatible with the persisted dimension.
 - **Render deployment:** API deploy `dep-db57ii67bikc7397fh8g` and worker deploy `dep-db5772ijnfac739fp1p0` were reported `live` on commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae` when checked 2026-10-11.
-- **Render configuration:** actual service settings do not fully match the checked-in `render.yaml` service names/root directories/deploy policies. Reconcile carefully before changing blueprint or deployment policy.
+- **Render configuration:** service identity drift is corrected in the proposed blueprint branch, which now uses `Cognix-Core` and `cognix-core-worker-runtime`, Python under `web-platform/backend`, locked dependencies, `/health`, and commit-triggered deployment for both API and worker. Live settings remain drifted: API reports `runtime=node`, `rootDir=backend`, `requirements.txt`; worker reports blank rootDir, inline `cd web-platform/backend`, `requirements.txt`, and auto-deploy off. Do not merge the blueprint change until the live API runtime/root/build settings are corrected, because a merge can trigger an API deploy against the stale root directory. Render connector currently has no service-settings update action.
 - **Render environment cleanup:** obsolete variable names have not been verified against the live service environment and have not been deleted. Do not infer that a variable is present from the blueprint alone.
 - **Database migration head:** repository and live Supabase migration history were both verified at 032 on 2026-10-08; re-check before final release.
 
@@ -53,7 +53,7 @@ External production gates remain pending until fresh evidence is captured. CI PA
 
 ## 6. PENDING — CURRENT RELEASE
 
-1. Inspect and reconcile live Render API/worker settings against `render.yaml`, including service identity, root directory, runtime/build command and deploy policy. Do not change these blindly.
+1. Apply the prepared Render settings in the dashboard: API Python + rootDir `web-platform/backend` + `pip install -r requirements.lock` + `/health`; worker service identity `cognix-core-worker-runtime`, Python + rootDir `web-platform/backend` + `pip install -r requirements.lock` + `python -m app.worker` + `/health`; set worker commit-triggered to prevent API/worker revision skew. Only then merge the prepared blueprint PR and verify both deployments. This remains blocked from direct execution because the connected Render tool cannot mutate service settings.
 2. Inventory actual live Render environment-variable names and compare with the current code/blueprint. Remove only verified obsolete overrides; preserve API keys, database, auth, storage, Google, release-gate and test variables. The connected Render action cannot currently enumerate or delete individual variables.
 3. Re-verify current Supabase migration head and database readiness.
 4. Run real AI provider E2E with production-safe credentials; verify Cohere embedding at 1536 dimensions and LLM routing/failover. Optional provider keys must not be treated as verified merely because configured.
@@ -86,7 +86,7 @@ Deferred items are not reported as completed.
 
 ## 9. NEXT ACTION ORDER
 
-1. Reconcile Render live service/blueprint drift and safely inventory live environment-variable names.
+1. Finish the Render live settings update and merge the prepared blueprint PR only after settings match; then safely inventory live environment-variable names.
 2. Run release-gate preflight without printing secrets; provide only missing gate names.
 3. Run provider/storage/Book acceptance using production-safe credentials and capture revision/time/result/cleanup evidence.
 4. Run authenticated browser and remaining external gates.
