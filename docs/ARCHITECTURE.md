@@ -2,7 +2,7 @@
 
 > Owner: Architecture
 > Update when: system boundaries, major components, invariants, or durable architectural decisions change
-> Last Updated: 2026-10-08
+> Last Updated: 2026-10-11
 > Do NOT put here: live release checklist or tactical backlog.
 
 ## Product boundary
@@ -34,6 +34,10 @@ Source/book → durable storage → extraction → chunks → embeddings/search 
 
 ## Retrieval
 Current retrieval is hybrid lexical/semantic retrieval with RRF/ranking and source/chunk citations. Older vector-only/non-semantic claims are historical and are not current source of truth.
+
+## AI provider configuration
+
+LLM provider endpoints and model IDs are defined in backend code; Render stores provider credentials, not endpoint/model overrides. LLM routes are eligible when their provider keys are present. Embeddings use a separate router and the persisted pgvector column is fixed at 1536 dimensions; Cohere is currently the only configured embedding route compatible with that production dimension. Provider credentials being configured is not equivalent to a successful provider E2E.
 
 ## Storage routing
 - Research images/covers/thumbnails: Cloudinary.
