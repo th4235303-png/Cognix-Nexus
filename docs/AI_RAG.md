@@ -2,7 +2,7 @@
 
 > Owner: AI/RAG pipeline
 > Update when: retrieval, AI processing, evidence rules, or Book Intelligence behavior changes
-> Last Updated: 2026-10-08
+> Last Updated: 2026-10-11
 > Do NOT put here: provider secrets or release gate status.
 
 ## Research pipeline
@@ -35,7 +35,7 @@ AI output is derived evidence, not canonical truth. Human review remains require
 Lesson packs, study guides, concept books and derived books preserve source/version manifests and distinguish agreement, disagreement and inference.
 
 ## Provider behavior
-The backend uses an OpenAI-compatible provider abstraction. The checked-in production blueprint has historically targeted an OpenAI-compatible endpoint; exact live provider/credentials remain a verification concern. Do not claim direct OpenAI production activation without evidence.
+The backend defines provider endpoints and model IDs in code in `app/services/llm.py`; routes are eligible when their provider keys are present. Render should hold credentials, not model/URL overrides. The current route registry includes Gemini, OpenRouter, Hugging Face, Mistral, Cohere, Groq and Cloudflare. A configured key is not proof of provider health; the real provider E2E must record success/failure. Embeddings are separately routed in `app/services/embeddings.py`; production remains fixed at 1536 dimensions, with Cohere currently the only compatible configured route.
 
 ## Reliability
 Retryable failures use bounded retry/backoff. Worker jobs use durable leases/fencing. Provider failures are explicit and do not silently fall back to memory.
