@@ -17,7 +17,7 @@
 - Render service runtime/root/build/start/health-check/auto-deploy metadata matches the checked-in blueprint. Direct HTTP health/readiness responses and live env-name inventory remain unavailable via the connected tools; no variable was deleted or overwritten.
 
 - Supabase migration 033 is live; targeted RLS initplan and `knowledge_items.chapter_id` index advisor findings are resolved. Supabase Auth leaked-password protection remains disabled because the current Free plan does not permit enabling it (owner-confirmed); treat as a documented plan limitation.
-- Release Gates run #38046919712 preflight PASS, provider E2E FAIL; dependent browser/recovery/Sentry/Book jobs were skipped.
+- Release Gates run [#38231060560](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38231060560): preflight PASS, provider E2E FAIL only at Google Drive with `GoogleDriveFolderNotFoundOrInaccessible:HTTP_404`. Storage/RAG/citation/owner-isolation/embedding checks passed; optional Gemini 401, Hugging Face 400, Cloudflare 410 are diagnostic. Next: verify the Actions `GOOGLE_DRIVE_ROOT_FOLDER_ID` and folder access for the OAuth account, then rerun the provider gate. Earlier run #38046919712 remains historical evidence.
 
 ### P1 UI completion/polish
 - UI foundation/state normalization.
@@ -44,7 +44,7 @@ The 2026-10-08 close-out verified the migration head, worker policy, Secret Vaul
 - Direct Render API `/health` and `/ready`, post-deploy worker health/runtime logs, and safe live environment-variable inventory (blueprint names are known, live names cannot be enumerated by the connected tool).
 - Supabase Auth leaked-password protection is unavailable on the current Free plan (owner-confirmed); retain as an explicit security limitation and revisit only if the plan/settings support it.
 - Repeat real AI provider E2E after reconciling provider access/model/quota configuration; prior run had six probe failures.
-- Google Drive account owner reports re-authorization and replacement `GOOGLE_REFRESH_TOKEN` in Render. The actual live Drive refresh/export drill is still required; the current integration did not expose a fresh successful runtime result, so do not mark this gate PASS yet.
+- Google Drive account owner reports re-authorization and replacement `GOOGLE_REFRESH_TOKEN` in Render. Fresh Actions run #38231060560 now identifies the blocker as HTTP 404 (`GoogleDriveFolderNotFoundOrInaccessible`), not an observed refresh-token error. Verify the workflow's GitHub Actions `GOOGLE_DRIVE_ROOT_FOLDER_ID` and ensure the folder is accessible to the OAuth account represented by Actions secrets. Render environment changes do not automatically update GitHub Actions secrets.
 - Supabase Storage and Backblaze B2 >50 MB drills previously passed in provider E2E #38046919712; repeat if fresh release evidence is required.
 - Authenticated Playwright production smoke.
 - Mobile EAS/device smoke.
