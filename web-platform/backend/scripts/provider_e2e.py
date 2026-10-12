@@ -70,6 +70,14 @@ def _assert(condition: bool, message: str) -> None:
         raise RuntimeError(message)
 
 
+def _has_healthy_llm_route(probe_results: dict[str, object]) -> bool:
+    """A release requires at least one healthy configured LLM route, not every optional route."""
+    return any(
+        isinstance(result, dict) and result.get("ok") is True
+        for result in probe_results.values()
+    )
+
+
 async def run(run_id: str) -> dict:
     if store.database is None:
         raise RuntimeError("production E2E requires PostgreSQL")
@@ -96,6 +104,7 @@ async def run(run_id: str) -> dict:
         # Record individual failures instead of aborting at the first bad provider,
         # so the workflow produces a useful provider matrix without exposing secrets.
         provider_failures: list[str] = []
+        optional_provider_failures: list[str] = []
         llm_probe_results: dict[str, object] = {}
         expected_llm = {
             "gemini", "openrouter", "huggingface",
@@ -128,7 +137,12 @@ async def run(run_id: str) -> dict:
                 if status_code is not None:
                     error = f"{error}:HTTP_{status_code}"
                 llm_probe_results[route.name] = {"ok": False, "error": error}
-                provider_failures.append(f"llm.{route.name}: {error}")
+                optional_provider_failures.append(f"llm.{route.name}: {error}")
+
+        # LLM keys are optional individually. Fail the release gate only when
+        # no configured route can answer; routing can fail over among healthy routes.
+        if not _has_healthy_llm_route(llm_probe_results):
+            provider_failures.append("llm.no_healthy_configured_route")
 
         embedding_probe_results: dict[str, object] = {}
         expected_embedding_1536 = {"cohere"}
@@ -173,13 +187,16 @@ async def run(run_id: str) -> dict:
                 if status_code is not None:
                     error = f"{type(exc).__name__}:HTTP_{status_code}"
                 embedding_probe_results[f"{route.name}_1024"] = {"ok": False, "error": error}
-                provider_failures.append(f"embedding.{route.name}.1024: {error}")
+                # Alternate-dimension embeddings are diagnostic only: the
+                # production schema is vector(1536), so these cannot gate release.
+                optional_provider_failures.append(f"embedding.{route.name}.1024: {error}")
 
         results["provider_matrix"] = {
             "llm": llm_probe_results,
             "embedding": embedding_probe_results,
         }
         results["provider_probe_failures"] = provider_failures
+        results["optional_provider_probe_failures"] = optional_provider_failures
         log.info("provider_e2e_probe_matrix=%s", json.dumps(results["provider_matrix"], sort_keys=True))
 
         # 1. Real provider round trips.

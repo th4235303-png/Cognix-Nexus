@@ -1,7 +1,7 @@
 # Cognix Nexus — Release Gate Matrix
 
 > Owner: Release engineering
-> Last Updated: 2026-10-11
+> Last Updated: 2026-10-12
 > Secrets and secret values never belong in this file.
 
 This file defines what can be automated now and what still requires an operator/browser/device.
@@ -10,7 +10,7 @@ This file defines what can be automated now and what still requires an operator/
 
 | Gate | Runner | Operator input |
 |---|---|---|
-| AI + embeddings + extraction + RRF/citation | `scripts/provider_e2e.py` | `COHERE_API_KEY` is required by current preflight for production-compatible 1536-dimensional embeddings; other LLM provider keys are optional and must be E2E-verified if configured. 1024-dimensional alternate embedding probes are non-production and cannot write to the persisted `vector(1536)` schema |
+| AI + embeddings + extraction + RRF/citation | `scripts/provider_e2e.py` | `COHERE_API_KEY` is required by current preflight for production-compatible 1536-dimensional embeddings. The gate requires at least one configured LLM route to succeed; individual optional LLM route errors are diagnostic when another route is healthy. A configured Cohere 1536-dimension embedding failure remains blocking. Alternate 1024-dimensional embedding probes are diagnostic only because they cannot write to persisted `vector(1536)` schema. |
 | Supabase Storage | `scripts/provider_e2e.py` | Supabase URL/service-role + bucket |
 | Backblaze B2 | `scripts/provider_e2e.py` | B2 credentials |
 | Cloudinary | `scripts/provider_e2e.py` | Cloudinary cloud name + API key/secret |
@@ -24,21 +24,23 @@ This file defines what can be automated now and what still requires an operator/
 
 ## Additional configuration checks
 
-- Reconcile live Render service identity/root directory/build/runtime/deploy policy against `render.yaml`; current API/worker settings differ from the blueprint.
-- Inventory live Render environment-variable names before deleting any override. Remove only verified-unused model/URL/legacy routing variables; preserve provider keys and database/auth/storage/Google/E2E/recovery/release-gate variables.
+- Live Render API (`Cognix-Core`) and Worker (`cognix-core-worker-runtime`) currently report Python runtime, expected root/build/start commands, `/health`, and commit-triggered auto-deploy. Direct `/health` and `/ready` responses still require verification.
+- The connected Render integration cannot enumerate/delete individual environment variables. Obtain an owner-visible live variable-name inventory before removing any override; preserve provider keys and database/auth/storage/Google/E2E/recovery/release-gate variables.
+- Supabase migration `033_rls_policy_initplan_indexes` is live. The targeted RLS initplan and chapter foreign-key index findings are resolved; Supabase Auth leaked-password protection remains disabled and needs an operator to enable/verify it.
 
 ## Operator/browser/device gates — intentionally last
 
 These are not promoted to PASS from static code inspection:
 
-1. Authenticated Playwright production smoke.
-2. Full keyboard/screen-reader/responsive sweep.
-3. Lighthouse/performance baseline.
-4. Mobile EAS/device smoke.
-5. Production backup/restore/rollback against the real environment.
-6. GDPR export/delete against a real owner account.
-7. Sentry live event ingestion.
-8. Final production smoke and release approval.
+1. Enable and verify Supabase Auth leaked-password protection.
+2. Authenticated Playwright production smoke.
+3. Full keyboard/screen-reader/responsive sweep.
+4. Lighthouse/performance baseline.
+5. Mobile EAS/device smoke.
+6. Production backup/restore/rollback against the real environment.
+7. GDPR export/delete against a real owner account.
+8. Sentry live event ingestion.
+9. Final production smoke and release approval.
 
 ## Key collection order
 
