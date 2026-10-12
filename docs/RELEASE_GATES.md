@@ -32,7 +32,7 @@ This file defines what can be automated now and what still requires an operator/
 
 These are not promoted to PASS from static code inspection:
 
-1. Enable and verify Supabase Auth leaked-password protection.
+1. Supabase Auth leaked-password protection is a known limitation on the current Free plan; verify only if plan/settings change.
 2. Authenticated Playwright production smoke.
 3. Full keyboard/screen-reader/responsive sweep.
 4. Lighthouse/performance baseline.
