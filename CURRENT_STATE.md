@@ -17,14 +17,18 @@ Future Phase 13–21 runtime activation remains blocked until the current releas
 
 ## 3. Overall Status
 
-- **Latest main CI/security checks:** Cognix Core CI [38201410726](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38201410726) and CodeQL [38201410735](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38201410735) both PASS on main commit `4805506ab1e82b5114850b5a40aebdcd2be21047` (2026-10-12). This commit is documentation-only; application code and Render deploys are on parent commit `5be9d641da6972fdfb0d4498afd44c42fbf9705a`. 
+- **Latest main CI/security checks:** Cognix Core CI [38225351392](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38225351392) and CodeQL [38225351317](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38225351317) both PASS on merge commit `c711aa225e7306d1b8b637e241abc05116167b01` (2026-10-12). CI frontend, backend, and mobile jobs passed; both Python and JavaScript/TypeScript CodeQL analyses passed.
+
 - **AI routing code:** provider endpoints and model IDs are code-defined; LLM routes are enabled by provider-key presence. Live `public.embeddings.embedding_vector` is `vector(1536)` (101 non-null rows at the 2026-10-11 audit); a separate JSONB `embedding` column also exists. Cohere is currently the only embedding route compatible with the persisted vector dimension.
-- **Render deployment:** API deploy `dep-db65gorbc2fs739bk7i0` and Worker deploy `dep-db65gorbc2fs739bk6s0` are both `live` on application commit `5be9d641da6972fdfb0d4498afd44c42fbf9705a` (verified 2026-10-12). Both auto-deploy from `main` on commits.
-- **Render configuration:** Live API `Cognix-Core` and Worker `cognix-core-worker-runtime` both report Python runtime, rootDir `web-platform/backend`, build command `pip install -r requirements.lock`, configured start commands, `/health`, and commit-triggered auto-deploy. This resolves the previously observed API `runtime=node` metadata mismatch. Direct `/health` and `/ready` HTTP verification was not obtainable in this session; no matching health-request logs were returned, so endpoint readiness is still unverified.
-- **Render environment cleanup:** obsolete variable names have not been verified against the live service environment and have not been deleted. Do not infer that a variable is present from the blueprint alone.
+- **Render deployment:** API deploy `dep-db69rg0u01pc73fcqm5g` and Worker deploy `dep-db69rg0u01pc73fcqmu0` are live on merge commit `c711aa225e7306d1b8b637e241abc05116167b01` (2026-10-12). Render events confirm successful build and deploy for both services.
+
+- **Render configuration:** Live API `Cognix-Core` and Worker `cognix-core-worker-runtime` both report Python runtime, rootDir `web-platform/backend`, build command `pip install -r requirements.lock`, expected start commands, `/health` configured, and commit-triggered auto-deploy. Direct HTTP verification from the connected environment is unavailable; API `/health`, API `/ready`, and post-deploy worker health are not marked PASS without a response/log proving them.
+
+- **Render environment audit:** `render.yaml` declares the expected API/worker variable names, including Google OAuth variables. The connected Render integration cannot enumerate live environment variable names, so blueprint-to-live comparison is still unverified; no variables were deleted or overwritten.
+- **Google Drive OAuth:** The owner reports re-authorizing the account and replacing the refresh token in Render. The secret value is intentionally not read or echoed. Current Render logs do not contain a fresh Drive refresh/export acceptance result, so OAuth is **configured per owner report, runtime acceptance still unverified**; do not claim a release-gate PASS until a real Drive API refresh/upload/export succeeds.
 - **Database migration head:** live Supabase migration history and advisor were re-verified on 2026-10-12 at `033_rls_policy_initplan_indexes` (version `20261012034910`). The seven owner-policy `auth_rls_initplan` findings and the unindexed `knowledge_items.chapter_id` FK finding are no longer reported. Remaining performance notices are INFO-level unused-index findings; Supabase Auth still warns that leaked-password protection is disabled.
 
-External production gates remain pending until fresh evidence is captured. CI PASS and a live deployment do not equal release PASS.
+External production gates remain pending until fresh evidence is captured. CI PASS and a live deployment do not equal release PASS. Supabase Auth leaked-password protection remains disabled because the current Free plan does not permit enabling it, per owner report; track as a documented plan limitation rather than a completed security control.
 
 ## 4. COMPLETED / CODE-READY
 
