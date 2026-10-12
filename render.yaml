@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: cognix-core-api
+    name: Cognix-Core
     autoDeployTrigger: commit
     runtime: python
     rootDir: web-platform/backend
@@ -99,13 +99,14 @@ services:
       - key: SENTRY_DSN
         sync: false
 
-  - type: worker
-    name: cognix-core-worker
+  - type: web
+    name: cognix-core-worker-runtime
     autoDeployTrigger: commit
     runtime: python
     rootDir: web-platform/backend
     buildCommand: pip install -r requirements.lock
     startCommand: python -m app.worker
+    healthCheckPath: /health
     envVars:
       - key: DATABASE_URL
         sync: false
