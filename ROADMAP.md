@@ -2,7 +2,7 @@
 
 > Owner: Product/engineering roadmap
 > Update when: phase scope, priority, acceptance, deferral, blocker, or backlog changes
-> Last Updated: 2026-10-11
+> Last Updated: 2026-10-12
 > Do NOT put here: live evidence details or step-by-step operational runbooks.
 
 ## Completed Phases
@@ -12,10 +12,11 @@
 
 ## Active Phase
 ### P0 engineering verification
-- CI is verified PASS on main commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae` (CI run 38071211914; CodeQL run 38071211816).
-- Reconcile live Render API/worker settings with `render.yaml` before changing any live configuration.
-- Inventory actual Render environment-variable names; remove only verified obsolete model/URL/legacy overrides while preserving provider keys, test/release gates, database/auth/storage and account integrations.
-- Storage/processing verification and security regression remain evidence-gated.
+- Latest main CI and CodeQL both PASS on docs commit `4805506ab1e82b5114850b5a40aebdcd2be21047` (runs 38201410726 and 38201410735, 2026-10-12). Application code is deployed on parent commit `5be9d641da6972fdfb0d4498afd44c42fbf9705a`.
+- Live Render API and Worker both report Python runtime, expected root/build/start commands, `/health`, and commit-triggered auto-deploy; latest application deploys are live on `5be9d64`.
+- Direct API `/health` and `/ready` plus worker health remain unverified. Live Render env-variable enumeration is unavailable through the connected integration; do not delete or infer variables without an owner-visible inventory.
+- Supabase migration 033 is live; targeted RLS initplan and `knowledge_items.chapter_id` index advisor findings are resolved. Supabase Auth leaked-password protection remains disabled and needs owner action.
+- Release Gates run #38046919712 preflight PASS, provider E2E FAIL; dependent browser/recovery/Sentry/Book jobs were skipped.
 
 ### P1 UI completion/polish
 - UI foundation/state normalization.
@@ -36,15 +37,14 @@
 5. Approve and tag the release only after all required gates are green.
 6. Then activate the Phase 13+ implementation slices only after the release is green; non-runtime foundations may be prepared in parallel but never substitute for release gates.
 
-The 2026-10-08 close-out verified the migration head, worker policy, Secret Vault KDF and R2 role at that time. The Render worker policy must be rechecked because live manual/off differs from the checked-in commit-triggered blueprint; do not treat that configuration drift as permanently closed.
+The 2026-10-08 close-out verified the migration head, worker policy, Secret Vault KDF and R2 role at that time. As of 2026-10-12, the live Worker auto-deploy trigger reports `commit`, matching the checked-in blueprint.
 
 ## Pending Verification / Acceptance
-- Live Render service/blueprint reconciliation and safe environment-variable inventory.
-- Re-verify the live Supabase migration head before release.
-- Real AI provider E2E.
-- Google Drive OAuth/account drill.
-- Supabase Storage drill.
-- Backblaze B2 drill.
+- Direct Render API `/health` and `/ready`, worker health/runtime logs, and safe live environment-variable inventory.
+- Enable/verify Supabase Auth leaked-password protection and recheck database readiness.
+- Repeat real AI provider E2E after reconciling provider access/model/quota configuration; prior run had six probe failures.
+- Google Drive OAuth/account drill after account owner re-authorizes; prior refresh token was expired or revoked.
+- Supabase Storage and Backblaze B2 >50 MB drills previously passed in provider E2E #38046919712; repeat if fresh release evidence is required.
 - Authenticated Playwright production smoke.
 - Mobile EAS/device smoke.
 - WCAG keyboard/screen-reader/responsive sweep.
@@ -113,7 +113,7 @@ Re-enable frontend deployment, configure domains/TLS/secrets, smoke-test and tag
 ## Deferred
 - Paid LLM activation.
 - Google Drive re-authorization/account-owner consent.
-These are not current P0 blockers.
+Google Drive re-authorization is a current external acceptance blocker; paid LLM activation remains deferred.
 
 ## Blocked
 - Final production smoke.
