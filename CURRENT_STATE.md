@@ -2,7 +2,7 @@
 
 > Owner: Release/status tracking
 > Update when: status, evidence, gate, blocker, deferral, or next action changes
-> Last Updated: 2026-10-11
+> Last Updated: 2026-10-12
 > Do NOT put here: architecture specifications, full design-system rules, historical source documents, or unverified claims presented as facts.
 
 ## 1. Current Release
@@ -17,12 +17,12 @@ Future Phase 13–21 runtime activation remains blocked until the current releas
 
 ## 3. Overall Status
 
-- **Last verified implementation CI:** PASS on application commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae`. Cognix Core CI run [38071211914](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211914) and CodeQL run [38071211816](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211816) completed successfully on 2026-10-10. Documentation-only PR #34 also passed CI and CodeQL on head `42afd633c848c604d673b8fb5385a0592740f76b`; post-merge checks must be read from the linked Actions runs before treating the new main revision as verified.
+- **Latest main CI/security checks:** Cognix Core CI [38201410726](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38201410726) and CodeQL [38201410735](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38201410735) both PASS on main commit `4805506ab1e82b5114850b5a40aebdcd2be21047` (2026-10-12). This commit is documentation-only; application code and Render deploys are on parent commit `5be9d641da6972fdfb0d4498afd44c42fbf9705a`. 
 - **AI routing code:** provider endpoints and model IDs are code-defined; LLM routes are enabled by provider-key presence. Live `public.embeddings.embedding_vector` is `vector(1536)` (101 non-null rows at the 2026-10-11 audit); a separate JSONB `embedding` column also exists. Cohere is currently the only embedding route compatible with the persisted vector dimension.
-- **Render deployment:** API deploy `dep-db5regl9mjac738nb4dg` is `live` on main commit `3227794eb45c3f74833dc3a2fc22f5ffe195fadc` after the root-directory/build-command service updates (2026-10-11). Worker deploy `dep-db5772ijnfac739fp1p0` is still the last observed live deploy on `538520aa908c8fdadef0a38c7fba23fea8ca3fae`; service settings have since been changed but a new worker deploy has not yet been observed.
-- **Render configuration:** service names now match the proposed blueprint. Live API rootDir is `web-platform/backend`, build command is `pip install -r requirements.lock`, start command is `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, and `/health` is configured; however, Render metadata still reports `runtime=node`, so Python runtime alignment and live `/health`/`/ready` verification remain blockers. Worker settings now report Python, rootDir `web-platform/backend`, `pip install -r requirements.lock`, `python -m app.worker`, `/health`, and commit-triggered auto-deploy. Do not merge the blueprint PR until API runtime is confirmed/corrected and the live health checks are verified. The connected Render tools cannot mutate runtime/root/build/deploy-policy settings.
+- **Render deployment:** API deploy `dep-db65gorbc2fs739bk7i0` and Worker deploy `dep-db65gorbc2fs739bk6s0` are both `live` on application commit `5be9d641da6972fdfb0d4498afd44c42fbf9705a` (verified 2026-10-12). Both auto-deploy from `main` on commits.
+- **Render configuration:** Live API `Cognix-Core` and Worker `cognix-core-worker-runtime` both report Python runtime, rootDir `web-platform/backend`, build command `pip install -r requirements.lock`, configured start commands, `/health`, and commit-triggered auto-deploy. This resolves the previously observed API `runtime=node` metadata mismatch. Direct `/health` and `/ready` HTTP verification was not obtainable in this session; no matching health-request logs were returned, so endpoint readiness is still unverified.
 - **Render environment cleanup:** obsolete variable names have not been verified against the live service environment and have not been deleted. Do not infer that a variable is present from the blueprint alone.
-- **Database migration head:** live Supabase migration history was re-verified on 2026-10-11 at `032_phase7_12_hardening`; PR #36 migration `033_rls_policy_initplan_indexes.sql` is not applied. The live `knowledge_items.chapter_id` FK has no matching index yet.
+- **Database migration head:** live Supabase migration history and advisor were re-verified on 2026-10-12 at `033_rls_policy_initplan_indexes` (version `20261012034910`). The seven owner-policy `auth_rls_initplan` findings and the unindexed `knowledge_items.chapter_id` FK finding are no longer reported. Remaining performance notices are INFO-level unused-index findings; Supabase Auth still warns that leaked-password protection is disabled.
 
 External production gates remain pending until fresh evidence is captured. CI PASS and a live deployment do not equal release PASS.
 
@@ -31,7 +31,7 @@ External production gates remain pending until fresh evidence is captured. CI PA
 - Book Intelligence Phase 1–6 implementation and Phase 7–12 Knowledge Vault/review/synthesis foundations.
 - Durable AI reading checkpoint/retry/backoff/provider-event audit foundations.
 - Knowledge Vault UI/API foundation.
-- Supabase migrations 031 and 032 are present in the repository; live migration head 032 was verified 2026-10-08.
+- Supabase migrations 031–033 are present in the repository; live migration head 033 and related advisor results were verified 2026-10-12.
 - Cloudinary upload/read/checksum/delete round-trip was previously observed.
 - Google Drive OAuth/export implementation and idempotent upsert path.
 - Provider E2E harness for provider, extraction, embedding, retrieval/citation and storage checks.
@@ -48,18 +48,18 @@ External production gates remain pending until fresh evidence is captured. CI PA
 - Render API deploy `dep-db57ii67bikc7397fh8g`: `live` on the same commit when checked 2026-10-11.
 - Render worker deploy `dep-db5772ijnfac739fp1p0`: `live` on the same commit when checked 2026-10-11.
 - Cloudinary live round-trip: previously verified; re-run if required by the current release evidence policy.
-- Repository/live Supabase migration head `032_phase7_12_hardening`: re-verified 2026-10-11; migration 033 remains unapplied.
+- Repository/live Supabase migration head `033_rls_policy_initplan_indexes`: re-verified 2026-10-12; targeted performance-advisor findings are resolved.
 - Previous four-item VERIFY close-out (migration head, worker deployment policy, Secret Vault KDF, R2 role) was recorded on 2026-10-08. The worker policy must be revisited because the checked-in blueprint and live setting differ.
 
 ## 6. PENDING — CURRENT RELEASE
 
-1. Correct the remaining API runtime mismatch (metadata still says `node` despite Python start command), verify API `/health` and `/ready` plus worker `/health`/worker logs, and confirm the latest worker deploy revision. The API root/build/health settings and worker Python/root/build/start/health/commit-triggered settings now match the intended configuration. Only then merge the prepared blueprint PR.
+1. API runtime mismatch is resolved in live Render metadata and both services deployed application commit `5be9d64`. Obtain direct API `/health`, `/ready`, and worker health evidence before calling readiness fully verified.
 2. Inventory actual live Render environment-variable names and compare with the current code/blueprint. Remove only verified obsolete overrides; preserve API keys, database, auth, storage, Google, release-gate and test variables. The connected Render action cannot currently enumerate or delete individual variables.
-3. Re-verify current Supabase migration head and database readiness.
-4. Run real AI provider E2E with production-safe credentials; verify Cohere embedding at 1536 dimensions and LLM routing/failover. Optional provider keys must not be treated as verified merely because configured.
-5. Run Google Drive account-owner OAuth/refresh-token and real export/idempotency drill.
-6. Run Supabase Storage live write/read/checksum drill.
-7. Run Backblaze B2 >50 MB write/read/checksum drill and cleanup.
+3. Migration 033 and targeted advisor findings are verified. Enable and verify Supabase Auth leaked-password protection, then capture a fresh database readiness check.
+4. Provider E2E [#38046919712](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38046919712) overall FAIL: Gemini 403, Hugging Face 400, Cerebras 402, Mistral 429, Cloudflare 1024 embedding RuntimeError, and expired/revoked Google refresh token. Storage, RAG/citation, owner isolation, and Cohere 1536-dimension probes passed. Reconcile optional provider model/access/quota configuration and retest without printing secrets.
+5. Google Drive account-owner OAuth/refresh-token and real export/idempotency drill remains blocked until the owner re-authorizes and provides a valid refresh token.
+6. Supabase Storage write/read/checksum passed in provider E2E #38046919712; rerun if fresh release evidence is required.
+7. Backblaze B2 >50 MB write/read/checksum passed in provider E2E #38046919712; rerun if fresh release evidence is required.
 8. Run controlled Book Intelligence 9-category / 170-file dry-run, duplicate fingerprint E2E, checkpoint/resume, durable ledger, distillation/lesson packs/derived-book lineage and export acceptance.
 9. Run authenticated Playwright production smoke.
 10. Run mobile EAS/device smoke.
@@ -73,7 +73,7 @@ External production gates remain pending until fresh evidence is captured. CI PA
 
 ## 7. BLOCKED
 
-- Final production smoke and release/tag until required gates have evidence-backed PASS.
+- Final production smoke and release/tag until required gates have evidence-backed PASS. Provider E2E #38046919712 failed, so browser-smoke, recovery-drill, sentry-probe, and book-contract jobs were skipped.
 - Phase 13–21 production runtime activation until release approval and each phase's own activation evidence.
 
 ## 8. DEFERRED
