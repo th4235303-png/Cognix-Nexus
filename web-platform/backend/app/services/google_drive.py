@@ -10,7 +10,11 @@ from dataclasses import dataclass
 
 from app.services.google_drive_package import build_file_contents
 
-SCOPES = ["https://www.googleapis.com/auth/drive.file"]
+# Exports target an owner-supplied existing root folder ID. drive.file does not
+# guarantee access to an arbitrary pre-existing folder that this app did not create
+# or that the user did not explicitly open with the app. The Drive API needs the
+# full Drive scope for this server-side root-folder workflow; re-consent is required.
+SCOPES = ["https://www.googleapis.com/auth/drive"]
 
 @dataclass
 class ExportPackage:
