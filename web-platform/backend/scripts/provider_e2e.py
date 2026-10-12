@@ -404,10 +404,28 @@ async def run(run_id: str) -> dict:
             # A revoked Google OAuth refresh token is an external configuration
             # blocker, not a reason to lose the provider matrix and storage/RAG
             # evidence collected above. Record a safe diagnostic and finish cleanup.
-            status_code = getattr(getattr(exc, "response", None), "status_code", None)
+            # googleapiclient.errors.HttpError exposes status via exc.resp.status,
+            # unlike httpx exceptions (which use exc.response.status_code).
+            # Read only the numeric status and emit categorical diagnostics; never
+            # log raw Google response bodies, which may contain sensitive details.
+            status_code = getattr(getattr(exc, "resp", None), "status", None)
+            if status_code is None:
+                status_code = getattr(getattr(exc, "response", None), "status_code", None)
             error = type(exc).__name__
             if status_code is not None:
                 error = f"{error}:HTTP_{status_code}"
+                if status_code == 400:
+                    error = "GoogleDriveBadRequest:HTTP_400"
+                elif status_code == 401:
+                    error = "GoogleDriveUnauthorized:HTTP_401"
+                elif status_code == 403:
+                    error = "GoogleDrivePermissionOrApiAccessDenied:HTTP_403"
+                elif status_code == 404:
+                    error = "GoogleDriveFolderNotFoundOrInaccessible:HTTP_404"
+                elif status_code == 429:
+                    error = "GoogleDriveRateLimited:HTTP_429"
+                elif status_code >= 500:
+                    error = f"GoogleDriveServerError:HTTP_{status_code}"
             # Google auth libraries sometimes expose the OAuth error in args
             # rather than in str(exc). Keep diagnostics categorical and never log
             # the raw exception, which could contain provider response details.
