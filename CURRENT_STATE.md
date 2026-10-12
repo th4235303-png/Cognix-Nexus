@@ -43,13 +43,12 @@ External production gates remain pending until fresh evidence is captured. CI PA
 
 ## 5. VERIFIED EVIDENCE
 
-- Current main CI run [38071211914](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211914): success on `538520aa908c8fdadef0a38c7fba23fea8ca3fae`.
-- Current main CodeQL run [38071211816](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38071211816): success on the same commit.
-- Render API deploy `dep-db57ii67bikc7397fh8g`: `live` on the same commit when checked 2026-10-11.
-- Render worker deploy `dep-db5772ijnfac739fp1p0`: `live` on the same commit when checked 2026-10-11.
+- Current main CI run [38201410726](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38201410726): success on `4805506ab1e82b5114850b5a40aebdcd2be21047`.
+- Current main CodeQL run [38201410735](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38201410735): success on the same commit.
+- Render API deploy `dep-db65gorbc2fs739bk7i0` and Worker deploy `dep-db65gorbc2fs739bk6s0`: live on app commit `5be9d641da6972fdfb0d4498afd44c42fbf9705a` on 2026-10-12.
 - Cloudinary live round-trip: previously verified; re-run if required by the current release evidence policy.
 - Repository/live Supabase migration head `033_rls_policy_initplan_indexes`: re-verified 2026-10-12; targeted performance-advisor findings are resolved.
-- Previous four-item VERIFY close-out (migration head, worker deployment policy, Secret Vault KDF, R2 role) was recorded on 2026-10-08. The worker policy must be revisited because the checked-in blueprint and live setting differ.
+- Previous four-item VERIFY close-out (migration head, worker deployment policy, Secret Vault KDF, R2 role) was recorded on 2026-10-08. Current live Worker auto-deploy trigger now reports `commit`, matching `render.yaml`.
 
 ## 6. PENDING — CURRENT RELEASE
 
@@ -86,8 +85,8 @@ Deferred items are not reported as completed.
 
 ## 9. NEXT ACTION ORDER
 
-1. Finish the Render live settings update and merge the prepared blueprint PR only after settings match; then safely inventory live environment-variable names.
-2. Run release-gate preflight without printing secrets; provide only missing gate names.
+1. Render API and Worker settings now match the intended Python/root/build/start/health/commit-triggered configuration. Verify live health/readiness and safely inventory actual environment-variable names; the connected Render integration cannot enumerate/delete individual environment variables.
+2. Re-run release-gate preflight without printing secrets; the previous preflight passed, but provider E2E failed.
 3. Run provider/storage/Book acceptance using production-safe credentials and capture revision/time/result/cleanup evidence.
 4. Run authenticated browser and remaining external gates.
 5. Complete grouped manual verification last.
