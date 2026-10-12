@@ -16,7 +16,7 @@
 - Render API deploy `dep-db69rg0u01pc73fcqm5g` and Worker deploy `dep-db69rg0u01pc73fcqmu0` succeeded and are live on `c711aa2`.
 - Render service runtime/root/build/start/health-check/auto-deploy metadata matches the checked-in blueprint. Direct HTTP health/readiness responses and live env-name inventory remain unavailable via the connected tools; no variable was deleted or overwritten.
 
-- Supabase migration 033 is live; targeted RLS initplan and `knowledge_items.chapter_id` index advisor findings are resolved. Supabase Auth leaked-password protection remains disabled and needs owner action.
+- Supabase migration 033 is live; targeted RLS initplan and `knowledge_items.chapter_id` index advisor findings are resolved. Supabase Auth leaked-password protection remains disabled because the current Free plan does not permit enabling it (owner-confirmed); treat as a documented plan limitation.
 - Release Gates run #38046919712 preflight PASS, provider E2E FAIL; dependent browser/recovery/Sentry/Book jobs were skipped.
 
 ### P1 UI completion/polish
