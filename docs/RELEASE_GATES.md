@@ -24,9 +24,9 @@ This file defines what can be automated now and what still requires an operator/
 
 ## Additional configuration checks
 
-- Live Render API (`Cognix-Core`) and Worker (`cognix-core-worker-runtime`) currently report Python runtime, expected root/build/start commands, `/health`, and commit-triggered auto-deploy. Direct `/health` and `/ready` responses still require verification.
-- The connected Render integration cannot enumerate/delete individual environment variables. Obtain an owner-visible live variable-name inventory before removing any override; preserve provider keys and database/auth/storage/Google/E2E/recovery/release-gate variables.
-- Supabase migration `033_rls_policy_initplan_indexes` is live. The targeted RLS initplan and chapter foreign-key index findings are resolved; Supabase Auth leaked-password protection remains disabled and needs an operator to enable/verify it.
+- Live Render API (`Cognix-Core`) and Worker (`cognix-core-worker-runtime`) both deployed successfully on `c711aa225e7306d1b8b637e241abc05116167b01`; runtime, root/build/start commands, `/health` configuration, and commit-triggered auto-deploy match the blueprint. Direct `/health`, `/ready`, and post-deploy worker health responses are still unverified because the connected runtime cannot fetch the service URLs and no matching fresh request logs were returned.
+- The connected Render integration cannot enumerate/delete individual environment variables. The owner reports that Google OAuth was re-authorized and the new `GOOGLE_REFRESH_TOKEN` entered. Do not expose secret values. Obtain an owner-visible live variable-name inventory before removing any override; preserve provider keys and database/auth/storage/Google/E2E/recovery/release-gate variables. The current Render deploy is live, but a fresh Google Drive refresh/export acceptance result is still required before that gate is PASS.
+- Supabase migration `033_rls_policy_initplan_indexes` is live. The targeted RLS initplan and chapter foreign-key index findings are resolved. Supabase Auth leaked-password protection remains disabled; owner reports it cannot be enabled on the current Free plan, so record this as an explicit plan limitation rather than repeatedly requesting the same action.
 
 ## Operator/browser/device gates — intentionally last
 
