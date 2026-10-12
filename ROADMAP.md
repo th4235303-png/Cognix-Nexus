@@ -12,9 +12,10 @@
 
 ## Active Phase
 ### P0 engineering verification
-- Latest main CI and CodeQL both PASS on docs commit `4805506ab1e82b5114850b5a40aebdcd2be21047` (runs 38201410726 and 38201410735, 2026-10-12). Application code is deployed on parent commit `5be9d641da6972fdfb0d4498afd44c42fbf9705a`.
-- Live Render API and Worker both report Python runtime, expected root/build/start commands, `/health`, and commit-triggered auto-deploy; latest application deploys are live on `5be9d64`.
-- Direct API `/health` and `/ready` plus worker health remain unverified. Live Render env-variable enumeration is unavailable through the connected integration; do not delete or infer variables without an owner-visible inventory.
+- Latest main CI [38225351392](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38225351392) and CodeQL [38225351317](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38225351317) both PASS on merge commit `c711aa225e7306d1b8b637e241abc05116167b01` (2026-10-12).
+- Render API deploy `dep-db69rg0u01pc73fcqm5g` and Worker deploy `dep-db69rg0u01pc73fcqmu0` succeeded and are live on `c711aa2`.
+- Render service runtime/root/build/start/health-check/auto-deploy metadata matches the checked-in blueprint. Direct HTTP health/readiness responses and live env-name inventory remain unavailable via the connected tools; no variable was deleted or overwritten.
+
 - Supabase migration 033 is live; targeted RLS initplan and `knowledge_items.chapter_id` index advisor findings are resolved. Supabase Auth leaked-password protection remains disabled and needs owner action.
 - Release Gates run #38046919712 preflight PASS, provider E2E FAIL; dependent browser/recovery/Sentry/Book jobs were skipped.
 
@@ -40,10 +41,10 @@
 The 2026-10-08 close-out verified the migration head, worker policy, Secret Vault KDF and R2 role at that time. As of 2026-10-12, the live Worker auto-deploy trigger reports `commit`, matching the checked-in blueprint.
 
 ## Pending Verification / Acceptance
-- Direct Render API `/health` and `/ready`, worker health/runtime logs, and safe live environment-variable inventory.
-- Enable/verify Supabase Auth leaked-password protection and recheck database readiness.
+- Direct Render API `/health` and `/ready`, post-deploy worker health/runtime logs, and safe live environment-variable inventory (blueprint names are known, live names cannot be enumerated by the connected tool).
+- Supabase Auth leaked-password protection is unavailable on the current Free plan (owner-confirmed); retain as an explicit security limitation and revisit only if the plan/settings support it.
 - Repeat real AI provider E2E after reconciling provider access/model/quota configuration; prior run had six probe failures.
-- Google Drive OAuth/account drill after account owner re-authorizes; prior refresh token was expired or revoked.
+- Google Drive account owner reports re-authorization and replacement `GOOGLE_REFRESH_TOKEN` in Render. The actual live Drive refresh/export drill is still required; the current integration did not expose a fresh successful runtime result, so do not mark this gate PASS yet.
 - Supabase Storage and Backblaze B2 >50 MB drills previously passed in provider E2E #38046919712; repeat if fresh release evidence is required.
 - Authenticated Playwright production smoke.
 - Mobile EAS/device smoke.
