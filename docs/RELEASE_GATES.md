@@ -15,8 +15,8 @@ This file defines automated gates and gates requiring operator/browser/device ev
 | Backblaze B2 | `scripts/provider_e2e.py` | B2 credentials; tiered large-file path passed in run #38344416584. |
 | Cloudinary | `scripts/provider_e2e.py` | Cloudinary credentials; upload/read/cleanup passed in run #38344416584. |
 | Google Drive | `scripts/provider_e2e.py` | OAuth client + account-owner refresh token; actual provider E2E passed in run #38344416584. |
-| Backup/restore | `scripts/backup_restore_drill.py` via `recovery-drill` | Production database + isolated recovery target; not run in #38344416584. |
-| Book schema/lifecycle contract | `scripts/book_acceptance_contract.py` | Safe test/staging database; not run in #38344416584. |
+| Backup/restore | `scripts/backup_restore_drill.py` via `recovery-drill` | Requires a distinct `COGNIX_RECOVERY_TARGET_DATABASE_URL` and repository variable `COGNIX_RECOVERY_TARGET_ISOLATED=true` after operator verification; do not run until target isolation and cleanup/rollback are understood. Not run in #38344416584. |
+| Book schema/lifecycle contract | `scripts/book_acceptance_contract.py` | Requires the dedicated `COGNIX_BOOK_ACCEPTANCE_DATABASE_URL` secret pointing to an isolated test/staging database; synthetic fixtures must never use production. Not run in #38344416584. |
 | Sentry ingestion probe | `scripts/sentry_live_check.py` | Sentry DSN; not run in #38344416584; UI observation may remain manual. |
 | Authenticated browser smoke | Playwright via `browser-smoke` | E2E base/API URL and test account; not run in #38344416584. |
 | Frontend typecheck/lint/build | CI | See latest main CI evidence before release. |
@@ -30,6 +30,7 @@ This file defines automated gates and gates requiring operator/browser/device ev
 - Optional LLM route failures: Gemini HTTP 401, Hugging Face HTTP 400, Groq HTTP 429, Cloudflare HTTP 410. OpenRouter, Mistral, and Cohere succeeded. Treat those errors as route-specific diagnostics unless those providers are required for the intended release.
 - Cleanup: Supabase test objects and Cloudinary test asset were deleted successfully in the job logs. B2 cleanup result is not explicitly summarized in the result object; do not claim cleanup for B2 unless its deletion log is confirmed.
 - Preflight and provider-e2e jobs passed. Sentry, recovery, Book contract, and browser smoke were skipped because their dispatch inputs were not enabled.
+- Safety follow-up in PR #39: Book synthetic acceptance now uses a dedicated isolated-database secret, not the production database URL. Recovery preflight now requires a different target DSN and explicit `COGNIX_RECOVERY_TARGET_ISOLATED=true`. These protections are code changes pending PR checks/merge; they are not runtime gate evidence.
 
 ## Additional Configuration / Security Checks
 
