@@ -66,7 +66,9 @@ jobs:
       COGNIX_E2E_EMAIL: ${{ secrets.COGNIX_E2E_EMAIL }}
       COGNIX_E2E_PASSWORD: ${{ secrets.COGNIX_E2E_PASSWORD }}
       DATABASE_URL: ${{ secrets.COGNIX_PROD_DATABASE_URL }}
+      COGNIX_BOOK_ACCEPTANCE_DATABASE_URL: ${{ secrets.COGNIX_BOOK_ACCEPTANCE_DATABASE_URL }}
       COGNIX_RECOVERY_TARGET_DATABASE_URL: ${{ secrets.COGNIX_RECOVERY_TARGET_DATABASE_URL }}
+      COGNIX_RECOVERY_TARGET_ISOLATED: ${{ vars.COGNIX_RECOVERY_TARGET_ISOLATED }}
       COGNIX_RUN_PROVIDER_E2E: ${{ inputs.run_provider_e2e }}
       COGNIX_RUN_BOOK_CONTRACT: ${{ inputs.run_book_contract }}
       COGNIX_RUN_BROWSER_SMOKE: ${{ inputs.run_browser_smoke }}
@@ -164,7 +166,8 @@ jobs:
       run:
         working-directory: web-platform/backend
     env:
-      DATABASE_URL: ${{ secrets.COGNIX_PROD_DATABASE_URL }}
+      # Never run synthetic fixture inserts against production.
+      DATABASE_URL: ${{ secrets.COGNIX_BOOK_ACCEPTANCE_DATABASE_URL }}
       COGNIX_REQUIRE_DATABASE: "true"
     steps:
       - uses: actions/checkout@v4
