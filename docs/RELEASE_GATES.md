@@ -2,6 +2,10 @@
 
 ## Latest verified evidence — 2026-10-13 (supplements older evidence below)
 
+- Latest `main` revision checked: `66a2d8b45b17df02640d4615a5f9aabca41067e2`; Cognix Core CI [#38414102418](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38414102418) and CodeQL [#38414102026](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38414102026) both PASS. CI's Book synthetic contract and ephemeral PostgreSQL restore drill passed, but neither is evidence of real production-account acceptance or recovery.
+- Owner reports `chore/prune-unverified-ai-providers` deleted. The branch's stale changes were reviewed and intentionally not merged. No open PRs were returned by the repository query.
+- Render API/worker metadata matches the checked-in blueprint and both services are active. API logs show repeated internal `/health` HTTP 200 responses; worker startup logged PostgreSQL persistence configured. External `/ready` response and live environment-variable-name inventory remain unverified.
+
 - [Release Gates run #38344416584](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584), provider job [#115122415177](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584/job/115122415177): provider E2E PASS on revision `c354aa1804a1ef473eb091bdfca45a9532eb2e8a`; Google Drive returned a folder reference and `provider_probe_failures: []`.
 - Supabase Storage, B2, Cloudinary, tiered storage, extraction, Cohere 1536 embedding, RRF/RAG/citation and owner isolation passed. Optional Gemini 401, Hugging Face 400, Groq 429 and Cloudflare 410 are nonblocking unless those routes are required.
 - Sentry, recovery, Book contract and browser smoke were skipped; they remain pending.

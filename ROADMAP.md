@@ -2,6 +2,10 @@
 
 ## Latest roadmap status — 2026-10-13 (supersedes older P0 status below)
 
+- Latest `main` revision `66a2d8b45b17df02640d4615a5f9aabca41067e2`: Cognix Core CI [#38414102418](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38414102418) and CodeQL [#38414102026](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38414102026) both PASS. The backend CI's synthetic Book acceptance and ephemeral PostgreSQL restore drill are CI checks only, not production account/data acceptance.
+- The obsolete `chore/prune-unverified-ai-providers` branch was removed after review; its changes were not merged because of stale release-gate/database-target assumptions and embedding-dimension incompatibility. No open pull requests were present at the time of verification.
+- Render API/worker metadata matches `render.yaml`; latest observed deployments are on `3cb9bea49bfc207691c1289329c95a4746c332ba` (later changes are documentation-only). API internal `/health` checks logged HTTP 200 and worker startup confirmed PostgreSQL persistence. Direct external `/ready` and live env-name inventory remain unverified.
+
 - Provider E2E now passes in [run #38344416584](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584), including Google Drive, Supabase Storage, B2, Cloudinary, extraction, Cohere 1536 embeddings, RRF/RAG/citation, tiered storage and owner isolation.
 - Google Drive's prior HTTP 404 blocker is resolved for that run. Optional Gemini 401, Hugging Face 400, Groq 429 and Cloudflare 410 remain route-specific diagnostics.
 - Sentry, recovery, Book contract and browser smoke were skipped and remain pending. Render direct health/readiness, live env inventory, mobile, accessibility, performance, GDPR and grouped manual verification also remain open.
