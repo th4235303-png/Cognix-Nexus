@@ -1,62 +1,58 @@
 # Cognix Nexus — Release Gate Matrix
 
-> Owner: Release engineering  
-> Last Updated: 2026-10-13  
+## Latest verified evidence — 2026-10-13 (supplements older evidence below)
+
+- [Release Gates run #38344416584](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584), provider job [#115122415177](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584/job/115122415177): provider E2E PASS on revision `c354aa1804a1ef473eb091bdfca45a9532eb2e8a`; Google Drive returned a folder reference and `provider_probe_failures: []`.
+- Supabase Storage, B2, Cloudinary, tiered storage, extraction, Cohere 1536 embedding, RRF/RAG/citation and owner isolation passed. Optional Gemini 401, Hugging Face 400, Groq 429 and Cloudflare 410 are nonblocking unless those routes are required.
+- Sentry, recovery, Book contract and browser smoke were skipped; they remain pending.
+- Safety correction in PR #39 (not yet merged/verified): Book contract requires `COGNIX_BOOK_ACCEPTANCE_DATABASE_URL` pointing to isolated test/staging; recovery requires a distinct `COGNIX_RECOVERY_TARGET_DATABASE_URL` and repository variable `COGNIX_RECOVERY_TARGET_ISOLATED=true`. Do not run recovery until target isolation and cleanup/rollback are explicitly confirmed.
+
+
+> Owner: Release engineering
+> Last Updated: 2026-10-13
 > Secrets and secret values never belong in this file.
 
-This file defines automated gates and gates requiring operator/browser/device evidence. A skipped job is not a PASS.
+This file defines what can be automated now and what still requires an operator/browser/device.
 
-## Automated / Code-Ready
+## Automated / code-ready
 
-| Gate | Runner | Operator input / evidence |
+| Gate | Runner | Operator input |
 |---|---|---|
-| AI + embeddings + extraction + RRF/citation | `scripts/provider_e2e.py` | Cohere API key required for persisted 1536-dimensional embeddings; at least one configured LLM route must succeed. |
-| Supabase Storage | `scripts/provider_e2e.py` | Supabase URL/service-role + bucket; write/read/cleanup passed in run #38344416584. |
-| Backblaze B2 | `scripts/provider_e2e.py` | B2 credentials; tiered large-file path passed in run #38344416584. |
-| Cloudinary | `scripts/provider_e2e.py` | Cloudinary credentials; upload/read/cleanup passed in run #38344416584. |
-| Google Drive | `scripts/provider_e2e.py` | OAuth client + account-owner refresh token; actual provider E2E passed in run #38344416584. |
-| Backup/restore | `scripts/backup_restore_drill.py` via `recovery-drill` | Requires a distinct `COGNIX_RECOVERY_TARGET_DATABASE_URL` and repository variable `COGNIX_RECOVERY_TARGET_ISOLATED=true` after operator verification; do not run until target isolation and cleanup/rollback are understood. Not run in #38344416584. |
-| Book schema/lifecycle contract | `scripts/book_acceptance_contract.py` | Requires the dedicated `COGNIX_BOOK_ACCEPTANCE_DATABASE_URL` secret pointing to an isolated test/staging database; synthetic fixtures must never use production. Not run in #38344416584. |
-| Sentry ingestion probe | `scripts/sentry_live_check.py` | Sentry DSN; not run in #38344416584; UI observation may remain manual. |
-| Authenticated browser smoke | Playwright via `browser-smoke` | E2E base/API URL and test account; not run in #38344416584. |
-| Frontend typecheck/lint/build | CI | See latest main CI evidence before release. |
-| Backend compile/unit/integration | CI | See latest main CI evidence before release. |
-| Mobile config validation | CI | CI validation does not replace device smoke. |
+| AI + embeddings + extraction + RRF/citation | `scripts/provider_e2e.py` | `COHERE_API_KEY` is required by current preflight for production-compatible 1536-dimensional embeddings. The gate requires at least one configured LLM route to succeed; individual optional LLM route errors are diagnostic when another route is healthy. A configured Cohere 1536-dimension embedding failure remains blocking. Alternate 1024-dimensional embedding probes are diagnostic only because they cannot write to persisted `vector(1536)` schema. |
+| Supabase Storage | `scripts/provider_e2e.py` | Supabase URL/service-role + bucket |
+| Backblaze B2 | `scripts/provider_e2e.py` | B2 credentials |
+| Cloudinary | `scripts/provider_e2e.py` | Cloudinary cloud name + API key/secret |
+| Google Drive | `scripts/provider_e2e.py` | OAuth client + account-owner refresh token; workflow explicitly forces the real Google provider |
+| Backup/restore | `scripts/backup_restore_drill.py` via `recovery-drill` | production DATABASE_URL + isolated recovery target DSN |
+| Book schema/lifecycle contract | `scripts/book_acceptance_contract.py` | test/staging DATABASE_URL |
+| Sentry ingestion probe | `scripts/sentry_live_check.py` | Sentry DSN; UI observation remains manual |
+| Frontend typecheck/lint/build | CI | none |
+| Backend compile/unit/integration | CI | none |
+| Mobile config validation | CI | none |
 
-## Latest Provider Evidence
+## Additional configuration checks
 
-- Run [#38344416584](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584), job [provider-e2e #115122415177](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584/job/115122415177), started 2026-10-13 04:01 UTC, checkout revision `c354aa1804a1ef473eb091bdfca45a9532eb2e8a`.
-- Result: `status: PASS`, `provider_probe_failures: []`; Google Drive returned a valid folder reference. Supabase Storage, B2, Cloudinary, tiered storage, extraction, Cohere 1536-dimensional embedding, RRF/RAG/citation, and owner isolation passed.
-- Optional LLM route failures: Gemini HTTP 401, Hugging Face HTTP 400, Groq HTTP 429, Cloudflare HTTP 410. OpenRouter, Mistral, and Cohere succeeded. Treat those errors as route-specific diagnostics unless those providers are required for the intended release.
-- Cleanup: Supabase test objects and Cloudinary test asset were deleted successfully in the job logs. B2 cleanup result is not explicitly summarized in the result object; do not claim cleanup for B2 unless its deletion log is confirmed.
-- Preflight and provider-e2e jobs passed. Sentry, recovery, Book contract, and browser smoke were skipped because their dispatch inputs were not enabled.
-- Safety follow-up in PR #39: Book synthetic acceptance now uses a dedicated isolated-database secret, not the production database URL. Recovery preflight now requires a different target DSN and explicit `COGNIX_RECOVERY_TARGET_ISOLATED=true`. These protections are code changes pending PR checks/merge; they are not runtime gate evidence.
+- Live Render API (`Cognix-Core`) and Worker (`cognix-core-worker-runtime`) both deployed successfully on `c711aa225e7306d1b8b637e241abc05116167b01`; runtime, root/build/start commands, `/health` configuration, and commit-triggered auto-deploy match the blueprint. Direct `/health`, `/ready`, and post-deploy worker health responses are still unverified because the connected runtime cannot fetch the service URLs and no matching fresh request logs were returned.
+- The connected Render integration cannot enumerate/delete individual environment variables. Provider E2E runs [#38231060560](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38231060560) and [#38259902309](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38259902309) failed only at Google Drive with `GoogleDriveFolderNotFoundOrInaccessible:HTTP_404`; latest job confirms `COGNIX_DRIVE_PROVIDER=google` and masked OAuth variables are injected. Owner confirms `GOOGLE_DRIVE_ROOT_FOLDER_ID` and `GOOGLE_REFRESH_TOKEN` were checked repeatedly. Code uses `drive.file` while targeting a pre-existing owner-provided root folder; proposed branch `fix/google-drive-root-folder-scope` changes to full Drive scope because `drive.file` may not grant access to arbitrary existing folders. Full Drive scope is broader/sensitive and requires explicit owner review and fresh OAuth consent after merge. This is a code-based hypothesis, not proven until the real export and idempotency retry pass. Preserve secret values.
+- Supabase migration `033_rls_policy_initplan_indexes` is live. The targeted RLS initplan and chapter foreign-key index findings are resolved. Supabase Auth leaked-password protection remains disabled; owner reports it cannot be enabled on the current Free plan, so record this as an explicit plan limitation rather than repeatedly requesting the same action.
 
-## Additional Configuration / Security Checks
+## Operator/browser/device gates — intentionally last
 
-- `render.yaml` declares API `Cognix-Core` and worker `cognix-core-worker-runtime` with Python runtime, `web-platform/backend` root, locked requirements build, expected start commands, `/health` health check, and commit-triggered auto-deploy.
-- Direct live API `/health`, API `/ready`, and post-deploy worker health responses are not yet recorded. Do not mark these PASS based on blueprint metadata alone.
-- The connected Render integration cannot enumerate/delete individual live environment variables. Compare the live names through a supported dashboard/operator path before removing anything. Preserve keys, database, auth, storage, Google, release-gate, and test variables; do not delete by name pattern alone.
-- Supabase migration `033_rls_policy_initplan_indexes` is live; the targeted RLS initplan and chapter foreign-key index findings were resolved in the 2026-10-12 audit. Supabase Auth leaked-password protection remains disabled per owner report that the current Free plan does not permit enabling it. Record this as a known limitation, not a completed control.
-- Google Drive OAuth now uses the broader `https://www.googleapis.com/auth/drive` scope to support the configured existing root folder. Because this is a sensitive scope, retain only with explicit owner consent and applicable Google OAuth policy/verification requirements. The successful E2E run is evidence that the configured workflow currently works; it does not eliminate future token expiry/consent requirements.
+These are not promoted to PASS from static code inspection:
 
-## Operator / Browser / Device Gates — Pending
+1. Supabase Auth leaked-password protection is a known limitation on the current Free plan; verify only if plan/settings change.
+2. Authenticated Playwright production smoke.
+3. Full keyboard/screen-reader/responsive sweep.
+4. Lighthouse/performance baseline.
+5. Mobile EAS/device smoke.
+6. Production backup/restore/rollback against the real environment.
+7. GDPR export/delete against a real owner account.
+8. Sentry live event ingestion.
+9. Final production smoke and release approval.
 
-1. Authenticated Playwright production smoke.
-2. Full keyboard/screen-reader/responsive sweep.
-3. Lighthouse/performance baseline.
-4. Mobile EAS/device smoke.
-5. Production backup → checksum → isolated restore → rollback/cleanup drill.
-6. GDPR owner-data export/delete and cleanup.
-7. Sentry live ingestion probe.
-8. Render API `/health` and `/ready`, worker health/runtime evidence, and live environment-name inventory.
-9. Supabase Auth leaked-password protection: known current Free-plan limitation; revisit if plan/settings change.
-10. Grouped manual UI verification, intentionally performed last.
-11. Final production smoke and release approval/tag.
+## Key collection order
 
-## Key Collection Order
-
-Provide values only when needed for a specific gate. Never paste secrets into the repository.
+Provide values only when requested for a specific gate. Never paste them into the repository.
 
 1. AI/embedding provider keys.
 2. Supabase service-role credentials.
@@ -64,10 +60,19 @@ Provide values only when needed for a specific gate. Never paste secrets into th
 4. Google OAuth values and account-owner refresh token.
 5. Sentry DSN.
 6. Browser E2E test account.
-7. Production database + isolated recovery target DSN only for the final recovery drill.
+7. Production DATABASE_URL + isolated recovery target DSN only for the final recovery drill.
 
-Run `python scripts/release_gate_preflight.py` to identify runnable gates without printing values.
+A preflight can be run first to show exactly which gate is runnable without printing values:
+`python scripts/release_gate_preflight.py`.
 
-## Evidence Rule
+## Evidence rule
 
-A gate is PASS only when the real runner completes and records the revision, UTC timestamp, observed result, and cleanup status without secret values. Static code is READY, not PASS; skipped jobs remain pending.
+A gate is PASS only when the real runner completes successfully and records:
+- UTC timestamp
+- revision
+- gate name
+- observed result
+- cleanup result
+- no secret values
+
+Static code presence is READY, not PASS.
