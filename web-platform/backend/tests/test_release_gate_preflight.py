@@ -19,6 +19,8 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "SENTRY_DSN", "COGNIX_E2E_BASE_URL", "COGNIX_E2E_API_URL", "COGNIX_E2E_EMAIL",
             "COGNIX_E2E_PASSWORD", "DATABASE_URL", "COGNIX_BOOK_ACCEPTANCE_DATABASE_URL",
             "COGNIX_RECOVERY_TARGET_DATABASE_URL", "COGNIX_RECOVERY_TARGET_ISOLATED",
+            "COGNIX_RUN_PROVIDER_E2E", "COGNIX_RUN_BOOK_CONTRACT", "COGNIX_RUN_BROWSER_SMOKE",
+            "COGNIX_RUN_SENTRY_PROBE", "COGNIX_RUN_RECOVERY",
         }:
             os.environ.pop(key, None)
 
@@ -77,6 +79,18 @@ class ReleaseGatePreflightTests(unittest.TestCase):
         self.assertEqual(payload["preflight"], "READY")
         self.assertTrue(all(g["runnable"] for g in payload["gates"]))
 
+    def test_book_gate_does_not_require_production_database(self):
+        os.environ.update({
+            "COGNIX_RUN_BOOK_CONTRACT": "true",
+            "COGNIX_BOOK_ACCEPTANCE_DATABASE_URL": "postgresql://example.invalid/book-test",
+        })
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(main(), 0)
+        payload = json.loads(out.getvalue())
+        self.assertEqual([g["gate"] for g in payload["gates"]], ["book_acceptance_database"])
+        self.assertTrue(payload["gates"][0]["runnable"])
+
     def test_recovery_target_is_only_required_when_recovery_is_selected(self):
         os.environ["DATABASE_URL"] = "postgresql://example.invalid/db"
         os.environ["COGNIX_RUN_PROVIDER_E2E"] = "true"
@@ -86,6 +100,7 @@ class ReleaseGatePreflightTests(unittest.TestCase):
         payload = json.loads(out.getvalue())
         self.assertNotIn("database_recovery", {g["gate"] for g in payload["gates"]})
 
+        os.environ.pop("COGNIX_RUN_PROVIDER_E2E", None)
         os.environ["COGNIX_RUN_RECOVERY"] = "true"
         out = io.StringIO()
         with redirect_stdout(out):
