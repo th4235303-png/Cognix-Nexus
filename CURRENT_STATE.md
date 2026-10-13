@@ -1,13 +1,23 @@
 # Cognix Nexus — Current State
 
-## Latest verified update — 2026-10-13 23:42+06:30 (supersedes older status below)
+## Latest verified update — 2026-10-14 00:55+06:30 (supersedes older status below)
 
-- **New local commit `e1bf06c` (pending push):** Phase 13 AI Active Layer runtime — 5 files changed, 715 insertions:
-  - `app/services/active_layer/__init__.py` — complete runtime exports (all contracts + lifecycle + execution + validation helpers)
-  - `app/services/agent.py` — integrated active_layer; added `persist_lifecycle_event` (idempotent + terminal-fenced), `build_evidence_refs`, `persist_decision_record` (evidence-required, fail-closed); fixed `owner_id` bug in list functions
-  - `app/routers/brain_agent.py` — new lifecycle events API (GET/POST `/jobs/{id}/events`), decisions CRUD (POST `/jobs/{id}/decisions`, GET `/decisions`, PATCH `/decisions/{id}/review`)
-  - `migrations/034_phase13_active_layer_runtime.sql` — `agent_lifecycle_events` + `agent_decisions` tables, RLS initplan-safe, `agent_runs` extended
-  - `tests/test_phase13_runtime.py` — 34/34 tests passing locally (psycopg-stubbed)
+- **Phase 13–21 AI runtime implementation complete (all local commits pending push):**
+
+  | Commit | Phase | Tests | Key files |
+  |---|---|---|---|
+  | `e1bf06c` | Ph13 — AI Active Layer | 34/34 | `agent.py`, `brain_agent.py`, `034_*.sql`, `test_phase13_runtime.py` |
+  | `93c6a46` | Ph14 — Learning Science | 32/32 | `learning_science_service.py`, `learning_science.py`, `035_*.sql`, `test_phase14_*.py` |
+  | `a542be3` | Ph15 — Life Integration | 27/27 | `life_integration_service.py`, `life_integration.py`, `036_*.sql`, `test_phase15_*.py` |
+  | `3dc74b4` | Ph16 — Advanced Layer | 37/37 | `advanced_layer_service.py`, `advanced_layer.py`, `037_*.sql`, `test_phase16_*.py` |
+  | `df09ee7` | Ph17 — Core Integration | 42/42 | `core_integration_service.py`, `core_integration.py`, `038_*.sql`, `test_phase17_*.py` |
+  | `3fbacad` | Ph18/19 — Media Boundary + Native UX | 29/29 | `media_boundary_service.py`, `media_boundary.py`, `039_*.sql`, `test_phase18_19_*.py` |
+  | `ce38983` | Ph20/21 — Release Evidence + Readiness | 42/42 | `release_evidence_service.py`, `release_evidence.py`, `040_*.sql`, `test_phase20_21_*.py` |
+
+  **Total: 243/243 tests passing locally across all phases.**
+
+  All phases follow: RLS initplan-safe pattern, fail-closed service functions, psycopg-stubbed tests, owner-isolated routers registered in `main.py`, and SQL migrations 034–040.
+
 
 ## Previous update — 2026-10-13 21:00+06:30
 
