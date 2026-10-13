@@ -60,24 +60,23 @@ def main() -> int:
         "recovery": os.getenv("COGNIX_RUN_RECOVERY", "").strip().lower() == "true",
     }
     any_selected = any(selected.values())
-    provider_gates = {"ai_provider_e2e", "supabase_storage", "backblaze_b2", "google_drive", "cloudinary", "production_database"}
     group_by_gate = {
-        **{name: "provider" for name in provider_gates},
+        "ai_provider_e2e": "provider",
+        "supabase_storage": "provider",
+        "backblaze_b2": "provider",
+        "google_drive": "provider",
+        "cloudinary": "provider",
         "production_database": "provider",
         "book_acceptance_database": "book",
         "database_recovery": "recovery",
         "authenticated_browser": "browser",
         "sentry": "sentry",
     }
-    if selected["book"]:
-        provider_gates = provider_gates | {"production_database"}
-        group_by_gate["production_database"] = "book"
+    active_groups = {key for key, value in selected.items() if value}
     active_gates = [
         gate
         for gate in GATES
-        if not any_selected or group_by_gate.get(gate.name) in {
-            key for key, value in selected.items() if value
-        }
+        if not any_selected or group_by_gate.get(gate.name) in active_groups
     ]
     for gate in active_gates:
         missing = [key for key in gate.required if not present(key)]
