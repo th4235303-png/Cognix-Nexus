@@ -28,6 +28,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_render_health:
+        description: "Run Render external health check against deployed API"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   preflight:
@@ -74,6 +79,7 @@ jobs:
       COGNIX_RUN_BROWSER_SMOKE: ${{ inputs.run_browser_smoke }}
       COGNIX_RUN_SENTRY_PROBE: ${{ inputs.run_sentry_probe }}
       COGNIX_RUN_RECOVERY: ${{ inputs.run_recovery_drill }}
+      COGNIX_RUN_RENDER_HEALTH: ${{ inputs.run_render_health }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -217,3 +223,20 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.lock
       - run: python scripts/sentry_live_check.py
+
+  render-health:
+    if: ${{ inputs.run_render_health }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web-platform/backend
+    env:
+      COGNIX_API_BASE_URL: ${{ secrets.COGNIX_API_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Render external health check
+        run: python scripts/render_health_check.py --compare-env-vars

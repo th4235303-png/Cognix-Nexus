@@ -43,6 +43,7 @@ GATES = (
     # Synthetic Book fixtures must never be written to the production database.
     Gate("book_acceptance_database", ("COGNIX_BOOK_ACCEPTANCE_DATABASE_URL",)),
     Gate("database_recovery", ("DATABASE_URL", "COGNIX_RECOVERY_TARGET_DATABASE_URL", "COGNIX_RECOVERY_TARGET_ISOLATED")),
+    Gate("render_health", ("COGNIX_API_BASE_URL",)),
 )
 
 
@@ -58,6 +59,7 @@ def main() -> int:
         "browser": os.getenv("COGNIX_RUN_BROWSER_SMOKE", "").strip().lower() == "true",
         "sentry": os.getenv("COGNIX_RUN_SENTRY_PROBE", "").strip().lower() == "true",
         "recovery": os.getenv("COGNIX_RUN_RECOVERY", "").strip().lower() == "true",
+        "render": os.getenv("COGNIX_RUN_RENDER_HEALTH", "").strip().lower() == "true",
     }
     any_selected = any(selected.values())
     group_by_gate = {
@@ -71,6 +73,7 @@ def main() -> int:
         "database_recovery": "recovery",
         "authenticated_browser": "browser",
         "sentry": "sentry",
+        "render_health": "render",
     }
     active_groups = {key for key, value in selected.items() if value}
     active_gates = [
