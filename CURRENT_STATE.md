@@ -38,9 +38,9 @@ Future Phase 13–21 production runtime activation remains blocked until the cur
 
 ## 5. Pending — Current Release
 
-1. **Book Intelligence acceptance:** controlled 9-category / 170-file dry-run; duplicate fingerprint and auto-stop; checkpoint/resume; durable reading ledger; provider-backed AI Reading Room; distillation/lesson packs/derived-book lineage; ledger export.
+1. **Book Intelligence acceptance:** first configure `COGNIX_BOOK_ACCEPTANCE_DATABASE_URL` to a dedicated isolated test/staging database, then run the synthetic schema/duplicate/checkpoint contract. Separately complete the controlled 9-category / 170-file dry-run; duplicate fingerprint and auto-stop; checkpoint/resume; durable reading ledger; provider-backed AI Reading Room; distillation/lesson packs/derived-book lineage; ledger export. The production database must never be used for synthetic fixtures.
 2. **Authenticated browser smoke:** enable and run `run_browser_smoke=true` with valid production-safe E2E account configuration.
-3. **Recovery:** enable `run_recovery_drill=true` only when production source and isolated recovery target DSNs are configured and the target is verified safe; complete backup → checksum → isolated restore → rollback/cleanup evidence.
+3. **Recovery:** enable `run_recovery_drill=true` only after `COGNIX_RECOVERY_TARGET_DATABASE_URL` differs from the source and repository variable `COGNIX_RECOVERY_TARGET_ISOLATED=true` is set after operator verification. The current drill does not yet demonstrate target cleanup/rollback, so keep it disabled until the disposable-target and cleanup procedure is explicitly verified.
 4. **Sentry:** enable `run_sentry_probe=true` and confirm live ingestion; UI observation may still require an operator.
 5. **Render runtime health:** collect direct API `/health`, `/ready`, and worker health/log evidence.
 6. **Render environment audit:** compare actual live variable names with `render.yaml` and code references. The current connected integration cannot enumerate/delete individual variables. Preserve keys, database, auth, storage, Google, release-gate and test variables; do not remove overrides based only on name patterns.
