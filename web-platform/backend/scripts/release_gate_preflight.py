@@ -40,7 +40,9 @@ GATES = (
     Gate("sentry", ("SENTRY_DSN",)),
     Gate("authenticated_browser", ("COGNIX_E2E_BASE_URL", "COGNIX_E2E_API_URL", "COGNIX_E2E_EMAIL", "COGNIX_E2E_PASSWORD")),
     Gate("production_database", ("DATABASE_URL",)),
-    Gate("database_recovery", ("DATABASE_URL", "COGNIX_RECOVERY_TARGET_DATABASE_URL")),
+    # Synthetic Book fixtures must never be written to the production database.
+    Gate("book_acceptance_database", ("COGNIX_BOOK_ACCEPTANCE_DATABASE_URL",)),
+    Gate("database_recovery", ("DATABASE_URL", "COGNIX_RECOVERY_TARGET_DATABASE_URL", "COGNIX_RECOVERY_TARGET_ISOLATED")),
 )
 
 
@@ -58,26 +60,32 @@ def main() -> int:
         "recovery": os.getenv("COGNIX_RUN_RECOVERY", "").strip().lower() == "true",
     }
     any_selected = any(selected.values())
-    provider_gates = {"ai_provider_e2e", "supabase_storage", "backblaze_b2", "google_drive", "cloudinary", "production_database"}
     group_by_gate = {
-        **{name: "provider" for name in provider_gates},
+        "ai_provider_e2e": "provider",
+        "supabase_storage": "provider",
+        "backblaze_b2": "provider",
+        "google_drive": "provider",
+        "cloudinary": "provider",
         "production_database": "provider",
+        "book_acceptance_database": "book",
         "database_recovery": "recovery",
         "authenticated_browser": "browser",
         "sentry": "sentry",
     }
-    if selected["book"]:
-        provider_gates = provider_gates | {"production_database"}
-        group_by_gate["production_database"] = "book"
+    active_groups = {key for key, value in selected.items() if value}
     active_gates = [
         gate
         for gate in GATES
-        if not any_selected or group_by_gate.get(gate.name) in {
-            key for key, value in selected.items() if value
-        }
+        if not any_selected or group_by_gate.get(gate.name) in active_groups
     ]
     for gate in active_gates:
         missing = [key for key in gate.required if not present(key)]
+        if gate.name == "database_recovery":
+            if present("DATABASE_URL") and present("COGNIX_RECOVERY_TARGET_DATABASE_URL"):
+                if os.getenv("DATABASE_URL", "").strip() == os.getenv("COGNIX_RECOVERY_TARGET_DATABASE_URL", "").strip():
+                    missing.append("COGNIX_RECOVERY_TARGET_DATABASE_URL must differ from DATABASE_URL")
+            if present("COGNIX_RECOVERY_TARGET_ISOLATED") and os.getenv("COGNIX_RECOVERY_TARGET_ISOLATED", "").strip().lower() != "true":
+                missing.append("COGNIX_RECOVERY_TARGET_ISOLATED must be explicitly set to true")
         optional_missing = [key for key in gate.optional if not present(key)]
         gates.append(
             {

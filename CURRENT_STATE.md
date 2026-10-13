@@ -1,8 +1,18 @@
 # Cognix Nexus — Current State
 
+## Latest verified update — 2026-10-13 (supersedes older status below)
+
+- Release Gates [run #38344416584](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584), provider job [#115122415177](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584/job/115122415177), passed on checkout revision `c354aa1804a1ef473eb091bdfca45a9532eb2e8a`.
+- Google Drive returned `ok: true`, a folder reference, and `provider_probe_failures: []`; this closes the prior HTTP 404 blocker for this run. Separately confirm idempotency/retry if not explicitly covered by the runner.
+- Supabase Storage, B2, Cloudinary, tiered storage, extraction, Cohere 1536-dimension embeddings, RRF/RAG/citation, and owner isolation passed. OpenRouter, Mistral and Cohere LLM probes succeeded; optional Gemini 401, Hugging Face 400, Groq 429 and Cloudflare 410 remain diagnostic unless those routes are required.
+- Preflight and provider E2E passed. Sentry, recovery, Book contract and browser smoke were skipped; skipped jobs remain pending, not PASS.
+- PR #39 adds a safety fix: synthetic Book acceptance now requires `COGNIX_BOOK_ACCEPTANCE_DATABASE_URL` for a dedicated isolated test/staging DB rather than production. Recovery preflight requires a distinct target DSN and explicit `COGNIX_RECOVERY_TARGET_ISOLATED=true`. These changes are not yet merged or runtime-verified.
+- Remaining gates include Book 9-category/170-file acceptance, authenticated browser smoke, Sentry ingestion, safely isolated recovery/cleanup, Render direct health/readiness and live env-name inventory, mobile, accessibility, performance, GDPR, grouped manual verification last, final smoke and approval.
+
+
 > Owner: Release/status tracking
 > Update when: status, evidence, gate, blocker, deferral, or next action changes
-> Last Updated: 2026-10-12
+> Last Updated: 2026-10-13
 > Do NOT put here: architecture specifications, full design-system rules, historical source documents, or unverified claims presented as facts.
 
 ## 1. Current Release
