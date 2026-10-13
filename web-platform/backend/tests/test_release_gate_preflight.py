@@ -16,8 +16,9 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "COGNIX_SUPABASE_STORAGE_BUCKET", "COGNIX_B2_ENDPOINT",
             "COGNIX_B2_BUCKET", "COGNIX_B2_KEY_ID", "COGNIX_B2_APPLICATION_KEY", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET",
             "GOOGLE_CLIENT_ID", "GOOGLE_CLIENT_SECRET", "GOOGLE_REDIRECT_URI", "GOOGLE_REFRESH_TOKEN",
-            "SENTRY_DSN", "COGNIX_E2E_BASE_URL", "COGNIX_E2E_EMAIL",
-            "COGNIX_E2E_PASSWORD", "DATABASE_URL", "COGNIX_RECOVERY_TARGET_DATABASE_URL",
+            "SENTRY_DSN", "COGNIX_E2E_BASE_URL", "COGNIX_E2E_API_URL", "COGNIX_E2E_EMAIL",
+            "COGNIX_E2E_PASSWORD", "DATABASE_URL", "COGNIX_BOOK_ACCEPTANCE_DATABASE_URL",
+            "COGNIX_RECOVERY_TARGET_DATABASE_URL", "COGNIX_RECOVERY_TARGET_ISOLATED",
         }:
             os.environ.pop(key, None)
 
@@ -65,7 +66,9 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "CLOUDFLARE_API_TOKEN": "cloudflare",
             "CLOUDFLARE_ACCOUNT_ID": "account",
             "DATABASE_URL": "postgresql://example.invalid/db",
+            "COGNIX_BOOK_ACCEPTANCE_DATABASE_URL": "postgresql://example.invalid/book-test",
             "COGNIX_RECOVERY_TARGET_DATABASE_URL": "postgresql://example.invalid/recovery",
+            "COGNIX_RECOVERY_TARGET_ISOLATED": "true",
         })
         out = io.StringIO()
         with redirect_stdout(out):
@@ -86,10 +89,41 @@ class ReleaseGatePreflightTests(unittest.TestCase):
         os.environ["COGNIX_RUN_RECOVERY"] = "true"
         out = io.StringIO()
         with redirect_stdout(out):
-            self.assertEqual(main(), 1)  # recovery target is missing
+            self.assertEqual(main(), 1)  # recovery target and isolation declaration are missing
         payload = json.loads(out.getvalue())
         recovery = next(g for g in payload["gates"] if g["gate"] == "database_recovery")
-        self.assertEqual(recovery["missing_required"], ["COGNIX_RECOVERY_TARGET_DATABASE_URL"])
+        self.assertEqual(
+            recovery["missing_required"],
+            ["COGNIX_RECOVERY_TARGET_DATABASE_URL", "COGNIX_RECOVERY_TARGET_ISOLATED"],
+        )
+
+    def test_recovery_rejects_same_source_and_target_dsn(self):
+        os.environ.update({
+            "DATABASE_URL": "postgresql://example.invalid/db",
+            "COGNIX_RECOVERY_TARGET_DATABASE_URL": "postgresql://example.invalid/db",
+            "COGNIX_RECOVERY_TARGET_ISOLATED": "true",
+            "COGNIX_RUN_RECOVERY": "true",
+        })
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(main(), 1)
+        payload = json.loads(out.getvalue())
+        recovery = next(g for g in payload["gates"] if g["gate"] == "database_recovery")
+        self.assertIn("COGNIX_RECOVERY_TARGET_DATABASE_URL must differ from DATABASE_URL", recovery["missing_required"])
+
+    def test_recovery_requires_explicit_isolation_true(self):
+        os.environ.update({
+            "DATABASE_URL": "postgresql://example.invalid/db",
+            "COGNIX_RECOVERY_TARGET_DATABASE_URL": "postgresql://example.invalid/recovery",
+            "COGNIX_RECOVERY_TARGET_ISOLATED": "false",
+            "COGNIX_RUN_RECOVERY": "true",
+        })
+        out = io.StringIO()
+        with redirect_stdout(out):
+            self.assertEqual(main(), 1)
+        payload = json.loads(out.getvalue())
+        recovery = next(g for g in payload["gates"] if g["gate"] == "database_recovery")
+        self.assertIn("COGNIX_RECOVERY_TARGET_ISOLATED must be explicitly set to true", recovery["missing_required"])
 
 
 if __name__ == "__main__":
