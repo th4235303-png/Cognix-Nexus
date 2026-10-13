@@ -9,6 +9,14 @@ import os
 
 from app.services.llm import llm_provider
 from app.store import store
+from app.services.active_layer import (
+    EvidenceRef,
+    AgentLifecycleEvent,
+    decide_execution,
+    lifecycle_event_is_valid,
+    terminal_event_is_fenced,
+    finding_ready_for_review,
+)
 
 
 def enqueue_due_agent_schedules(limit: int = 5) -> int:
@@ -268,3 +276,127 @@ def _fail_agent_job(job_id: str, error: str) -> None:
                 (error[:2000], job_id),
             )
         conn.commit()
+
+
+# ─── Phase 13 Active Layer runtime helpers ────────────────────────────────────
+
+def persist_lifecycle_event(
+    run_id: str,
+    job_id: str,
+    owner_id: str,
+    event_type: str,
+    idempotency_key: str,
+    metadata: dict | None = None,
+) -> bool:
+    """Write a durable, idempotent lifecycle event for a Phase 13 agent run.
+
+    Returns True if the event was inserted, False if it was a duplicate
+    (idempotency_key already exists — safe to ignore).
+
+    Invariants enforced:
+    - lifecycle_event_is_valid: run_id, owner_id, and idempotency_key must be non-empty.
+    - terminal_event_is_fenced: terminal runs cannot be revived by non-terminal events.
+    """
+    db = store.database
+    if db is None:
+        return False
+
+    event = AgentLifecycleEvent(
+        run_id=run_id,
+        owner_id=owner_id,
+        event_type=event_type,  # type: ignore[arg-type]
+        occurred_at=datetime.now(timezone.utc),
+        idempotency_key=idempotency_key,
+    )
+    if not lifecycle_event_is_valid(event):
+        return False
+
+    # Check terminal fencing before writing.
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT status FROM agent_jobs WHERE id=%s", (job_id,)
+            )
+            row = cur.fetchone()
+            current_status = (row["status"] if row else "queued")
+
+    if terminal_event_is_fenced(current_status, event_type):  # type: ignore[arg-type]
+        return False
+
+    event_id = f"ALE-{uuid4().hex[:10].upper()}"
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO agent_lifecycle_events"
+                "(id,run_id,job_id,owner_id,event_type,occurred_at,idempotency_key,metadata) "
+                "VALUES(%s,%s,%s,%s,%s,%s,%s,%s::jsonb) "
+                "ON CONFLICT(idempotency_key) DO NOTHING RETURNING id",
+                (
+                    event_id, run_id, job_id, owner_id, event_type,
+                    event.occurred_at, idempotency_key,
+                    json.dumps(metadata or {}),
+                ),
+            )
+            inserted = cur.fetchone() is not None
+        conn.commit()
+    return inserted
+
+
+def build_evidence_refs(chunk_rows: list[dict]) -> list[dict]:
+    """Convert chunk DB rows into serialisable EvidenceRef dicts.
+
+    Each returned dict is safe to store as JSONB in agent_runs.evidence_refs
+    or agent_findings.evidence.
+    """
+    refs = []
+    for row in chunk_rows:
+        ref = EvidenceRef(
+            source_type="chunk",
+            source_id=str(row.get("id", "")),
+            locator=f"page={row.get('page_number')}" if row.get("page_number") else None,
+            excerpt=(str(row.get("content", ""))[:200] if row.get("content") else None),
+        )
+        refs.append({
+            "source_type": ref.source_type,
+            "source_id": ref.source_id,
+            "locator": ref.locator,
+            "excerpt": ref.excerpt,
+        })
+    return refs
+
+
+def persist_decision_record(
+    job_id: str,
+    owner_id: str,
+    decision: str,
+    rationale: str,
+    evidence_refs: list[dict],
+) -> str | None:
+    """Persist a Phase 13 DecisionRecord with evidence.
+
+    Enforces: decision and rationale must be non-empty, and at least one
+    evidence reference must be attached (fail-closed — no evidence = no record).
+
+    Returns the new decision ID, or None if validation fails or DB unavailable.
+    """
+    db = store.database
+    if db is None:
+        return None
+    if not decision.strip() or not rationale.strip() or not evidence_refs:
+        return None
+
+    decision_id = f"ADEC-{uuid4().hex[:8].upper()}"
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO agent_decisions"
+                "(id,job_id,owner_id,decision,rationale,evidence,review_state) "
+                "VALUES(%s,%s,%s,%s,%s,%s::jsonb,'needs_review')",
+                (
+                    decision_id, job_id, owner_id,
+                    decision[:2000], rationale[:4000],
+                    json.dumps(evidence_refs),
+                ),
+            )
+        conn.commit()
+    return decision_id
