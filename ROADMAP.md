@@ -1,9 +1,12 @@
 # Cognix Nexus — Strategic Roadmap
 
-## Latest roadmap status — 2026-10-13 (supersedes older P0 status below)
+## Latest roadmap status — 2026-10-14 (supersedes older P0 status below)
 
-- Latest `main` revision `66a2d8b45b17df02640d4615a5f9aabca41067e2`: Cognix Core CI [#38414102418](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38414102418) and CodeQL [#38414102026](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38414102026) both PASS. The backend CI's synthetic Book acceptance and ephemeral PostgreSQL restore drill are CI checks only, not production account/data acceptance.
-- The obsolete `chore/prune-unverified-ai-providers` branch was removed after review; its changes were not merged because of stale release-gate/database-target assumptions and embedding-dimension incompatibility. No open pull requests were present at the time of verification.
+- **Phase 13–21 AI runtime implementation: COMPLETE** — 7 commits (`e1bf06c` → `ce38983`), 243/243 tests passing locally, pending push + Supabase migrations 034–040 apply.
+  - All phases follow: RLS initplan-safe, fail-closed services, psycopg-stubbed tests, owner-isolated routers, SQL migrations 034–040.
+  - Phase production activation remains **blocked** until P0 release gates are all green (see below).
+- **P0 Gate Expansion (commit `e3fc567`):** Playwright smoke (30+ tests, 24 pages), accessibility spec (axe-core), `render_health_check.py`, `lighthouse_check.py`, book acceptance column checks, CI `render-health` job.
+
 - Render API/worker metadata matches `render.yaml`; latest observed deployments are on `3cb9bea49bfc207691c1289329c95a4746c332ba` (later changes are documentation-only). API internal `/health` checks logged HTTP 200 and worker startup confirmed PostgreSQL persistence. Direct external `/ready` and live env-name inventory remain unverified.
 
 - Provider E2E now passes in [run #38344416584](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584), including Google Drive, Supabase Storage, B2, Cloudinary, extraction, Cohere 1536 embeddings, RRF/RAG/citation, tiered storage and owner isolation.

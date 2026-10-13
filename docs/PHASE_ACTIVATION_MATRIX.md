@@ -1,6 +1,6 @@
 # Cognix Nexus — Future Phase Activation Matrix
 
-Status: preparation only. No autonomous production activation is enabled by this document.
+> Status: **runtime code complete** (Ph13–21, 243 tests). Production activation blocked until P0 release gates pass.
 
 ## Activation guard
 
@@ -10,17 +10,17 @@ The machine-readable control surface is `docs/PHASE_ACTIVATION_MANIFEST.json`.
 
 ## Phase sequence
 
-| Phase | Prepared now | Activation gate | First runtime action |
-| --- | --- | --- | --- |
-| 13 Active Layer | contracts, evidence validation, tests, foundation docs | release green + evidence lifecycle ready | persist agent runs/events |
-| 14 Learning Science | signals, path contracts, decay tests, docs | Phase 13 durable evidence + evaluation fixtures | persisted learning events |
-| 15 Life Integration | context restore, privacy boundary, capsule refs, tests/docs | recovery + GDPR/privacy evidence | explicit user-triggered restore |
-| 16 Advanced Layer | wiki/growth/offline contracts, boundary docs | Phase 15 privacy/recovery evidence | reviewable advanced artifacts |
-| 17 Core Integration | evidence-bound artifact contracts/tests/docs | shared Phase 13 evidence API | source/claim/report/export lineage |
-| 18 Vizora Lens | media/OCR boundary docs | storage/provider + evidence lineage | media/OCR processing behind explicit gate |
-| 19 Native/Product UX | device/offline/camera/voice/biometric boundaries | device/EAS + accessibility/performance evidence | native capability activation |
-| 20 Production Engineering | recovery/rollback/observability foundation | production drill evidence | production automation |
-| 21 Final Release | release checklist and gate model | every required gate + approval | final release/tag |
+| Phase | Runtime Code | Commit | Tests | Activation gate | First runtime action |
+| --- | --- | --- | --- | --- | --- |
+| 13 Active Layer | ✅ Ready | `e1bf06c` | 34/34 | release green + evidence lifecycle ready | persist agent runs/events |
+| 14 Learning Science | ✅ Ready | `93c6a46` | 32/32 | Phase 13 durable evidence + evaluation fixtures | persisted learning events |
+| 15 Life Integration | ✅ Ready | `a542be3` | 27/27 | recovery + GDPR/privacy evidence | explicit user-triggered restore |
+| 16 Advanced Layer | ✅ Ready | `3dc74b4` | 37/37 | Phase 15 privacy/recovery evidence | reviewable advanced artifacts |
+| 17 Core Integration | ✅ Ready | `df09ee7` | 42/42 | shared Phase 13 evidence API | source/claim/report/export lineage |
+| 18 Vizora Lens | ✅ Ready | `3fbacad` | 29/29 | storage/provider + evidence lineage | media/OCR processing behind explicit gate |
+| 19 Native/Product UX | ✅ Ready | `3fbacad` | (above) | device/EAS + accessibility/performance evidence | native capability activation |
+| 20 Production Engineering | ✅ Ready | `ce38983` | 42/42 | production drill evidence | production automation |
+| 21 Final Release | ✅ Ready | `ce38983` | (above) | every required gate + approval | final release/tag |
 
 ## Parallel-preparation rules
 
