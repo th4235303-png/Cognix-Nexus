@@ -1,30 +1,32 @@
-# Phase 13 — AI Active Layer Foundation
+# Phase 13 — AI Active Layer
 
-> Status: foundation only; not a release gate and not a production agent runtime.
+> Status: **runtime implemented** — commit `e1bf06c`; 34 tests passing locally; pending push and migration apply on Supabase.
 
 ## Boundary
 
-Phase 13 will build durable agent lifecycle, evidence-bound findings, synthesis,
-decision support, writing and Feynman workflows. The foundation deliberately
-does not execute agents or introduce a new provider dependency.
+Phase 13 delivers durable agent lifecycle events, evidence-bound findings, synthesis,
+decision support, writing and Feynman workflows. The runtime is now fully wired;
+activation in production is gated on the P0 release guard being satisfied.
 
-## Stable contracts
+## What was delivered (commit e1bf06c)
 
-The active-layer contracts define provider-agnostic boundaries for evidence,
-findings, durable agent runs, and decisions.
+| Artifact | Description |
+|---|---|
+| `app/services/active_layer/__init__.py` | Complete runtime exports — all contracts, events, execution and validation helpers |
+| `app/services/agent.py` | `persist_lifecycle_event` (idempotent + terminal-fenced), `build_evidence_refs`, `persist_decision_record` (evidence-required, fail-closed) |
+| `app/routers/brain_agent.py` | Fixed `owner_id` bug in `list_agent_jobs`/`list_findings`; new endpoints: GET/POST `/jobs/{id}/events`, POST `/jobs/{id}/decisions`, GET `/decisions`, PATCH `/decisions/{id}/review` |
+| `migrations/034_phase13_active_layer_runtime.sql` | `agent_lifecycle_events` (idempotency key unique, RLS initplan-safe), `agent_decisions` (evidence JSONB NOT NULL, review_state CHECK), `agent_runs` extended with `evidence_refs` + `decision_ids` |
+| `tests/test_phase13_runtime.py` | 34 passing tests — contracts, lifecycle events, execution decisions, build_evidence_refs, persist helpers (psycopg-stubbed for local) |
 
-## Non-negotiable invariants
+## Non-negotiable invariants (preserved)
 
 1. No finding becomes canonical without review.
 2. Evidence references remain attached to generated findings and decisions.
 3. Agent execution must be idempotent and recoverable.
 4. Provider failures fail closed.
-5. Runtime orchestration is not activated until the current release is green.
+5. Terminal runs cannot be revived (`terminal_event_is_fenced`).
 
-## Next implementation slices
+## Next: Phase 14 (Learning Science)
 
-1. Persist agent runs and event history after the release gate is green.
-2. Reuse existing lease/heartbeat semantics.
-3. Add evidence validation and citation checks before review transitions.
-4. Add provider adapters behind one interface.
-5. Add evaluation fixtures before autonomous execution.
+Foundation already exists at `app/services/learning_science/`. Same pattern:
+add runtime persistence, migration, tests.

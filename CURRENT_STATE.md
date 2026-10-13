@@ -1,6 +1,15 @@
 # Cognix Nexus — Current State
 
-## Latest verified update — 2026-10-13 21:00+06:30 (supersedes older status below)
+## Latest verified update — 2026-10-13 23:42+06:30 (supersedes older status below)
+
+- **New local commit `e1bf06c` (pending push):** Phase 13 AI Active Layer runtime — 5 files changed, 715 insertions:
+  - `app/services/active_layer/__init__.py` — complete runtime exports (all contracts + lifecycle + execution + validation helpers)
+  - `app/services/agent.py` — integrated active_layer; added `persist_lifecycle_event` (idempotent + terminal-fenced), `build_evidence_refs`, `persist_decision_record` (evidence-required, fail-closed); fixed `owner_id` bug in list functions
+  - `app/routers/brain_agent.py` — new lifecycle events API (GET/POST `/jobs/{id}/events`), decisions CRUD (POST `/jobs/{id}/decisions`, GET `/decisions`, PATCH `/decisions/{id}/review`)
+  - `migrations/034_phase13_active_layer_runtime.sql` — `agent_lifecycle_events` + `agent_decisions` tables, RLS initplan-safe, `agent_runs` extended
+  - `tests/test_phase13_runtime.py` — 34/34 tests passing locally (psycopg-stubbed)
+
+## Previous update — 2026-10-13 21:00+06:30
 
 - Latest `main` revision checked: `66a2d8b45b17df02640d4615a5f9aabca41067e2`. Cognix Core CI [#38414102418](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38414102418) and CodeQL [#38414102026](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38414102026) both completed successfully.
 - **New local commit `e3fc567` (pending push):** P0 release gate expansion — 11 files changed, 1230 insertions:
