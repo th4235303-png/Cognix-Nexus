@@ -2,7 +2,7 @@
 
 > Owner: Deployment/release operations
 > Update when: hosting, deployment configuration, environment requirements, or rollback procedure changes
-> Last Updated: 2026-10-11
+> Last Updated: 2026-10-13
 > Do NOT put here: product roadmap or live evidence tables.
 
 ## Production targets
@@ -12,7 +12,7 @@
 - Database/Auth: Supabase/PostgreSQL.
 - Storage: Cloudinary + Supabase Storage + B2, with Google Drive for user-owned export/backup.
 
-Current live service identities are `Cognix-Core` (`srv-dauh0tu0tbcc73fdds2g`) and `cognix-core-worker-runtime` (`srv-dav13vm0tbcc73d4ek8g`). The intended repository layout is Python under `web-platform/backend`, installed from `requirements.lock`; the API serves `/health` and `/ready`, and the worker exposes `/health` while processing the queue. Live API rootDir, build command, start command, and `/health` setting now match the intended layout, and deploy `dep-db5regl9mjac738nb4dg` is live on main commit `3227794eb45c3f74833dc3a2fc22f5ffe195fadc`; however, Render metadata still reports API `runtime=node` despite the Python `uvicorn` start command, so runtime alignment and live health verification remain blockers. The worker now reports Python, rootDir `web-platform/backend`, `pip install -r requirements.lock`, `python -m app.worker`, `/health`, and commit-triggered auto-deploy, but its latest observed live deploy is still commit `538520aa908c8fdadef0a38c7fba23fea8ca3fae`. Do not merge/apply the blueprint PR until API runtime is corrected/confirmed and API/worker health is verified. The connected Render tools can inspect services and trigger deploys but cannot update runtime/root/build/deploy-policy settings.
+Current live service identities are `Cognix-Core` (`srv-dauh0tu0tbcc73fdds2g`) and `cognix-core-worker-runtime` (`srv-dav13vm0tbcc73d4ek8g`). Both currently report Python runtime, rootDir `web-platform/backend`, build command `pip install -r requirements.lock`, expected start commands (`uvicorn app.main:app --host 0.0.0.0 --port $PORT` for API and `python -m app.worker` for worker), `/health` configured, and commit-triggered auto-deploy, matching `render.yaml`. Latest observed deploy timestamps are 2026-10-13 14:03 UTC and both deployed from `3cb9bea49bfc207691c1289329c95a4746c332ba`; later `main` commits were documentation-only. Render API logs show repeated internal `GET /health` responses with HTTP 200, and worker logs show `worker_started persistence=postgresql database_configured=True poll_seconds=2.0`. Direct external HTTP access to `/health` and `/ready` was unavailable from the connected verification environment, and no direct `/ready` response is claimed. The connected Render tools cannot enumerate live environment-variable names, so blueprint-to-live environment comparison remains pending. No live environment variables were deleted or overwritten. The connected Render tools can inspect services and trigger deploys but cannot update runtime/root/build/deploy-policy settings.
 
 ## Release sequence
 1. CI green on main.
