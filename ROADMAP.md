@@ -5,8 +5,8 @@
 - Provider E2E now passes in [run #38344416584](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584), including Google Drive, Supabase Storage, B2, Cloudinary, extraction, Cohere 1536 embeddings, RRF/RAG/citation, tiered storage and owner isolation.
 - Google Drive's prior HTTP 404 blocker is resolved for that run. Optional Gemini 401, Hugging Face 400, Groq 429 and Cloudflare 410 remain route-specific diagnostics.
 - Sentry, recovery, Book contract and browser smoke were skipped and remain pending. Render direct health/readiness, live env inventory, mobile, accessibility, performance, GDPR and grouped manual verification also remain open.
-- PR #39 safety guardrails passed standard CI on merge revision `54abdf355ceacc879c4842d0992e08ec61f584a8`: frontend/backend/mobile CI, CodeQL, Book synthetic acceptance contract and the ephemeral-container restore drill passed. This does not substitute for the real production recovery gate.
-- Follow-up preflight correction scopes the Book-only gate to `COGNIX_BOOK_ACCEPTANCE_DATABASE_URL` without requiring production `DATABASE_URL`; CI is pending for this latest change. PR remains open and unmerged.
+- PR #39 safety guardrails are merged as `3cb9bea49bfc207691c1289329c95a4746c332ba`; CI and CodeQL passed after merge in the next main revision `902ad74ca58f0c52edd3b72bddfbe698390db0d7`. The Book-only gate uses `COGNIX_BOOK_ACCEPTANCE_DATABASE_URL` rather than production `DATABASE_URL`. The CI restore drill uses an ephemeral PostgreSQL service container and does not substitute for real production recovery.
+- PR #40 Media Intelligence source-monitoring plan is merged as `902ad74ca58f0c52edd3b72bddfbe698390db0d7`. Planning documentation only; feature implementation remains future work.
 - Next order: confirm latest preflight CI; configure/run the release workflow for authenticated browser smoke and Sentry; verify Render health/readiness and runtime evidence; verify isolated recovery target and cleanup before any real recovery run; finish device/accessibility/performance/GDPR/manual checks; final smoke and release approval.
 
 
