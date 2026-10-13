@@ -6,6 +6,7 @@
 - Recorded successful Supabase Storage, Backblaze B2, Cloudinary, tiered-storage, extraction, Cohere 1536-dimensional embedding, RRF/RAG/citation, and owner-isolation checks.
 - Documented optional Gemini 401, Hugging Face 400, Groq 429, and Cloudflare 410 route diagnostics; OpenRouter, Mistral, and Cohere routes succeeded.
 - Kept Sentry, recovery, Book contract, browser smoke, Render live health/environment inventory, mobile, accessibility, performance, GDPR, grouped manual verification, and final release approval pending because they are unverified or skipped.
+- Hardened release-gate preflight: Book synthetic acceptance requires a dedicated isolated database secret, and recovery requires a distinct target DSN plus explicit isolation confirmation; no destructive recovery drill was run.
 
 ## 2026-10-11
 - Recorded current main CI PASS (run 38071211914) and CodeQL PASS (run 38071211816) for commit 538520aa908c8fdadef0a38c7fba23fea8ca3fae.
