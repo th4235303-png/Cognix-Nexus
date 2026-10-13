@@ -9,7 +9,7 @@ on:
         default: false
         type: boolean
       run_book_contract:
-        description: "Run Book Intelligence synthetic contract against DATABASE_URL"
+        description: "Run Book Intelligence synthetic contract against isolated acceptance database"
         required: false
         default: false
         type: boolean
