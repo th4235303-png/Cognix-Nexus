@@ -81,10 +81,11 @@ def main() -> int:
     ]
     for gate in active_gates:
         missing = [key for key in gate.required if not present(key)]
-        if gate.name == "database_recovery" and present("DATABASE_URL") and present("COGNIX_RECOVERY_TARGET_DATABASE_URL"):
-            if os.getenv("DATABASE_URL", "").strip() == os.getenv("COGNIX_RECOVERY_TARGET_DATABASE_URL", "").strip():
-                missing.append("COGNIX_RECOVERY_TARGET_DATABASE_URL must differ from DATABASE_URL")
-            if os.getenv("COGNIX_RECOVERY_TARGET_ISOLATED", "").strip().lower() != "true":
+        if gate.name == "database_recovery":
+            if present("DATABASE_URL") and present("COGNIX_RECOVERY_TARGET_DATABASE_URL"):
+                if os.getenv("DATABASE_URL", "").strip() == os.getenv("COGNIX_RECOVERY_TARGET_DATABASE_URL", "").strip():
+                    missing.append("COGNIX_RECOVERY_TARGET_DATABASE_URL must differ from DATABASE_URL")
+            if present("COGNIX_RECOVERY_TARGET_ISOLATED") and os.getenv("COGNIX_RECOVERY_TARGET_ISOLATED", "").strip().lower() != "true":
                 missing.append("COGNIX_RECOVERY_TARGET_ISOLATED must be explicitly set to true")
         optional_missing = [key for key in gate.optional if not present(key)]
         gates.append(
