@@ -5,7 +5,9 @@
 - [Release Gates run #38344416584](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584), provider job [#115122415177](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38344416584/job/115122415177): provider E2E PASS on revision `c354aa1804a1ef473eb091bdfca45a9532eb2e8a`; Google Drive returned a folder reference and `provider_probe_failures: []`.
 - Supabase Storage, B2, Cloudinary, tiered storage, extraction, Cohere 1536 embedding, RRF/RAG/citation and owner isolation passed. Optional Gemini 401, Hugging Face 400, Groq 429 and Cloudflare 410 are nonblocking unless those routes are required.
 - Sentry, recovery, Book contract and browser smoke were skipped; they remain pending.
-- Safety correction in PR #39 (not yet merged/verified): Book contract requires `COGNIX_BOOK_ACCEPTANCE_DATABASE_URL` pointing to isolated test/staging; recovery requires a distinct `COGNIX_RECOVERY_TARGET_DATABASE_URL` and repository variable `COGNIX_RECOVERY_TARGET_ISOLATED=true`. Do not run recovery until target isolation and cleanup/rollback are explicitly confirmed.
+- PR #39 safety guardrails now pass the standard Cognix Core CI on merge revision `54abdf355ceacc879c4842d0992e08ec61f584a8`: frontend, backend, mobile, CodeQL, Book synthetic acceptance contract, isolated CI restore drill, and `pip-audit` all passed. The restore evidence uses an ephemeral PostgreSQL service container, not the real production recovery target.
+- Release-gate-specific preflight changes were refined afterward to avoid requiring production `DATABASE_URL` for the Book-only gate; a new CI run is pending for this latest commit. Real authenticated browser smoke, Sentry ingestion, provider E2E on the PR revision, and production backup/restore remain separate release gates.
+- Recovery guard requires a distinct target DSN plus repository variable `COGNIX_RECOVERY_TARGET_ISOLATED=true`; this declaration does not itself prove target isolation or cleanup. Do not run the real recovery drill until target identity and cleanup/rollback are explicitly confirmed.
 
 
 > Owner: Release engineering
