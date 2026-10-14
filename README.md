@@ -1,3 +1,9 @@
+## Current execution note — 2026-10-14
+
+Phase 13–21 implementation commits are present in main, with 243/243 local tests reported in repository docs. These tests are described as using stubbed database paths; migrations 034–040 and production activation are not thereby verified. Current-main CI/CodeQL, isolated PostgreSQL migration/RLS tests, Render health/readiness and environment parity, Book corpus acceptance, authenticated browser, Sentry, GDPR, mobile/accessibility/performance and real recovery remain on the release critical path. See [CURRENT_STATE.md](CURRENT_STATE.md), [ROADMAP.md](ROADMAP.md), and the [reconciled execution plan](docs/EXECUTION_PLAN_2026-10-14.md).
+
+---
+
 # Cognix Nexus
 
 Cognix Nexus is evolving into **Cognix Brain Vault**, a personal knowledge OS built on a research intelligence foundation.
