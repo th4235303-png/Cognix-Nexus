@@ -1,3 +1,19 @@
+## Reconciled execution priority — 2026-10-14 (authoritative addendum)
+
+Phase 13–21 implementation is already present in main (commits e1bf06c through ce38983); repository docs report 243/243 local tests. These are implementation/local-test results, not production acceptance. Migrations 034–040 are in the repository, but production application is not evidenced. Do not keep those phases on the backlog as unimplemented coding work; keep them **implemented, integration-validation pending, production activation blocked**.
+
+The critical path is:
+1. Run CI + CodeQL on current main revision `ea010485390c82bed48853c8433802fdf30cab1a`.
+2. Review and apply migrations 034–040 to an isolated PostgreSQL database; run real DB/RLS/owner-isolation/idempotency tests.
+3. Fix Render env parity checking: the current script reads the GitHub runner process environment, not Render's live configuration.
+4. Capture fresh external Render health/readiness, worker, provider/storage and Sentry evidence.
+5. Complete Book 9-category/170-file, authenticated browser, accessibility/performance, mobile, GDPR and Google Drive real-account checks.
+6. Perform isolated backup/restore/rollback; grouped manual verification last; final production smoke and release approval/tag.
+
+Do not activate autonomous Phase 13+ runtime until all required P0 gates are evidence-backed PASS. Detailed batch order and acceptance criteria: [docs/EXECUTION_PLAN_2026-10-14.md](docs/EXECUTION_PLAN_2026-10-14.md).
+
+---
+
 # Cognix Nexus — Strategic Roadmap
 
 ## Latest roadmap status — 2026-10-14 (supersedes older P0 status below)
