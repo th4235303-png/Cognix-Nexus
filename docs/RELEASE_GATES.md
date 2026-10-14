@@ -1,3 +1,15 @@
+## Reconciled gate status — 2026-10-14
+
+The main revision inspected is `ea010485390c82bed48853c8433802fdf30cab1a`. No combined commit-status records were returned for that exact revision; prior PASS runs on older commits do not establish current-head CI/CodeQL PASS.
+
+Phase 13–21 runtime code is in main and repository docs report 243/243 local tests, but the tests use stubbed database paths. Migrations 034–040 are not proven applied to production. The release remains BLOCKED until current-head CI/CodeQL and isolated real-PostgreSQL migration/RLS tests pass.
+
+**Known gate implementation issue:** `scripts/render_health_check.py --compare-env-vars` currently compares `os.getenv()` in the process running the script. In GitHub Actions that is the runner environment, not the live Render service configuration. Do not use this result as proof of live Render parity until the script reads the authorized Render service configuration, redacts values, and has tests proving the source of its inventory.
+
+Use [the reconciled execution plan](EXECUTION_PLAN_2026-10-14.md) for the authoritative run order. Browser tests skipped for missing credentials, synthetic Book contracts, evidence rows, and CI's ephemeral PostgreSQL restore are not production PASS.
+
+---
+
 # Cognix Nexus — Release Gate Matrix
 
 ## Latest verified evidence — 2026-10-13 (supplements older evidence below)
