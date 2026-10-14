@@ -6,8 +6,10 @@ import { AppShell } from '@/components/layout/app-shell';
 import { PageHeader, SectionCard, GlowButton } from '@/components/shared/cognix-primitives';
 import { useEffect } from 'react';
 import { createProcessingTask, createSource, listSources, type ApiSource } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 export default function AddSourcePage() {
+  const { toast } = useToast();
   const [url, setUrl] = useState('');
   const [note, setNote] = useState('');
   const [saved, setSaved] = useState(false);
@@ -28,8 +30,19 @@ export default function AddSourcePage() {
       setSaved(true);
       setUrl('');
       setNote('');
+      toast({
+        title: 'Source Queued',
+        description: 'Research intake created and processing pipeline started.',
+        variant: 'success',
+      });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to queue source. Check that the Cognix API is running.');
+      const msg = err instanceof Error ? err.message : 'Unable to queue source. Check that the Cognix API is running.';
+      setError(msg);
+      toast({
+        title: 'Intake Failed',
+        description: msg,
+        variant: 'destructive',
+      });
     } finally {
       setBusy(false);
     }
