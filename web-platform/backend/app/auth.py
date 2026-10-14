@@ -120,3 +120,20 @@ def authenticate_request(request: Request) -> dict:
         return _decode_token(token)
 
     return _verify_with_supabase(token)
+
+
+def get_current_owner_id(request: Request) -> str:
+    """Return the authenticated owner id established by request middleware.
+
+    Owner-scoped routes must fail closed when authentication did not establish a
+    real subject. Anonymous/dev-mode requests are intentionally not accepted as
+    an owner identity.
+    """
+    auth = getattr(request.state, "auth", None)
+    owner_id = auth.get("sub") if isinstance(auth, dict) else None
+    if not isinstance(owner_id, str) or not owner_id or owner_id == "anonymous":
+        raise HTTPException(
+            status_code=401,
+            detail={"code": "OWNER_AUTH_REQUIRED", "message": "Authenticated owner identity required"},
+        )
+    return owner_id
