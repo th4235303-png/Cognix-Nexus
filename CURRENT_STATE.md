@@ -1,3 +1,14 @@
+## Reconciled status — 2026-10-14 (authoritative addendum)
+
+- Main is at `ea010485390c82bed48853c8433802fdf30cab1a`. Phase 13–21 implementation commits and the later documentation commits are already in main; do not describe these commits as pending push.
+- Repository docs report 243/243 local tests across Phase 13–21, but those tests are described as psycopg-stubbed. They do not prove migrations 034–040 were applied to live Supabase, nor do they prove production RLS/integration acceptance.
+- The combined-status query returned no status records for the inspected main head. Earlier CI/CodeQL PASS runs are on older revisions; current-head CI and CodeQL must be triggered and checked before candidate status.
+- The immediate plan is **P0 verification + isolated migration validation**, not re-implementing Phase 13–21. See [reconciled execution plan](docs/EXECUTION_PLAN_2026-10-14.md).
+- Important gate defect to fix before relying on it: `render_health_check.py --compare-env-vars` compares the process environment via `os.getenv()`; in GitHub Actions this is the runner's environment, not the live Render service environment. Treat live environment parity as unverified until the checker reads authorized Render configuration and is tested.
+- Release status remains **BLOCKED** pending current-head CI/CodeQL, real PostgreSQL validation for migrations 034–040, trustworthy Render health/readiness/env evidence, executed authenticated browser and accessibility checks, Book 9-category/170-file acceptance, Sentry, GDPR, mobile/performance, real isolated recovery/rollback, and final manual verification.
+
+---
+
 # Cognix Nexus — Current State
 
 ## Latest verified update — 2026-10-14 00:55+06:30 (supersedes older status below)
