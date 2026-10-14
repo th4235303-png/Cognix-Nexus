@@ -13,7 +13,9 @@ export interface ApiClaim { id: string; text: string; excerpt?: string | null; l
 export interface ApiSource { id: string; url: string; note?: string | null; status: string; processing_stage: string; created_at: string; updated_at: string; critical_warnings: string[]; claims?: ApiClaim[]; source_trust?: string; original_text?: string | null; ai_summary?: string | null; myanmar_translation?: string | null; human_edited_myanmar?: string | null; approved_myanmar?: string | null; key_points?: string[]; }
 export interface ApiProcessingTask { id: string; source_id: string; stage: string; progress: number; status: string; retry_count: number; error: string | null; }
 export interface ApiExportJob { id: string; source_id: string; status: string; idempotency_key: string; drive_reference: string | null; files: string[]; error?: string | null; }
-export interface ApiUsage { ai_requests_today: number; processing_jobs: number; translation_requests: number; drive_exports: number; }
+export interface ApiAiProviderStat { configured: boolean; status: string; calls_today: number; total_calls: number; errors_today: number; last_used: string | null; }
+export interface ApiAiSummary { project: string; timestamp: string; date: string; total_calls_today: number; active_chains: { chat_priority: string[]; rag_priority: string[]; }; providers: Record<string, ApiAiProviderStat>; }
+export interface ApiUsage { ai_requests_today: number; processing_jobs: number; translation_requests: number; drive_exports: number; ai_summary?: ApiAiSummary; }
 
 export class ApiError extends Error {
   status: number;
