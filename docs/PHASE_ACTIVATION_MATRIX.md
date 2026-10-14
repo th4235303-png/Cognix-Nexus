@@ -1,3 +1,13 @@
+## Reconciled activation status — 2026-10-14
+
+The Phase 13–21 runtime implementation commits are already present in main. Repository docs report 243/243 local tests, but database calls are stubbed in the described local suite. Therefore the matrix status means **code implemented / production activation blocked**, not production-ready or production-verified. Migrations 034–040 require isolated real-PostgreSQL validation, and current-main CI/CodeQL must be confirmed before release-candidate status.
+
+Do not duplicate implementation work in the active backlog. First close P0 release verification, migration/RLS evidence, Render health/readiness and trustworthy live environment inventory, Book acceptance, authenticated browser/accessibility/performance, Sentry, GDPR, mobile, and real recovery/rollback. Then activate one phase at a time after release approval.
+
+Detailed order: [docs/EXECUTION_PLAN_2026-10-14.md](EXECUTION_PLAN_2026-10-14.md).
+
+---
+
 # Cognix Nexus — Future Phase Activation Matrix
 
 > Status: **runtime code complete** (Ph13–21, 243 tests). Production activation blocked until P0 release gates pass.
