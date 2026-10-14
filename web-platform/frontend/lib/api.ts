@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 
 const configuredApiUrl = (process.env.NEXT_PUBLIC_COGNIX_API_URL || '').trim();
-if (process.env.NODE_ENV === 'production' && !configuredApiUrl) {
+if (process.env.NODE_ENV === 'production' && !configuredApiUrl && typeof window !== 'undefined') {
   throw new Error('NEXT_PUBLIC_COGNIX_API_URL must be set in production');
 }
 const API_BASE_URL = (configuredApiUrl || 'http://localhost:8000').replace(/\/$/, '');
