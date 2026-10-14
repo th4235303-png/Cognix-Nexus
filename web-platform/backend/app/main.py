@@ -18,7 +18,7 @@ except ImportError:
     sentry_sdk = None
 
 from app.auth import auth_required, authenticate_request
-from app.routers import activity, advanced_layer, brain_advanced, book_intelligence, brain_agent, brain_documents, brain_media, brain_vault, core_integration, exports, integrations, intelligence, learning_science, level_up, life_integration, media_boundary, processing, release_evidence, reviews, sources, usage
+from app.routers import activity, advanced_layer, brain_advanced, book_intelligence, brain_agent, brain_documents, brain_media, brain_vault, core_integration, exports, integrations, intelligence, learning_science, level_up, life_integration, media_boundary, processing, release_evidence, reviews, sources, usage, telegram
 from app.store import store
 from app.ownership import reset_request_owner, set_request_owner
 
@@ -231,6 +231,7 @@ def _register_api_routes(target):
     target.include_router(activity.router, prefix="/activity", tags=["activity"])
     target.include_router(usage.router, prefix="/usage", tags=["usage"])
     target.include_router(integrations.router)
+    target.include_router(telegram.router)
 
 
 _register_api_routes(app)

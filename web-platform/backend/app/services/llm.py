@@ -18,14 +18,12 @@ class LLMRoute:
 # A provider is eligible only when its own API key is present.
 _DEFAULT_ROUTES: tuple[LLMRoute, ...] = (
     LLMRoute("gemini", "GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-2.5-flash"),
+    LLMRoute("groq", "GROQ_API_KEY", "https://api.groq.com/openai/v1/chat/completions", "qwen/qwen3.8-27b"),
     LLMRoute("openrouter", "OPENROUTER_API_KEY", "https://openrouter.ai/api/v1/chat/completions", "openrouter/free"),
-    # Keep Hugging Face enabled; availability depends on account inference credit
-    # and the providers currently serving the selected model.
-    LLMRoute("huggingface", "HUGGINGFACE_API_KEY", "https://router.huggingface.co/v1/chat/completions", "Qwen/Qwen2.5-7B-Instruct"),
     LLMRoute("mistral", "MISTRAL_API_KEY", "https://api.mistral.ai/v1/chat/completions", "ministral-8b-latest"),
     LLMRoute("cohere", "COHERE_API_KEY", "https://api.cohere.ai/compatibility/v1/chat/completions", "command-a-03-2025"),
-    LLMRoute("groq", "GROQ_API_KEY", "https://api.groq.com/openai/v1/chat/completions", "qwen/qwen3.8-27b"),
     LLMRoute("cloudflare", "CLOUDFLARE_API_TOKEN", "", "@cf/meta/llama-3.1-8b-instruct"),
+    LLMRoute("huggingface", "HUGGINGFACE_API_KEY", "https://router.huggingface.co/v1/chat/completions", "Qwen/Qwen2.5-7B-Instruct"),
 )
 
 
@@ -111,8 +109,19 @@ class LLMProvider:
         errors: list[str] = []
         for route in routes:
             try:
-                return await self.complete_on_route(route, system, user)
+                res = await self.complete_on_route(route, system, user)
+                try:
+                    from app.services.ai_usage_tracker import record_ai_usage
+                    record_ai_usage(route.name, task="complete", success=True)
+                except Exception:
+                    pass
+                return res
             except Exception as exc:
+                try:
+                    from app.services.ai_usage_tracker import record_ai_usage
+                    record_ai_usage(route.name, task="complete", success=False, error=str(exc))
+                except Exception:
+                    pass
                 # Never include credentials or raw provider response bodies.
                 errors.append(f"{route.name}: {type(exc).__name__}")
         raise RuntimeError("All configured LLM providers failed: " + "; ".join(errors))

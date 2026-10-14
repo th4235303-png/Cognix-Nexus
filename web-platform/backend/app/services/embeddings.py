@@ -25,11 +25,11 @@ class EmbeddingRoute:
 # key is present and it supports the database's fixed vector dimension.
 _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
     EmbeddingRoute(
-        "openrouter",
-        "OPENROUTER_API_KEY",
-        "https://openrouter.ai/api/v1/embeddings",
-        "liquid/lfm-2.5-embedding-350m:free",
-        (1024,),
+        "voyage",
+        "VOYAGE_API_KEY",
+        "https://api.voyageai.com/v1/embeddings",
+        "voyage-4",
+        (256, 512, 1024, 2048),
     ),
     EmbeddingRoute(
         "cohere",
@@ -39,17 +39,17 @@ _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
         (256, 512, 768, 1024, 1536, 2048),
     ),
     EmbeddingRoute(
-        "voyage",
-        "VOYAGE_API_KEY",
-        "https://api.voyageai.com/v1/embeddings",
-        "voyage-4",
-        (256, 512, 1024, 2048),
-    ),
-    EmbeddingRoute(
         "cloudflare",
         "CLOUDFLARE_API_TOKEN",
         "",
         "@cf/baai/bge-large-en-v1.5",
+        (1024,),
+    ),
+    EmbeddingRoute(
+        "openrouter",
+        "OPENROUTER_API_KEY",
+        "https://openrouter.ai/api/v1/embeddings",
+        "liquid/lfm-2.5-embedding-350m:free",
         (1024,),
     ),
 )
