@@ -468,6 +468,8 @@ class Database:
             "039_phase18_19_media_boundary_runtime.sql",
             "040_phase20_21_release_evidence_runtime.sql",
             "041_phase22_book_acceptance_schema.sql",
+            "042_brain_soul.sql",
+            "043_youtube_tracker.sql",
         )
         with self.connect() as conn:
             with conn.cursor() as cur:
@@ -1476,6 +1478,217 @@ class Database:
         return {"id": row["id"], "action": row["action"], "target": row["target"],
                 "previous_state": row.get("previous_state") or "—", "new_state": row.get("new_state") or "—",
                 "timestamp": row["created_at"].isoformat()}
+
+
+    # ── Brain Soul File ───────────────────────────────────────────────────────
+
+    def soul_list_context(self) -> list[dict[str, Any]]:
+        """Return all active Soul File key-value entries, ordered by key."""
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, context_key, context_value, description, is_active, "
+                    "       updated_by, created_at, updated_at "
+                    "FROM brain_soul_context "
+                    "ORDER BY context_key"
+                )
+                rows = cur.fetchall()
+        return [
+            {
+                "id": r["id"],
+                "key": r["context_key"],
+                "value": r["context_value"],
+                "description": r["description"],
+                "is_active": r["is_active"],
+                "updated_by": r["updated_by"],
+                "created_at": r["created_at"].isoformat(),
+                "updated_at": r["updated_at"].isoformat(),
+            }
+            for r in rows
+        ]
+
+    def soul_upsert_context(
+        self,
+        key: str,
+        value: str,
+        description: str = "",
+        updated_by: str = "user",
+    ) -> dict[str, Any]:
+        """Insert or update a Soul File entry. Returns the saved row."""
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO brain_soul_context
+                        (context_key, context_value, description, updated_by, updated_at)
+                    VALUES (%s, %s, %s, %s, now())
+                    ON CONFLICT (context_key) DO UPDATE
+                        SET context_value = EXCLUDED.context_value,
+                            description   = EXCLUDED.description,
+                            updated_by    = EXCLUDED.updated_by,
+                            updated_at    = now()
+                    RETURNING id, context_key, context_value, description,
+                              is_active, updated_by, created_at, updated_at
+                    """,
+                    (key, value, description, updated_by),
+                )
+                row = cur.fetchone()
+            conn.commit()
+        return {
+            "id": row["id"],
+            "key": row["context_key"],
+            "value": row["context_value"],
+            "description": row["description"],
+            "is_active": row["is_active"],
+            "updated_by": row["updated_by"],
+            "created_at": row["created_at"].isoformat(),
+            "updated_at": row["updated_at"].isoformat(),
+        }
+
+    def soul_delete_context(self, key: str) -> bool:
+        """Delete a Soul File entry by key. Returns True if deleted."""
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM brain_soul_context WHERE context_key = %s RETURNING id",
+                    (key,),
+                )
+                deleted = cur.fetchone() is not None
+            conn.commit()
+        return deleted
+
+    def soul_build_system_prefix(self) -> str:
+        """Build an LLM system-prompt prefix from active Soul File entries.
+
+        Returns an empty string when no entries exist or the table is absent,
+        so callers never need to guard for missing brain tables.
+        """
+        try:
+            rows = self.soul_list_context()
+            active = [r for r in rows if r["is_active"]]
+            if not active:
+                return ""
+            lines = ["[Personal Brain Context]"]
+            for r in active:
+                desc = f" ({r['description']})" if r["description"] else ""
+                lines.append(f"• {r['key']}{desc}: {r['value']}")
+            lines.append("")  # blank line separator before user messages
+            return "\n".join(lines)
+        except Exception:
+            return ""
+
+    def soul_list_syntheses(self, limit: int = 20) -> list[dict[str, Any]]:
+        """Return recent weekly synthesis snapshots, newest first."""
+        limit = max(1, min(limit, 100))
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id, period_label, period_start, period_end, topic, "
+                    "       synthesis_text, source_item_ids, item_count, provider, created_at "
+                    "FROM brain_soul_syntheses "
+                    "ORDER BY created_at DESC "
+                    "LIMIT %s",
+                    (limit,),
+                )
+                rows = cur.fetchall()
+        return [
+            {
+                "id": r["id"],
+                "period_label": r["period_label"],
+                "period_start": r["period_start"].isoformat(),
+                "period_end": r["period_end"].isoformat(),
+                "topic": r["topic"],
+                "synthesis_text": r["synthesis_text"],
+                "source_item_ids": r["source_item_ids"],
+                "item_count": r["item_count"],
+                "provider": r["provider"],
+                "created_at": r["created_at"].isoformat(),
+            }
+            for r in rows
+        ]
+
+    def soul_save_synthesis(
+        self,
+        period_label: str,
+        period_start: Any,
+        period_end: Any,
+        topic: str,
+        synthesis_text: str,
+        source_item_ids: list,
+        provider: str | None,
+        force: bool = False,
+    ) -> dict[str, Any]:
+        """Persist a weekly synthesis snapshot.
+
+        When force=True the existing snapshot for this period+topic is deleted
+        first so a fresh one can be inserted.
+        """
+        from psycopg.types.json import Jsonb as _Jsonb
+
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                if force:
+                    cur.execute(
+                        "DELETE FROM brain_soul_syntheses "
+                        "WHERE period_label = %s AND topic = %s",
+                        (period_label, topic),
+                    )
+                cur.execute(
+                    """
+                    INSERT INTO brain_soul_syntheses
+                        (period_label, period_start, period_end, topic,
+                         synthesis_text, source_item_ids, item_count, provider)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (period_label, topic) DO UPDATE
+                        SET synthesis_text  = EXCLUDED.synthesis_text,
+                            source_item_ids = EXCLUDED.source_item_ids,
+                            item_count      = EXCLUDED.item_count,
+                            provider        = EXCLUDED.provider,
+                            created_at      = now()
+                    RETURNING id, period_label, period_start, period_end, topic,
+                              synthesis_text, source_item_ids, item_count, provider, created_at
+                    """,
+                    (
+                        period_label, period_start, period_end, topic,
+                        synthesis_text, _Jsonb(source_item_ids),
+                        len(source_item_ids), provider,
+                    ),
+                )
+                row = cur.fetchone()
+            conn.commit()
+        return {
+            "id": row["id"],
+            "period_label": row["period_label"],
+            "period_start": row["period_start"].isoformat(),
+            "period_end": row["period_end"].isoformat(),
+            "topic": row["topic"],
+            "synthesis_text": row["synthesis_text"],
+            "source_item_ids": row["source_item_ids"],
+            "item_count": row["item_count"],
+            "provider": row["provider"],
+            "created_at": row["created_at"].isoformat(),
+        }
+
+    def soul_seed_defaults(self) -> None:
+        """Seed default Soul File entries on first startup (never overwrites)."""
+        defaults = [
+            ("operator_name", "Cognix User", "Who is using this brain"),
+            ("learning_style", "visual + structured notes", "Preferred way to learn and retain information"),
+            ("primary_topics", "books, research, knowledge management", "Main areas of interest"),
+            ("content_language", "English / Myanmar", "Language preference for notes and summaries"),
+            ("brain_purpose", "Personal second brain — books, YouTube, research synthesis", "What this Cognix instance is for"),
+        ]
+        with self.connect() as conn:
+            with conn.cursor() as cur:
+                for key, value, description in defaults:
+                    cur.execute(
+                        "INSERT INTO brain_soul_context "
+                        "(context_key, context_value, description, updated_by) "
+                        "VALUES (%s, %s, %s, 'system') "
+                        "ON CONFLICT (context_key) DO NOTHING",
+                        (key, value, description),
+                    )
+            conn.commit()
 
 
 def configured_database() -> Database | None:

@@ -18,7 +18,7 @@ except ImportError:
     sentry_sdk = None
 
 from app.auth import auth_required, authenticate_request
-from app.routers import activity, advanced_layer, brain_advanced, book_intelligence, brain_agent, brain_documents, brain_media, brain_vault, core_integration, exports, integrations, intelligence, learning_science, level_up, life_integration, media_boundary, processing, release_evidence, reviews, sources, usage, telegram
+from app.routers import activity, advanced_layer, brain_advanced, book_intelligence, brain_agent, brain_documents, brain_media, brain_soul, brain_vault, core_integration, exports, integrations, intelligence, learning_science, level_up, life_integration, media_boundary, processing, release_evidence, reviews, sources, usage, telegram, youtube_tracker
 from app.store import store
 from app.ownership import reset_request_owner, set_request_owner
 
@@ -88,6 +88,11 @@ def validate_production_configuration() -> None:
             store.initialize()
         except Exception as exc:
             raise RuntimeError("Failed to initialize database") from exc
+        # Seed default brain soul context entries (no-op if already seeded)
+        try:
+            store.database.soul_seed_defaults()
+        except Exception:
+            logger.warning("brain soul seed skipped — migration may not be applied yet")
 
 
 @app.on_event("shutdown")
@@ -217,6 +222,7 @@ def _register_api_routes(target):
     target.include_router(brain_media.router)
     target.include_router(brain_advanced.router)
     target.include_router(brain_agent.router)
+    target.include_router(brain_soul.router)
     target.include_router(learning_science.router)
     target.include_router(life_integration.router)
     target.include_router(advanced_layer.router)
@@ -232,6 +238,7 @@ def _register_api_routes(target):
     target.include_router(usage.router, prefix="/usage", tags=["usage"])
     target.include_router(integrations.router)
     target.include_router(telegram.router)
+    target.include_router(youtube_tracker.router)
 
 
 _register_api_routes(app)
