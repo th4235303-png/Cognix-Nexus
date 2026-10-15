@@ -1,3 +1,17 @@
+# Current verification update — 2026-10-15 07:10 UTC
+
+This update supersedes conflicting historical status below.
+
+- Current main revision: `54be85aa883b589b392d14279ea73e830951a522`.
+- Cognix Core CI and CodeQL are green on this revision. Backend CI confirms migration smoke (all 41 registered migrations), unit/integration tests, Book Intelligence synthetic acceptance, backup/isolated restore drill, coverage gate, and dependency audit all passed.
+- Render API, worker and frontend deployments for this revision are all LIVE. API logs show repeated `GET /health 200 OK`; worker logs show `worker_started persistence=postgresql database_configured=True`.
+- Supabase `public.cognix_schema_migrations` records migrations 034–041 as applied, including `041_phase22_book_acceptance_schema.sql`.
+- **Release remains BLOCKED pending final production verification.** A current post-deploy `/ready` response has not yet been captured; safe live environment-variable name reconciliation, public frontend/auth/API smoke, real provider/Google Drive acceptance, controlled 9-category/170-file Book Intelligence acceptance, accessibility/performance/mobile/Sentry/GDPR and final release smoke remain outstanding. Do not activate Phases 13–21 or tag a release before these gates pass.
+- Supabase Auth leaked-password protection remains a security WARN pending an explicit enable/exception decision. INFO-level unused indexes must be reviewed, not automatically deleted.
+- Live service URLs: frontend https://cognix-nexus-frontend.onrender.com ; worker https://cognix-core-worker-runtime.onrender.com. The API public URL should be taken from Render service configuration rather than guessed.
+
+---
+
 # Cognix Nexus — Current State
 
 ## Latest verified audit — 2026-10-15
