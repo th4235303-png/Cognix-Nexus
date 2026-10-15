@@ -42,7 +42,7 @@ jobs:
       - run: npm run build
       - name: Validate Playwright harness
         run: |
-          npm install --no-save --no-package-lock @playwright/test@1.51.1 playwright@1.51.1
+          npm install --no-save --no-package-lock @playwright/test@1.51.1 playwright@1.51.1 @axe-core/playwright
           npx playwright test --list
       - name: Prevent Supabase service role leakage
         run: |
@@ -82,6 +82,7 @@ jobs:
           cache-dependency-path: web-platform/backend/requirements.lock
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements.lock
+      - run: python -m pip install pytest==8.3.5
       - name: Verify direct release-script imports without production credentials
         run: |
           env -u COGNIX_PROVIDER_E2E_RUN_ID python scripts/provider_e2e.py
