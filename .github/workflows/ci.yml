@@ -88,6 +88,10 @@ jobs:
           env -u COGNIX_PROVIDER_E2E_RUN_ID python scripts/provider_e2e.py
           python -c "import runpy; runpy.run_path('scripts/privacy_inventory.py')"
       - run: python -m compileall app
+      - name: Smoke-test registered migrations in an isolated PostgreSQL database
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cognix_test
+        run: python scripts/migration_smoke_test.py
       - run: env -u DATABASE_URL python -m unittest discover -s tests
         env:
           COGNIX_DEV_MODE: "true"
