@@ -6,7 +6,8 @@ This section supersedes older live-status statements below where they conflict. 
 
 ### Repository
 
-- Latest main commit observed: `f58a9fc3c9bb59ce0791b7b117bfa4ae8ebe446f` (`feat(ui): trigger interactive toast notifications on source intake and export in cognix`, 2026-10-14).
+- Latest main commit observed after this audit: `40558ee3f6bed1c1d2dde79c80942754a6353534` (`fix(auth): restore current owner dependency for media and release routers`).
+- The latest fix restores `get_current_owner_id()` in `app.auth`, matching the existing Phase 18/19 media router and Phase 20/21 release-evidence router imports that caused the latest API startup failure.
 - Phase 13–21 runtime implementation is present in the repository. The latest documented implementation set reports 243/243 local deterministic tests across Ph13–21, but production activation remains gated.
 - No `vercel.json` exists and repository search found no Vercel references. Vercel is therefore **not verified as a deployment target**.
 
@@ -17,8 +18,8 @@ This section supersedes older live-status statements below where they conflict. 
 - API service configuration: Python, `web-platform/backend`, `pip install -r requirements.lock`, `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, `/health`, auto-deploy on commit, Singapore region.
 - Worker configuration: Python, `web-platform/backend`, same locked build, `python -m app.worker`, `/health`, auto-deploy on commit, Singapore region.
 - Frontend configuration: Node, repository root, build `cd web-platform/frontend && npm ci && npm run build`, start `cd web-platform/frontend && npm start`, Singapore region.
-- Worker latest deploy for commit `5067c12b3235a87b2881f320350706b54ee0b5a2` is **LIVE**.
-- API latest deploy for the same commit is **FAILED** after a successful build (`deploy_ended`, non-zero exit). The previously live API revision is still the service's last known-good deployment. The API failure must be diagnosed and redeployed before release.
+- Worker deploy for commit `5067c12b3235a87b2881f320350706b54ee0b5a2` is **LIVE**.
+- The matching API deploy failed after a successful build because `media_boundary.py` and `release_evidence.py` imported `get_current_owner_id`, which was absent from `app.auth`. The failure is now fixed in main commit `40558ee3...`; a new Render API deploy still needs to be observed before marking the runtime healthy.
 - Render currently hosts the frontend as well. This supersedes the older documentation assumption that Netlify was the active frontend host.
 - Live environment-variable enumeration is not available through the connected Render action surface; do not claim blueprint/live env parity until an inventory is captured.
 
@@ -48,7 +49,7 @@ This section supersedes older live-status statements below where they conflict. 
 
 **BLOCKED — pre-final-production-verification.**
 
-The project is not release-ready solely because code, CI, or a deployment exists. The latest API deployment failure plus unresolved external release gates prevent final smoke, tagging and Phase 13–21 production activation.
+The immediate Render API startup defect has been identified and patched, but the patch has not yet been deployed and re-verified. Final smoke, tagging and Phase 13–21 production activation remain blocked until the full release gate is green.
 
 ## 2. Completed / code-ready
 
@@ -59,59 +60,59 @@ The project is not release-ready solely because code, CI, or a deployment exists
 - Supabase migration 033 is live and targeted RLS/initplan/index findings from the earlier audit are resolved.
 - Render API, worker and frontend services exist with commit-triggered deployment.
 - Provider-key-only AI routing and fixed 1536-dimension production embedding compatibility are implemented.
+- Latest API startup defect caused by a missing `get_current_owner_id` auth dependency is patched in main.
 
 ## 3. Remaining work — required before release
 
-### A. Fix and verify Render API first
+### A. Deploy and verify the Render API fix first
 
-1. Inspect the failed API deploy `dep-db7q3t142hec739i2s6g` for the application startup/runtime error.
-2. Compare the failed commit `5067c12b3235a87b2881f320350706b54ee0b5a2` against the last live API revision.
-3. Fix the API failure and redeploy.
-4. Capture `/health` and `/ready` external evidence from the intended public API.
-5. Confirm worker health/logs after the matching API revision is live.
-6. Capture a safe live environment-variable **name** inventory and reconcile it with code, `render.yaml`, CI, recovery and test workflows. Never print secret values.
+1. Let Render build/deploy main commit `40558ee3f6bed1c1d2dde79c80942754a6353534`.
+2. Confirm the API starts without import errors.
+3. Capture `/health` and `/ready` external evidence from the intended public API.
+4. Confirm worker health/logs after the matching API revision is live.
+5. Capture a safe live environment-variable **name** inventory and reconcile it with code, `render.yaml`, CI, recovery and test workflows. Never print secret values.
 
 ### B. Frontend hosting reconciliation
 
-7. Treat Render `cognix-nexus-frontend` as the current frontend host unless the owner intentionally chooses another platform.
-8. Verify production domain, TLS, public API URL, Supabase public configuration and auth redirect URLs on the actual frontend host.
-9. If Vercel is intended instead, create/confirm the Vercel project and migrate the deployment configuration deliberately; no current repository/account evidence establishes Vercel today.
-10. Remove or archive stale Netlify-only deployment instructions only after confirming no operational dependency remains.
+6. Treat Render `cognix-nexus-frontend` as the current frontend host unless the owner intentionally chooses another platform.
+7. Verify production domain, TLS, public API URL, Supabase public configuration and auth redirect URLs on the actual frontend host.
+8. If Vercel is intended instead, create/confirm the Vercel project and migrate the deployment configuration deliberately; no current repository/account evidence establishes Vercel today.
+9. Remove or archive stale Netlify-only deployment instructions only after confirming no operational dependency remains.
 
 ### C. Supabase
 
-11. Keep migration head 033 as the current production baseline unless a reviewed migration is intentionally promoted.
-12. Decide whether to enable leaked-password protection. The current advisor still reports it disabled; if the current plan/settings cannot enable it, document the limitation rather than claiming PASS.
-13. Review the 69 INFO unused-index findings; remove none automatically.
-14. Run a fresh database readiness/advisor capture after any schema change.
-15. Complete the isolated restore/rollback drill against the dedicated restore target and record cleanup.
+10. Keep migration head 033 as the current production baseline unless a reviewed migration is intentionally promoted.
+11. Decide whether to enable leaked-password protection. The current advisor still reports it disabled; if the current plan/settings cannot enable it, document the limitation rather than claiming PASS.
+12. Review the 69 INFO unused-index findings; remove none automatically.
+13. Run a fresh database readiness/advisor capture after any schema change.
+14. Complete the isolated restore/rollback drill against the dedicated restore target and record cleanup.
 
 ### D. Provider acceptance
 
-16. Re-run provider/storage acceptance on the intended release revision.
-17. Prove Google Drive with a real export, retry and idempotency check using the correct OAuth account and root folder.
-18. Re-run Cloudinary write/read/checksum evidence if release policy requires fresh proof.
-19. Re-run Supabase Storage and B2 write/read/checksum evidence if the final release revision changed the relevant code/configuration.
-20. Verify Cohere 1536-dimension embedding production compatibility and RAG/citation behavior on the final revision.
+15. Re-run provider/storage acceptance on the intended release revision.
+16. Prove Google Drive with a real export, retry and idempotency check using the correct OAuth account and root folder.
+17. Re-run Cloudinary write/read/checksum evidence if release policy requires fresh proof.
+18. Re-run Supabase Storage and B2 write/read/checksum evidence if the final release revision changed the relevant code/configuration.
+19. Verify Cohere 1536-dimension embedding production compatibility and RAG/citation behavior on the final revision.
 
 ### E. Product/release gates
 
-21. Run controlled Book Intelligence acceptance: 9 categories / 170-file corpus, duplicate fingerprint, checkpoint/resume, durable ledger, distillation, lesson packs, derived-book lineage and export.
-22. Run authenticated Playwright production smoke across the intended pages and critical flows.
-23. Complete WCAG keyboard, screen-reader, responsive and accessibility verification.
-24. Capture Lighthouse/performance baseline and investigate regressions.
-25. Run Sentry live ingestion verification.
-26. Run mobile EAS/device smoke.
-27. Run GDPR owner-data export/delete and cleanup verification.
-28. Run production backup → isolated restore → rollback drill.
-29. Complete grouped manual verification last.
-30. Run final production smoke against the exact release revision.
-31. Obtain release approval and tag only after all required gates are green.
+20. Run controlled Book Intelligence acceptance: 9 categories / 170-file corpus, duplicate fingerprint, checkpoint/resume, durable ledger, distillation, lesson packs, derived-book lineage and export.
+21. Run authenticated Playwright production smoke across the intended pages and critical flows.
+22. Complete WCAG keyboard, screen-reader, responsive and accessibility verification.
+23. Capture Lighthouse/performance baseline and investigate regressions.
+24. Run Sentry live ingestion verification.
+25. Run mobile EAS/device smoke.
+26. Run GDPR owner-data export/delete and cleanup verification.
+27. Run production backup → isolated restore → rollback drill.
+28. Complete grouped manual verification last.
+29. Run final production smoke against the exact release revision.
+30. Obtain release approval and tag only after all required gates are green.
 
 ### F. Phase 13–21 activation
 
-32. Do **not** activate Phase 13–21 production runtime merely because the code exists.
-33. After release approval, activate Phase 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 one controlled phase at a time, with its own evidence.
+31. Do **not** activate Phase 13–21 production runtime merely because the code exists.
+32. After release approval, activate Phase 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 one controlled phase at a time, with its own evidence.
 
 ## 4. Explicitly deferred / optional
 
