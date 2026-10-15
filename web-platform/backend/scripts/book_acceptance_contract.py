@@ -94,13 +94,13 @@ def run(synthetic: bool) -> dict:
         result["knowledge_lineage_columns_ok"] = required_knowledge_columns <= column_names(database, "knowledge_items")
 
         # Additional table column checks
-        required_lesson_packs_columns = {"id", "book_id", "owner_id", "category", "items"}
+        required_lesson_packs_columns = {"id", "owner_id", "category", "content", "source_book_ids", "source_knowledge_ids"}
         result["lesson_packs_columns_ok"] = required_lesson_packs_columns <= column_names(database, "lesson_packs")
         required_derived_books_columns = {"id", "title", "owner_id", "source_book_ids"}
         result["derived_books_columns_ok"] = required_derived_books_columns <= column_names(database, "derived_books")
         required_chapter_summaries_columns = {"id", "chapter_id", "book_id", "owner_id", "content", "source_chunk_ids"}
         result["chapter_summaries_columns_ok"] = required_chapter_summaries_columns <= column_names(database, "chapter_summaries")
-        required_book_summaries_columns = {"id", "book_id", "owner_id", "content", "source_chunk_ids"}
+        required_book_summaries_columns = {"id", "book_id", "level", "content", "version", "source_chunk_ids"}
         result["book_summaries_columns_ok"] = required_book_summaries_columns <= column_names(database, "book_summaries")
         required_reading_events_columns = {"id", "book_id", "owner_id", "event_type", "created_at"}
         result["reading_events_columns_ok"] = required_reading_events_columns <= column_names(database, "reading_events")
