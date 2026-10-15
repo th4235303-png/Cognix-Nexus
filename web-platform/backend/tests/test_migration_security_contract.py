@@ -36,6 +36,7 @@ class MigrationSecurityContractTests(unittest.TestCase):
             "038_phase17_core_integration_runtime.sql",
             "039_phase18_19_media_boundary_runtime.sql",
             "040_phase20_21_release_evidence_runtime.sql",
+            "041_phase22_book_acceptance_schema.sql",
         ]
         tail = registered[-len(expected):]
         self.assertEqual(tail, expected)
