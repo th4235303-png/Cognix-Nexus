@@ -3,7 +3,8 @@
 ## Latest roadmap status — 2026-10-15
 
 - **Phase 13–21 runtime implementation: COMPLETE in code** — the repository contains the implementation set and deterministic tests, but production activation remains blocked by the release gate invariant.
-- **Infrastructure reconciliation:** Render is currently the actual hosting platform for the frontend, API and worker. The latest API deploy for commit `5067c12b3235a87b2881f320350706b54ee0b5a2` failed after build; the worker deploy for the same commit is live. This is the immediate engineering priority.
+- **Immediate Render fix identified:** the latest API deploy failed because Phase 18/19 and Phase 20/21 routers imported `get_current_owner_id` while `app.auth` did not define it. Main commit `40558ee3f6bed1c1d2dde79c80942754a6353534` restores that dependency. The fix still needs a successful Render deployment and health/readiness evidence.
+- **Infrastructure reconciliation:** Render is currently the actual hosting platform for the frontend, API and worker. The worker is live on the previous `5067c12b...` revision; the matching API revision failed and is being repaired.
 - **Supabase:** production project is healthy and migration head is 033. One security WARN remains for disabled leaked-password protection; performance advisor findings are INFO-level unused indexes.
 - **Cloudflare:** account is connected but no zones, Workers scripts or Pages projects are currently present; R2 is not enabled. Cloudflare is not a current production dependency.
 - **Vercel:** no repository configuration or connected deployment evidence was found. Vercel is not currently part of the verified architecture.
@@ -11,7 +12,7 @@
 
 ## Current execution order
 
-1. Fix the failed Render API deployment and prove `/health` + `/ready` on the intended revision.
+1. Deploy the `40558ee3` auth fix to Render and prove API `/health` + `/ready`.
 2. Verify worker health and safe live environment-variable names against `render.yaml` and CI.
 3. Reconcile the actual frontend deployment/domain/auth configuration on Render; choose Vercel only if intentionally adopted.
 4. Capture fresh Supabase readiness/security evidence and decide how to handle leaked-password protection.
@@ -34,7 +35,7 @@
 
 ### P0 — Production verification and infrastructure reconciliation
 
-The project is code-complete enough to enter final verification, but it is not release-complete. A successful build or a live worker does not compensate for the failed API deployment or missing external acceptance evidence.
+The project is code-complete enough to enter final verification, but it is not release-complete. A successful build or a live worker does not compensate for a failed API deployment or missing external acceptance evidence.
 
 ### P1 — UI completion/polish
 
@@ -52,8 +53,8 @@ The project is code-complete enough to enter final verification, but it is not r
 
 ## Pending Verification / Acceptance
 
-- Render API `/health` and `/ready` plus diagnosis of the latest failed API deploy.
-- Worker health/runtime verification on the final matching revision.
+- Deploy and verify the Render API auth fix.
+- Render API `/health` and `/ready` plus worker health/runtime verification on the final matching revision.
 - Safe live environment-variable name inventory and blueprint reconciliation.
 - Frontend production domain/TLS/API/Auth redirect verification on the current Render frontend.
 - Supabase Auth leaked-password protection decision/verification.
