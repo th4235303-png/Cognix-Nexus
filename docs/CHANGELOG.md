@@ -3,7 +3,9 @@
 ## 2026-10-15
 - Performed a fresh repository + infrastructure reconciliation across GitHub, Render, Supabase and Cloudflare.
 - Reconciled hosting documentation: the active frontend service is currently Render `cognix-nexus-frontend`; no Vercel configuration/reference was found; Netlify is retained as legacy documentation only.
-- Recorded the latest Render state: worker deploy for `5067c12b3235a87b2881f320350706b54ee0b5a2` is live, while the matching API deploy failed after a successful build and requires diagnosis.
+- Diagnosed the latest Render API deployment failure: `media_boundary.py` and `release_evidence.py` imported missing `get_current_owner_id` from `app.auth`.
+- Fixed the auth dependency in main commit `40558ee3f6bed1c1d2dde79c80942754a6353534` so owner-isolated routers can resolve the authenticated owner and fail closed for anonymous requests.
+- Recorded the required follow-up: deploy the fix to Render and capture `/health` + `/ready` evidence before release PASS.
 - Verified Supabase `Cognix-Core` is healthy at migration `033_rls_policy_initplan_indexes`; leaked-password protection remains disabled and performance advisor findings are INFO-level unused indexes.
 - Verified the connected Cloudflare account currently has no zones, Workers scripts or Pages projects; R2 is not enabled.
 - Rewrote `CURRENT_STATE.md`, `ROADMAP.md`, `PROJECT_OVERVIEW.md`, `README.md`, `docs/DEPLOYMENT.md` and `docs/STORAGE.md` so release blockers and provider roles reflect observed infrastructure rather than stale historical evidence.
