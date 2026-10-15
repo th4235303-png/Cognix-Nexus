@@ -28,7 +28,7 @@ class MultiProviderRoutingTests(unittest.TestCase):
             cloudflare = next(route for route in routes if route.name == "cloudflare")
         self.assertEqual(
             names,
-            ["gemini", "openrouter", "huggingface", "mistral", "cohere", "groq", "cloudflare"],
+            ["gemini", "groq", "openrouter", "mistral", "cohere", "cloudflare", "huggingface"],
         )
         self.assertEqual(groq.model, "qwen/qwen3.8-27b")
         self.assertEqual(groq.url, "https://api.groq.com/openai/v1/chat/completions")
