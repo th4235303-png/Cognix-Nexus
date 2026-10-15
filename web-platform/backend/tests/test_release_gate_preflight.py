@@ -20,7 +20,7 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "COGNIX_E2E_PASSWORD", "DATABASE_URL", "COGNIX_BOOK_ACCEPTANCE_DATABASE_URL",
             "COGNIX_RECOVERY_TARGET_DATABASE_URL", "COGNIX_RECOVERY_TARGET_ISOLATED",
             "COGNIX_RUN_PROVIDER_E2E", "COGNIX_RUN_BOOK_CONTRACT", "COGNIX_RUN_BROWSER_SMOKE",
-            "COGNIX_RUN_SENTRY_PROBE", "COGNIX_RUN_RECOVERY",
+            "COGNIX_RUN_SENTRY_PROBE", "COGNIX_RUN_RECOVERY", "COGNIX_API_BASE_URL",
         }:
             os.environ.pop(key, None)
 
@@ -71,6 +71,7 @@ class ReleaseGatePreflightTests(unittest.TestCase):
             "COGNIX_BOOK_ACCEPTANCE_DATABASE_URL": "postgresql://example.invalid/book-test",
             "COGNIX_RECOVERY_TARGET_DATABASE_URL": "postgresql://example.invalid/recovery",
             "COGNIX_RECOVERY_TARGET_ISOLATED": "true",
+            "COGNIX_API_BASE_URL": "https://api.example.invalid",
         })
         out = io.StringIO()
         with redirect_stdout(out):
