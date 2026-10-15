@@ -22,13 +22,13 @@ Cognix Core is the research/evidence foundation. Brain Vault is the durable pers
 
 ## Current snapshot
 
-**Release status: blocked / pre-final-production-verification.** The repository's latest main commit is `f58a9fc3c9bb59ce0791b7b117bfa4ae8ebe446f` (2026-10-14). Phase 13–21 runtime code exists in the repository, but production activation remains behind the release gate.
+**Release status: blocked / pre-final-production-verification.** The latest main commit is `bbdad24985db427417fd159ded454893fbe82fac` (documentation update after the Render auth fix). Phase 13–21 runtime code exists in the repository, but production activation remains behind the release gate.
 
 A fresh infrastructure audit on **2026-10-15** found:
 
 - Supabase `Cognix-Core` is `ACTIVE_HEALTHY`; live migration head is `033_rls_policy_initplan_indexes`.
 - Supabase security advisor still reports leaked-password protection disabled. Performance advisor reports INFO-level unused-index findings; no new critical performance finding was identified.
-- Render has three live services: `Cognix-Core` API, `cognix-core-worker-runtime`, and `cognix-nexus-frontend`. The worker is live on commit `5067c12b`; the latest API deploy for the same commit failed after a successful build, so the API must be reconciled before release.
+- Render has three services: `Cognix-Core` API, `cognix-core-worker-runtime`, and `cognix-nexus-frontend`. The worker is live on commit `5067c12b`; the API failure on that revision was traced to a missing `get_current_owner_id` dependency and fixed in main commit `40558ee3`. The API still needs a successful deployment and health/readiness verification of the fix.
 - Render frontend is currently the actual live frontend target; repository docs previously naming Netlify are stale and have been corrected in this documentation pass.
 - Cloudflare has one connected account but currently exposes no zones, Workers scripts, or Pages projects. R2 is not enabled, so Cloudflare is not a production storage/runtime dependency today.
 - The repository contains no `vercel.json` and no Vercel reference was found by repository search. There is therefore no evidence that Vercel is the current deployment platform.
