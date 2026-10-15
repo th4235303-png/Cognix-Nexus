@@ -22,17 +22,9 @@ Cognix Core is the research/evidence foundation. Brain Vault is the durable pers
 
 ## Current snapshot
 
-**Release status: blocked / pre-final-production-verification.** The latest main commit is `bbdad24985db427417fd159ded454893fbe82fac` (documentation update after the Render auth fix). Phase 13–21 runtime code exists in the repository, but production activation remains behind the release gate.
+**Release status: BLOCKED pending final production verification.** The P0 code/CI/deployment blockers are resolved on main revision `54be85aa883b589b392d14279ea73e830951a522` (2026-10-15): Cognix Core CI and CodeQL pass; Render frontend, API and worker are live; migrations 034–041 are recorded as applied; API logs show `/health 200 OK`; and worker logs confirm PostgreSQL-backed startup.
 
-A fresh infrastructure audit on **2026-10-15** found:
-
-- Supabase `Cognix-Core` is `ACTIVE_HEALTHY`; live migration head is `033_rls_policy_initplan_indexes`.
-- Supabase security advisor still reports leaked-password protection disabled. Performance advisor reports INFO-level unused-index findings; no new critical performance finding was identified.
-- Render has three services: `Cognix-Core` API, `cognix-core-worker-runtime`, and `cognix-nexus-frontend`. The worker is live on commit `5067c12b`; the API failure on that revision was traced to a missing `get_current_owner_id` dependency and fixed in main commit `40558ee3`. The API still needs a successful deployment and health/readiness verification of the fix.
-- Render frontend is currently the actual live frontend target; repository docs previously naming Netlify are stale and have been corrected in this documentation pass.
-- Cloudflare has one connected account but currently exposes no zones, Workers scripts, or Pages projects. R2 is not enabled, so Cloudflare is not a production storage/runtime dependency today.
-- The repository contains no `vercel.json` and no Vercel reference was found by repository search. There is therefore no evidence that Vercel is the current deployment platform.
-- Google Drive/export, authenticated browser smoke, recovery/restore, GDPR, Sentry, accessibility, performance, mobile/device and final production smoke still require fresh evidence before release approval.
+The remaining release gates are current post-deploy `/ready` evidence, safe live environment-name reconciliation, authenticated production browser smoke, real provider and Google Drive export/retry/idempotency acceptance, controlled Book Intelligence corpus acceptance, accessibility/performance/mobile/Sentry/GDPR/recovery evidence, and final production smoke. Supabase Auth leaked-password protection remains a security WARN pending an explicit decision. Phase 13–21 production activation and release tagging remain blocked until required gates pass.
 
 See `CURRENT_STATE.md` for evidence-backed status and next actions, `ROADMAP.md` for strategic scope, and `PROJECT_OVERVIEW.md` for architecture/product boundaries.
 
