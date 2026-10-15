@@ -2,7 +2,7 @@
 
 > Owner: Project documentation
 > Update when: product or architecture boundaries materially change
-> Last Updated: 2026-10-08
+> Last Updated: 2026-10-15
 > Do NOT put here: release checklists, live verification evidence, tactical backlog, detailed domain runbooks, or UI implementation checklists.
 
 ## What this is
@@ -30,8 +30,11 @@ Library / Inbox → duplicate gate → AI Reading Room → partial/final distill
 - Small private artifacts: Supabase Storage.
 - Large originals: Backblaze B2.
 - User-owned exports/backups: Google Drive.
-- Frontend hosting: Netlify.
-- API/worker hosting: Render.
+- Current frontend hosting: Render (`cognix-nexus-frontend`).
+- API/worker hosting: Render (`Cognix-Core`, `cognix-core-worker-runtime`).
+- Netlify: legacy frontend deployment target retained in historical documentation; no active Netlify service was confirmed in the current connected infrastructure audit.
+- Vercel: not part of the repository's current deployment configuration; no Vercel config/reference was found during the 2026-10-15 audit.
+- Cloudflare: connected account, but no active zone, Workers script, or Pages project was found; R2 is not enabled.
 
 The current storage target is tiered: Supabase Storage for artifacts up to 50 MB and B2 above 50 MB; Cloudinary remains the media provider. R2 has an adapter but is not production-active; it is a legacy/optional compatibility adapter.
 
@@ -55,6 +58,6 @@ The current storage target is tiered: Supabase Storage for artifacts up to 50 MB
 
 ## Runtime documentation
 
-Detailed architecture, data, API, pipeline, deployment, operations, storage, AI/RAG, testing and troubleshooting live under docs/.
+Detailed architecture, data, API, pipeline, deployment, operations, storage, AI/RAG, testing and troubleshooting live under `docs/`.
 
-Release status belongs in CURRENT_STATE.md; strategic scope belongs in ROADMAP.md; working protocol belongs in TOOL.md; security policy belongs in SECURITY.md.
+Release status belongs in `CURRENT_STATE.md`; strategic scope belongs in `ROADMAP.md`; working protocol belongs in `TOOL.md`; security policy belongs in `SECURITY.md`.
