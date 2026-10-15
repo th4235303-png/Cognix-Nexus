@@ -10,7 +10,7 @@ MIGRATIONS = BACKEND / "migrations"
 
 
 class MigrationSecurityContractTests(unittest.TestCase):
-    def test_020_to_032_are_registered_once_in_order_and_required(self):
+    def test_runtime_migrations_020_to_040_are_registered_once_in_order_and_required(self):
         persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8").lower()
         start = persistence.index("migration_names = (")
         end = persistence.index(")\n        with self.connect", start)
@@ -29,6 +29,13 @@ class MigrationSecurityContractTests(unittest.TestCase):
             "030_processing_task_superseded_index.sql",
             "031_book_intelligence.sql",
             "032_phase7_12_hardening.sql",
+            "034_phase13_active_layer_runtime.sql",
+            "035_phase14_learning_science_runtime.sql",
+            "036_phase15_life_integration_runtime.sql",
+            "037_phase16_advanced_layer_runtime.sql",
+            "038_phase17_core_integration_runtime.sql",
+            "039_phase18_19_media_boundary_runtime.sql",
+            "040_phase20_21_release_evidence_runtime.sql",
         ]
         tail = registered[-len(expected):]
         self.assertEqual(tail, expected)
