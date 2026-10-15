@@ -460,6 +460,13 @@ class Database:
             "030_processing_task_superseded_index.sql",
             "031_book_intelligence.sql",
             "032_phase7_12_hardening.sql",
+            "034_phase13_active_layer_runtime.sql",
+            "035_phase14_learning_science_runtime.sql",
+            "036_phase15_life_integration_runtime.sql",
+            "037_phase16_advanced_layer_runtime.sql",
+            "038_phase17_core_integration_runtime.sql",
+            "039_phase18_19_media_boundary_runtime.sql",
+            "040_phase20_21_release_evidence_runtime.sql",
         )
         with self.connect() as conn:
             with conn.cursor() as cur:
