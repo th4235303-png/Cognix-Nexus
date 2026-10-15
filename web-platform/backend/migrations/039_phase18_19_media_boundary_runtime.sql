@@ -15,6 +15,12 @@ CREATE TABLE IF NOT EXISTS public.media_assets (
     created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Upgrade-safe path: migration 009 created media_assets without owner_id.
+-- Keep legacy rows unowned (NULL) rather than inventing ownership; RLS below
+-- prevents authenticated users from seeing or claiming those rows.
+ALTER TABLE public.media_assets
+    ADD COLUMN IF NOT EXISTS owner_id TEXT;
+
 CREATE INDEX IF NOT EXISTS media_assets_owner_id_idx
     ON public.media_assets (owner_id);
 
