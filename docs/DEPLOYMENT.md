@@ -48,9 +48,15 @@
 - Health check: `/health`
 - Auto-deploy: commit
 
-## 2026-10-15 deployment finding
+## 2026-10-15 deployment finding and fix
 
-The latest worker deploy for commit `5067c12b3235a87b2881f320350706b54ee0b5a2` is **live**. The corresponding API deploy `dep-db7q3t142hec739i2s6g` **failed after a successful build** with a non-zero exit. The API's previous live revision remains the last known-good runtime. Diagnose the startup/runtime failure before treating the revision as releasable.
+The latest API deployment for commit `5067c12b3235a87b2881f320350706b54ee0b5a2` failed after a successful build. Render logs show the startup failure was:
+
+`ImportError: cannot import name 'get_current_owner_id' from 'app.auth'`
+
+`media_boundary.py` and `release_evidence.py` both depended on this owner-isolation dependency, while `app.auth` did not define it. Main commit `40558ee3f6bed1c1d2dde79c80942754a6353534` restores `get_current_owner_id()` using the authenticated identity established by the global auth middleware and fails closed for anonymous requests.
+
+The code fix is now in `main`. The next required step is a successful Render API deployment of that revision followed by external `/health` and `/ready` evidence. Do not mark the API release gate PASS until that evidence exists.
 
 The connected Render action surface can inspect services/deploys/logs and trigger deploys, but it cannot enumerate or delete individual live environment variables. Do not claim live-vs-blueprint parity until a safe environment-name inventory is captured.
 
