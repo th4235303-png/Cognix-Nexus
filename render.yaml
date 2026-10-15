@@ -3,7 +3,7 @@ services:
     name: Cognix-Core
     autoDeployTrigger: commit
     runtime: python
-    rootDir: web-platform/backend
+    rootDir: apps/web-platform/backend
     buildCommand: pip install -r requirements.lock
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
@@ -103,7 +103,7 @@ services:
     name: cognix-core-worker-runtime
     autoDeployTrigger: commit
     runtime: python
-    rootDir: web-platform/backend
+    rootDir: apps/web-platform/backend
     buildCommand: pip install -r requirements.lock
     startCommand: python -m app.worker
     healthCheckPath: /health

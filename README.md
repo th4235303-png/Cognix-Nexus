@@ -24,7 +24,7 @@ Cognix Core is the research/evidence foundation. Brain Vault is the durable pers
 
 **Release status: BLOCKED pending final production verification.** The P0 code/CI/deployment blockers are resolved on main revision `54be85aa883b589b392d14279ea73e830951a522` (2026-10-15): Cognix Core CI and CodeQL pass; Render frontend, API and worker are live; migrations 034–041 are recorded as applied; API logs show `/health 200 OK`; and worker logs confirm PostgreSQL-backed startup.
 
-The remaining release gates are current post-deploy `/ready` evidence, safe live environment-name reconciliation, authenticated production browser smoke, real provider and Google Drive export/retry/idempotency acceptance, controlled Book Intelligence corpus acceptance, accessibility/performance/mobile/Sentry/GDPR/recovery evidence, and final production smoke. Supabase Auth leaked-password protection remains a security WARN pending an explicit decision. Phase 13–21 production activation and release tagging remain blocked until required gates pass.
+The remaining release gates are current post-deploy `/ready` evidence, safe live environment-name reconciliation, authenticated production browser smoke, real provider and Google Drive export/retry/idempotency acceptance, controlled Book Intelligence corpus acceptance, accessibility/performance/apps/mobile/Sentry/GDPR/recovery evidence, and final production smoke. Supabase Auth leaked-password protection remains a security WARN pending an explicit decision. Phase 13–21 production activation and release tagging remain blocked until required gates pass.
 
 See `CURRENT_STATE.md` for evidence-backed status and next actions, `ROADMAP.md` for strategic scope, and `PROJECT_OVERVIEW.md` for architecture/product boundaries.
 

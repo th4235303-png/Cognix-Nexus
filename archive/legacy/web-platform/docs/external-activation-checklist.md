@@ -75,7 +75,7 @@ netlify.toml builds from main. Set the public API/Supabase variables in Netlify 
 
 ## Provider drill
 
-web-platform/backend/scripts/provider_e2e.py remains the one-shot provider drill for when external providers are intentionally enabled. The current release evidence claims implementation and persisted embedding state, but does not fabricate a real provider PASS where credentials have not been exercised.
+apps/web-platform/backend/scripts/provider_e2e.py remains the one-shot provider drill for when external providers are intentionally enabled. The current release evidence claims implementation and persisted embedding state, but does not fabricate a real provider PASS where credentials have not been exercised.
 
 Previously verified evidence remains valid for the components actually observed, including the live Cloudinary upload/read/checksum/delete round-trip.
 

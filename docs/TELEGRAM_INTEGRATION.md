@@ -29,7 +29,7 @@ Users can review flashcards and recall ratings with inline buttons (`I Knew This
 
 ## 3. Environment Variables
 
-Configure these variables in `web-platform/backend/.env` or in the Render Dashboard:
+Configure these variables in `apps/web-platform/backend/.env` or in the Render Dashboard:
 
 | Key | Type | Default | Description |
 |---|---|---|---|
@@ -42,9 +42,9 @@ Configure these variables in `web-platform/backend/.env` or in the Render Dashbo
 
 ## 4. Code Architecture
 
-* **Service Module:** `web-platform/backend/app/services/telegram.py`
+* **Service Module:** `apps/web-platform/backend/app/services/telegram.py`
 * **Configuration:** Environment resolution via `os.getenv`
-* **Template:** `web-platform/backend/.env.example`
+* **Template:** `apps/web-platform/backend/.env.example`
 
 ---
 

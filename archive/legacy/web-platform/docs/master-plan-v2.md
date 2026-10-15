@@ -188,4 +188,4 @@ The Long-Book AI Reader is a background knowledge-production workflow:
 
 The current reference corpus is 9 categories / 170 files. Exact duplicates stop before expensive processing, incomplete runs resume from durable checkpoints, partial results are viewable while processing, and cross-book synthesis preserves source/version lineage. Free-provider operation is quota-aware and resumable.
 
-The detailed contract is documented in web-platform/docs/book-intelligence-product-spec.md.
+The detailed contract is documented in apps/web-platform/docs/book-intelligence-product-spec.md.

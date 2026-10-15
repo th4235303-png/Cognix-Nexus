@@ -50,7 +50,7 @@ These fixtures are preparation assets only. They never substitute for real produ
 
 ## Phase 13–21 prepared contract coverage
 
-The prepared contract test `web-platform/backend/tests/test_phase13_21_prepared_contracts.py` covers:
+The prepared contract test `apps/web-platform/backend/tests/test_phase13_21_prepared_contracts.py` covers:
 - Phase 13: duplicate idempotency, terminal fencing and execution decisions.
 - Phase 14: deterministic learning priority and path generation.
 - Phase 15: explicit user-triggered restore, owner scope and privacy boundary.

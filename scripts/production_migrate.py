@@ -17,7 +17,7 @@ from pathlib import Path
 
 # Add backend directory to path
 repo_root = Path(__file__).resolve().parent.parent
-backend_dir = repo_root / "web-platform" / "backend"
+backend_dir = repo_root / "apps/web-platform" / "backend"
 sys.path.insert(0, str(backend_dir))
 
 

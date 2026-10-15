@@ -6,8 +6,8 @@
 > Do NOT put here: production evidence or release status.
 
 ## Repository layout
-- web-platform/frontend — Next.js frontend.
-- web-platform/backend — FastAPI API and worker.
+- apps/web-platform/frontend — Next.js frontend.
+- apps/web-platform/backend — FastAPI API and worker.
 - mobile — Expo mobile client.
 - supabase/migrations — database migration ledger.
 

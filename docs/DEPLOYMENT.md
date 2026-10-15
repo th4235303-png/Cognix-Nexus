@@ -24,15 +24,15 @@
 - Runtime: Node
 - Repository: `th4235303-png/Cognix-Nexus`
 - Branch: `main`
-- Build: `cd web-platform/frontend && npm ci && npm run build`
-- Start: `cd web-platform/frontend && npm start`
+- Build: `cd apps/web-platform/frontend && npm ci && npm run build`
+- Start: `cd apps/web-platform/frontend && npm start`
 - Region: Singapore
 
 ### API
 
 - Service: `Cognix-Core`
 - Runtime: Python
-- Root: `web-platform/backend`
+- Root: `apps/web-platform/backend`
 - Build: `pip install -r requirements.lock`
 - Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
 - Health check: `/health`
@@ -42,7 +42,7 @@
 
 - Service: `cognix-core-worker-runtime`
 - Runtime: Python
-- Root: `web-platform/backend`
+- Root: `apps/web-platform/backend`
 - Build: `pip install -r requirements.lock`
 - Start: `python -m app.worker`
 - Health check: `/health`
@@ -71,7 +71,7 @@ The connected Render action surface can inspect services/deploys/logs and trigge
 7. Reconcile environment-variable names against code, `render.yaml`, workflows and recovery/test procedures.
 8. Run provider/storage/Book acceptance.
 9. Run authenticated frontend/browser smoke.
-10. Run accessibility/performance/mobile/Sentry/GDPR/recovery gates.
+10. Run accessibility/performance/apps/mobile/Sentry/GDPR/recovery gates.
 11. Complete grouped manual verification last.
 12. Run final production smoke.
 13. Approve and tag the release.

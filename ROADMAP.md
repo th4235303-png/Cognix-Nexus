@@ -8,7 +8,7 @@ Next execution order:
 3. Run public frontend/API/authenticated critical-path smoke against current production host.
 4. Resolve/document Supabase leaked-password protection WARN; capture fresh security/readiness evidence.
 5. Complete real provider/Google Drive export+retry/idempotency and controlled Book Intelligence corpus acceptance.
-6. Complete accessibility, performance, mobile/device, Sentry, GDPR and backup/restore evidence.
+6. Complete accessibility, performance, apps/mobile/device, Sentry, GDPR and backup/restore evidence.
 7. Final production smoke and release approval. Keep Phase 13–21 activation blocked until then.
 
 ---

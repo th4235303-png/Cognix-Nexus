@@ -2,9 +2,9 @@
 
 ## Deployment model
 
-- Frontend: Netlify (`web-platform/frontend`)
-- API: Render web service (`web-platform/backend`)
-- Worker: Render worker (`web-platform/backend`)
+- Frontend: Netlify (`apps/web-platform/frontend`)
+- API: Render web service (`apps/web-platform/backend`)
+- Worker: Render worker (`apps/web-platform/backend`)
 - Persistence: PostgreSQL / Supabase
 
 During active development, Netlify continuous builds are intentionally paused by `netlify.toml`. Re-enable them by setting `COGNIX_NETLIFY_DEPLOY=true` in the Netlify build environment.

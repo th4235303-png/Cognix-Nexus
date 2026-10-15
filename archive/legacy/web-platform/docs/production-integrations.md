@@ -13,7 +13,7 @@
 
 ## Repository layout
 
-Deployable applications live under web-platform/frontend and web-platform/backend. The root netlify.toml points Netlify at the frontend base directory; render.yaml points both Render services at the backend directory.
+Deployable applications live under apps/web-platform/frontend and apps/web-platform/backend. The root netlify.toml points Netlify at the frontend base directory; render.yaml points both Render services at the backend directory.
 
 ## Environment variables
 
@@ -26,7 +26,7 @@ Provider secrets are backend-only. Never expose GOOGLE_REFRESH_TOKEN or AI API k
 ## Production sequence
 
 1. Provision PostgreSQL and set DATABASE_URL.
-2. Deploy the API and worker on Render from web-platform/backend.
+2. Deploy the API and worker on Render from apps/web-platform/backend.
 3. Deploy the frontend on Netlify using the root netlify.toml and set public API/Supabase settings.
 4. Configure Supabase Auth and the backend JWKS issuer/audience.
 5. Configure the AI provider and model.

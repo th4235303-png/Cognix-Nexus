@@ -104,7 +104,7 @@ Non-runtime release-evidence contracts/tests now require approved revision + evi
 
 Foundation boundary is documented in `docs/PHASE_21_FOUNDATION.md`.
 
-Release activation remains gated by provider/storage drills, authenticated browser smoke, accessibility/performance, mobile/device verification, GDPR export/delete, production recovery/rollback, observability, final production smoke, and release approval/tag.
+Release activation remains gated by provider/storage drills, authenticated browser smoke, accessibility/performance, apps/mobile/device verification, GDPR export/delete, production recovery/rollback, observability, final production smoke, and release approval/tag.
 
 ## Parallel-preparation rule
 

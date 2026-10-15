@@ -6,7 +6,7 @@ This update supersedes conflicting historical status below.
 - Cognix Core CI and CodeQL are green on this revision. Backend CI confirms migration smoke (all 41 registered migrations), unit/integration tests, Book Intelligence synthetic acceptance, backup/isolated restore drill, coverage gate, and dependency audit all passed.
 - Render API, worker and frontend deployments for this revision are all LIVE. API logs show repeated `GET /health 200 OK`; worker logs show `worker_started persistence=postgresql database_configured=True`.
 - Supabase `public.cognix_schema_migrations` records migrations 034–041 as applied, including `041_phase22_book_acceptance_schema.sql`.
-- **Release remains BLOCKED pending final production verification.** A current post-deploy `/ready` response has not yet been captured; safe live environment-variable name reconciliation, public frontend/auth/API smoke, real provider/Google Drive acceptance, controlled 9-category/170-file Book Intelligence acceptance, accessibility/performance/mobile/Sentry/GDPR and final release smoke remain outstanding. Do not activate Phases 13–21 or tag a release before these gates pass.
+- **Release remains BLOCKED pending final production verification.** A current post-deploy `/ready` response has not yet been captured; safe live environment-variable name reconciliation, public frontend/auth/API smoke, real provider/Google Drive acceptance, controlled 9-category/170-file Book Intelligence acceptance, accessibility/performance/apps/mobile/Sentry/GDPR and final release smoke remain outstanding. Do not activate Phases 13–21 or tag a release before these gates pass.
 - Supabase Auth leaked-password protection remains a security WARN pending an explicit enable/exception decision. INFO-level unused indexes must be reviewed, not automatically deleted.
 - Live service URLs: frontend https://cognix-nexus-frontend.onrender.com ; worker https://cognix-core-worker-runtime.onrender.com. The API public URL should be taken from Render service configuration rather than guessed.
 
@@ -29,9 +29,9 @@ This section supersedes older live-status statements below where they conflict. 
 
 - Connected workspace: `Cognix Core`.
 - Live services: `Cognix-Core` API, `cognix-core-worker-runtime`, and `cognix-nexus-frontend`.
-- API service configuration: Python, `web-platform/backend`, `pip install -r requirements.lock`, `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, `/health`, auto-deploy on commit, Singapore region.
-- Worker configuration: Python, `web-platform/backend`, same locked build, `python -m app.worker`, `/health`, auto-deploy on commit, Singapore region.
-- Frontend configuration: Node, repository root, build `cd web-platform/frontend && npm ci && npm run build`, start `cd web-platform/frontend && npm start`, Singapore region.
+- API service configuration: Python, `apps/web-platform/backend`, `pip install -r requirements.lock`, `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, `/health`, auto-deploy on commit, Singapore region.
+- Worker configuration: Python, `apps/web-platform/backend`, same locked build, `python -m app.worker`, `/health`, auto-deploy on commit, Singapore region.
+- Frontend configuration: Node, repository root, build `cd apps/web-platform/frontend && npm ci && npm run build`, start `cd apps/web-platform/frontend && npm start`, Singapore region.
 - Worker deploy for commit `5067c12b3235a87b2881f320350706b54ee0b5a2` is **LIVE**.
 - The matching API deploy failed after a successful build because `media_boundary.py` and `release_evidence.py` imported `get_current_owner_id`, which was absent from `app.auth`. The failure is now fixed in main commit `40558ee3...`; a new Render API deploy still needs to be observed before marking the runtime healthy.
 - Render currently hosts the frontend as well. This supersedes the older documentation assumption that Netlify was the active frontend host.

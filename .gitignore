@@ -49,3 +49,13 @@ build/
 .pytest_cache/
 .coverage
 htmlcov/
+
+# Expo local state and mobile dependencies
+apps/mobile/.expo/
+apps/mobile/node_modules/
+apps/mobile/dist/
+
+# Local backend runtime data
+apps/web-platform/backend/uploads/
+apps/web-platform/backend/storage/
+apps/web-platform/backend/tmp/

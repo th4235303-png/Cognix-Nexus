@@ -43,7 +43,7 @@ Cognix-Nexus/
 │       │   ├── TROUBLESHOOTING.md
 │       │   ├── UI_PLAN.md
 │       │   └── UI_STATUS.md
-│       └── web-platform/
+│       └── apps/web-platform/
 │           └── docs/
 │               ├── book-intelligence-product-spec.md
 │               ├── brain-vault-roadmap.md
@@ -105,7 +105,7 @@ Cognix-Nexus/
 │   ├── master_result all
 │   └── runbooks/
 │       └── external-activation.md
-├── mobile/
+├── apps/mobile/
 │   ├── .env.example
 │   ├── App.tsx
 │   ├── README.md
@@ -114,7 +114,7 @@ Cognix-Nexus/
 │   └── package.json
 ├── netlify.toml
 ├── render.yaml
-└── web-platform/
+└── apps/web-platform/
     ├── backend/
     │   ├── .env.example
     │   ├── PROVIDER_FREE_TIER_SETUP.md
@@ -482,14 +482,14 @@ The repository is organized as a multi-surface project with:
 - GitHub automation under `.github/`;
 - an archived legacy implementation under `archive/legacy/`;
 - a documentation hub under `docs/`;
-- a mobile application under `mobile/`;
+- a mobile application under `apps/mobile/`;
 - deployment configuration for Netlify and Render;
-- the active web platform under `web-platform/`;
+- the active web platform under `apps/web-platform/`;
 - a `backend` symbolic link at repository root.
 
 ### Active web platform
 
-`web-platform/` is split into:
+`apps/web-platform/` is split into:
 
 - `backend/` — Python application, routers, service layer, database migrations, operational scripts, and backend tests.
 - `frontend/` — Next.js application routes, shared/layout components, UI primitives, hooks, API helpers, types, and Playwright E2E tests.
@@ -510,7 +510,7 @@ The backend service layer contains both general services and phase-oriented doma
 
 ### Database migrations
 
-`web-platform/backend/migrations/` contains the numbered SQL migration history through migration `041_phase22_book_acceptance_schema.sql`, plus the migration README. The tree also contains two `010_*` migrations with distinct names; both are recorded exactly as present.
+`apps/web-platform/backend/migrations/` contains the numbered SQL migration history through migration `041_phase22_book_acceptance_schema.sql`, plus the migration README. The tree also contains two `010_*` migrations with distinct names; both are recorded exactly as present.
 
 ### Generated / compiled artifacts
 

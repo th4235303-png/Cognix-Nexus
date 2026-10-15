@@ -21,7 +21,7 @@ Cognix Nexus handles personal knowledge, research sources, user-owned records, e
 - Provider failures are explicit.
 
 ## Secret Vault cryptography
-The current implementation uses **PBKDF2-SHA256 with 600,000 iterations** to derive a 256-bit AES-GCM key in the browser. Evidence checked 2026-10-08 in `web-platform/frontend/app/vault/page.tsx`. The historical Argon2id statement is a future/target design claim and is not the current implementation.
+The current implementation uses **PBKDF2-SHA256 with 600,000 iterations** to derive a 256-bit AES-GCM key in the browser. Evidence checked 2026-10-08 in `apps/web-platform/frontend/app/vault/page.tsx`. The historical Argon2id statement is a future/target design claim and is not the current implementation.
 
 ## Durable security decisions
 ### ADR-003 — Owner isolation
