@@ -1,3 +1,18 @@
+## Execution update — 2026-10-15 07:10 UTC
+
+The P0 startup/migration/CI/deployment blockers are resolved on main revision `54be85aa883b589b392d14279ea73e830951a522`: Cognix Core CI and CodeQL pass, all three Render services are live, and production migration records include 034–041. This does **not** equal release approval.
+
+Next execution order:
+1. Capture current post-deploy API `/health` and `/ready` success; verify worker stays healthy on the same revision.
+2. Reconcile live environment-variable **names only** against `render.yaml`, code and workflows; never expose values.
+3. Run public frontend/API/authenticated critical-path smoke against current production host.
+4. Resolve/document Supabase leaked-password protection WARN; capture fresh security/readiness evidence.
+5. Complete real provider/Google Drive export+retry/idempotency and controlled Book Intelligence corpus acceptance.
+6. Complete accessibility, performance, mobile/device, Sentry, GDPR and backup/restore evidence.
+7. Final production smoke and release approval. Keep Phase 13–21 activation blocked until then.
+
+---
+
 # Cognix Nexus — Strategic Roadmap
 
 ## Latest roadmap status — 2026-10-15
