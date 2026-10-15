@@ -29,7 +29,7 @@ Boundary:
 - learning-path generation retains source/evidence references
 - autonomous learning state is never canonical without an auditable event
 
-Contract tests are prepared in `backend/tests/test_phase14_learning_contracts.py`.
+Contract tests are prepared in `apps/web-platform/backend/tests/test_phase14_learning_contracts.py`.
 
 Dependency: Phase 13 evidence/run lifecycle.
 
@@ -43,7 +43,7 @@ Boundary:
 - encrypted capsules never become an implicit cross-feature data source
 - ambient behavior remains opt-in
 
-Contract tests are prepared in `backend/tests/test_phase15_life_integration_contracts.py`.
+Contract tests are prepared in `apps/web-platform/backend/tests/test_phase15_life_integration_contracts.py`.
 
 Dependency: privacy/recovery gates and Phase 13 evidence lifecycle.
 
@@ -57,7 +57,7 @@ Boundary:
 - offline/local-model boundaries are explicit
 - encrypted handoff is exportable and recoverable
 
-Contract tests are prepared in `backend/tests/test_phase16_advanced_contracts.py`.
+Contract tests are prepared in `apps/web-platform/backend/tests/test_phase16_advanced_contracts.py`.
 
 Dependency: Phase 15 privacy boundary and production recovery evidence.
 
@@ -70,7 +70,7 @@ Boundary:
 - review states remain compatible with the existing human-review lifecycle
 - generated API contracts remain typechecked in CI
 
-Contract tests are prepared in `backend/tests/test_core_integration_contracts.py`.
+Contract tests are prepared in `apps/web-platform/backend/tests/test_core_integration_contracts.py`.
 
 Dependency: Phase 13 evidence contracts and current P1 UI/release evidence.
 

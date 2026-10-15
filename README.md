@@ -28,6 +28,14 @@ The remaining release gates are current post-deploy `/ready` evidence, safe live
 
 See `CURRENT_STATE.md` for evidence-backed status and next actions, `ROADMAP.md` for strategic scope, and `PROJECT_OVERVIEW.md` for architecture/product boundaries.
 
+## Repository layout
+
+- `apps/web-platform/frontend/` — Next.js web application.
+- `apps/web-platform/backend/` — FastAPI API, worker, migrations and backend tests.
+- `apps/mobile/` — reserved future mobile product surface; it is not a production mobile release.
+
+See [docs/REPOSITORY_STRUCTURE.md](docs/REPOSITORY_STRUCTURE.md) for placement rules.
+
 ## Documentation map
 
 - `PROJECT_OVERVIEW.md` — product and architecture overview
