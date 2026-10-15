@@ -19,7 +19,10 @@ CREATE TABLE IF NOT EXISTS public.media_assets (
 -- Keep legacy rows unowned (NULL) rather than inventing ownership; RLS below
 -- prevents authenticated users from seeing or claiming those rows.
 ALTER TABLE public.media_assets
-    ADD COLUMN IF NOT EXISTS owner_id TEXT;
+    ADD COLUMN IF NOT EXISTS owner_id TEXT,
+    ADD COLUMN IF NOT EXISTS storage_ref TEXT,
+    ADD COLUMN IF NOT EXISTS content_sha256 TEXT,
+    ADD COLUMN IF NOT EXISTS source_ref TEXT;
 
 CREATE INDEX IF NOT EXISTS media_assets_owner_id_idx
     ON public.media_assets (owner_id);
