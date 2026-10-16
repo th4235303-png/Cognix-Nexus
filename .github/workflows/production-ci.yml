@@ -96,5 +96,5 @@ jobs:
     needs: [backend-quality, frontend-build]
     runs-on: ubuntu-latest
     steps:
-      - name: Confirm Build Readiness
-        run: echo "Cognix-Nexus passes all standalone production gate checks. Ready for native zero-downtime deployment."
+      - name: Confirm CI Readiness (Not Production Authorization)
+        run: echo "Build and test checks passed. Production release still requires verified live health/readiness, reviewed and applied database migrations, backup/restore evidence for production, and security-advisor remediation."
