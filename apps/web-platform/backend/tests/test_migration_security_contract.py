@@ -159,7 +159,7 @@ class MigrationSecurityContractTests(unittest.TestCase):
         self.assertIn("alter default privileges in schema public", sql)
         self.assertIn("revoke all on tables from anon, authenticated", sql)
         self.assertIn("revoke all on sequences from anon, authenticated", sql)
-        self.assertNotRegex(sql, r"\\bgrant\\s+")
+        self.assertNotRegex(sql, r"\bgrant\s+")
 
     def test_authenticated_owner_paths_match_parent_owner_and_leave_null_owners_out(self):
         persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8").lower()
