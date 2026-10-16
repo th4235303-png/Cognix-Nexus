@@ -1340,18 +1340,6 @@ class Database:
                     )
                 return cur.fetchall()
 
-        with self.connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """INSERT INTO language_cards(id,front,back,language,source_note,owner_id)
-                       VALUES(%(id)s,%(front)s,%(back)s,%(language)s,%(source_note)s,%(owner_id)s)
-                       RETURNING id,front,back,language,source_note,due_at,stability,difficulty,
-                                 reps,lapses,state,created_at,updated_at""",
-                    {**card, "owner_id": owner_id},
-                )
-                row = cur.fetchone()
-            conn.commit()
-        return row
 
     def list_language_cards_due_for_owner(self, owner_id: str | None, limit: int) -> list[dict[str, Any]]:
         with self.connect() as conn:
