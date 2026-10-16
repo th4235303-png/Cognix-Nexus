@@ -3,11 +3,11 @@
 This section supersedes conflicting historical status below. Use the GitHub `main` branch head for the current revision.
 
 - Repository structure and dependency/test fixes are committed to `main`.
-- Production CI includes live Render `/health` and `/ready` checks on non-PR runs. The last completed evidence run returned HTTP 200 for both; `/ready` reported `database_configured=true`, `database_reachable=true`, and `persistence_mode=postgresql`.
+- Production CI run [#38882163315](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38882163315) passed on revision `a57c804087d725d6b7ce99f988892f245c87fb3d`: frontend build, backend lint/compile/tests/migration pre-flight, live API `/health` + `/ready`, and live frontend HTTPS/HTML smoke all passed. Cognix Core CI [#38882163328](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38882163328) and CodeQL [#38882163206](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38882163206) also passed.
 - Migration `044_restrict_service_managed_brain_soul_youtube.sql` is applied. The application migration registry in `public.cognix_schema_migrations` confirms migrations through `044`; this is distinct from the separate Supabase CLI migration history, which still reports `033`.
 - Migration 044 removes `anon` and `authenticated` table and sequence privileges from `brain_soul_context`, `brain_soul_syntheses`, `youtube_channels`, and `brain_youtube_videos`, and revokes those grants by default for future public tables/sequences.
 - Production database verification shows the expected public schema is present and all current public tables have RLS enabled. User-facing tables have policies; the four service-managed Brain Soul/YouTube tables intentionally have no frontend policies and no `anon`/`authenticated` Data API privileges.
-- Render API deploy `dep-db8u9ubrjlhs73dirt80` and Worker deploy `dep-db8uarqvcj2c73b8hkgg` are live. Frontend remains live on its latest frontend build.
+- Render API deploy `dep-db8u9ubrjlhs73dirt80` and Worker deploy `dep-db8uarqvcj2c73b8hkgg` are live. Frontend deploy `dep-db8v1sgts6fs73dptmeg` for revision `a57c804087d725d6b7ce99f988892f245c87fb3d` is live.
 - Supabase Auth leaked-password protection is **explicitly deferred/accepted for the current free-tier setup** and is no longer a release blocker in this project state. Do not keep repeating it as a required task unless the plan changes.
 - Remaining release work is now limited to production evidence and external acceptance gates listed below.
 
@@ -24,7 +24,8 @@ This section supersedes conflicting historical status below. Use the GitHub `mai
 - API: `https://cognix-core-ypak.onrender.com`.
 - Worker: `https://cognix-core-worker-runtime.onrender.com`.
 - Frontend: `https://cognix-nexus-frontend.onrender.com`.
-- API live verification: `/health` HTTP 200; `/ready` HTTP 200; database configured and reachable; PostgreSQL persistence mode.
+- API live verification: `/health` returned `status=ok`; `/ready` returned `status=ready`, `database_configured=true`, `database_reachable=true`, `persistence_mode=postgresql`, and `database_required=true`.
+- Browser smoke verified HTTPS frontend `/login` and `/forgot-password` routes load. Authenticated actions were not tested because no test-user credentials were available.
 - Render dashboard service paths still use legacy aliases (`web-platform/backend` and `cd web-platform/frontend` in the frontend build command) while `render.yaml` documents canonical `apps/web-platform/...` paths. Current services are live through the compatibility symlink; migrate service settings to canonical paths when the connected Render control surface permits it.
 
 ## Supabase
@@ -40,26 +41,25 @@ This section supersedes conflicting historical status below. Use the GitHub `mai
 
 ## Remaining work — required before release
 
-1. Verify the latest workflow run after the most recent documentation update; the preceding Production CI run passed build, backend checks, and live `/health` + `/ready`.
-2. Complete a real production backup → isolated restore → rollback drill; CI's isolated drill is not a substitute.
-3. Reconcile live environment-variable **names** against code, `render.yaml`, CI, recovery and test workflows without exposing secret values.
-4. Confirm production frontend domain/TLS, API URL, Supabase public configuration and auth redirect URLs.
-5. Decide whether to migrate the Render dashboard service paths from the compatibility bridge to canonical `apps/web-platform/...` paths.
-6. Decide whether Vercel/Netlify remain intentionally unused; Render is the currently observed frontend host.
-7. Review unused indexes using actual query-plan/usage evidence; delete none automatically.
-8. Re-run Cloudinary fresh round-trip evidence if required by release policy.
-9. Prove Google Drive with a real export, retry and idempotency check.
-10. Re-run Supabase Storage/B2/provider/RAG evidence on the final revision where required.
-11. Run controlled 9-category / 170-file Book Intelligence acceptance.
-12. Run authenticated Playwright production smoke.
-13. Complete WCAG keyboard/screen-reader/responsive checks.
-14. Capture Lighthouse/performance baseline.
-15. Verify Sentry live ingestion.
-16. Run mobile EAS/device smoke.
-17. Run GDPR owner-data export/delete and cleanup verification.
-18. Complete final production smoke on the exact release revision.
-19. Obtain release approval and tag only after all required gates are green.
-20. Only then activate Phases 13–21 one controlled phase at a time with evidence.
+1. Complete a real production backup → isolated restore → rollback drill; CI's isolated drill is not a substitute.
+2. Reconcile live environment-variable **names** against code, `render.yaml`, CI, recovery and test workflows without exposing secret values; the connected Render integration cannot enumerate live variable names.
+3. Confirm Supabase public frontend configuration and auth redirect URLs; Render-hosted HTTPS frontend/API routes have been verified.
+4. Decide whether to migrate the Render dashboard service paths from the compatibility bridge to canonical `apps/web-platform/...` paths.
+5. Decide whether Vercel/Netlify remain intentionally unused; Render is the currently observed frontend host.
+6. Review unused indexes using actual query-plan/usage evidence; delete none automatically.
+7. Re-run Cloudinary fresh round-trip evidence if required by release policy.
+8. Prove Google Drive with a real export, retry and idempotency check; merged scope change requires fresh account-owner OAuth consent.
+9. Re-run Supabase Storage/B2/provider/RAG evidence on the final revision where required.
+10. Run controlled 9-category / 170-file Book Intelligence acceptance; CI's synthetic contract is not corpus acceptance.
+11. Run authenticated Playwright production smoke with a dedicated test account.
+12. Complete WCAG keyboard/screen-reader/responsive checks.
+13. Capture Lighthouse/performance baseline.
+14. Verify Sentry live ingestion.
+15. Run mobile EAS/device smoke; CI config validation is not a device test.
+16. Run GDPR owner-data export/delete and cleanup verification.
+17. Complete final production smoke on the exact release revision.
+18. Obtain release approval and tag only after all required gates are green.
+19. Only then activate Phases 13–21 one controlled phase at a time with evidence.
 
 ## Explicitly deferred / optional
 
