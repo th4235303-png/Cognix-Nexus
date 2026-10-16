@@ -135,7 +135,9 @@ class StorageContractTests(unittest.TestCase):
 
     def test_storage_status_never_returns_secret_values(self):
         client = TestClient(app)
-        response = client.get("/integrations/storage/status")
+        # This public response contract is tested in explicit dev mode, not by weakening production auth.
+        with patch.dict(os.environ, {"COGNIX_DEV_MODE": "true"}, clear=False):
+            response = client.get("/integrations/storage/status")
         self.assertEqual(response.status_code, 200)
         body = response.json()
         self.assertIn("cloudinary_configured", body)
