@@ -51,6 +51,7 @@ jobs:
       - name: Execute Backend Tests
         env:
           COGNIX_ENV: test
+          COGNIX_RATE_LIMIT_PER_MINUTE: "0"
           PYTHONPATH: apps/web-platform/backend
         run: |
           pytest -q apps/web-platform/backend/tests
