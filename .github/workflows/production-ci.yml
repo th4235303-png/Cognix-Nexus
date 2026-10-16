@@ -106,4 +106,4 @@ jobs:
         run: python3 apps/web-platform/backend/scripts/render_health_check.py
 
       - name: Confirm CI Readiness (Not Production Authorization)
-        run: echo "Build and test checks passed. Production release still requires reviewed and applied database migrations, backup/restore evidence for production, and security-advisor remediation."
+        run: echo "Build, tests, and live API readiness passed. Production release still requires verified production backup/restore evidence and remediation of remaining Supabase security warnings; CI success is not release authorization."
