@@ -31,9 +31,11 @@ class LevelUpTests(unittest.TestCase):
         self.assertTrue(result["conflict"])
 
     def test_policy_boundaries(self):
-        self.assertEqual(self.client.get("/brain/level-up/mood-policy").json()["storage"], "local_only")
-        self.assertFalse(self.client.get("/brain/level-up/ambient-policy").json()["background_listening"])
-        self.assertTrue(self.client.get("/brain/level-up/legacy/policy").json()["encrypted"])
+        # These contract checks exercise route behavior without production credentials.
+        with patch.dict(os.environ, {"COGNIX_DEV_MODE": "true"}, clear=False):
+            self.assertEqual(self.client.get("/brain/level-up/mood-policy").json()["storage"], "local_only")
+            self.assertFalse(self.client.get("/brain/level-up/ambient-policy").json()["background_listening"])
+            self.assertTrue(self.client.get("/brain/level-up/legacy/policy").json()["encrypted"])
 
     def test_learning_path_is_library_only(self):
         result = build_learning_path([
@@ -74,7 +76,9 @@ class LevelUpTests(unittest.TestCase):
             self.assertEqual(provider.configured_routes[0].model, "qwen/qwen3.8-27b")
 
     def test_feature_matrix_contains_all_20(self):
-        response = self.client.get("/brain/level-up/feature-matrix")
+        # Keep auth fail-closed in production; opt into dev mode only for this route contract test.
+        with patch.dict(os.environ, {"COGNIX_DEV_MODE": "true"}, clear=False):
+            response = self.client.get("/brain/level-up/feature-matrix")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(len(response.json()["features"]), 20)
 
