@@ -2,7 +2,7 @@
 
 > Owner: Database/schema
 > Update when: schema, migration ledger, RLS, ownership or lineage rules change
-> Last Updated: 2026-10-12
+> Last Updated: 2026-10-16
 > Do NOT put here: live release status unless it is directly a schema fact.
 
 ## Persistence
@@ -22,34 +22,34 @@ export job → Google Drive package
 Vault items store ciphertext, nonce and KDF metadata; plaintext remains client-side. Time capsules/legacy payloads follow the encrypted-payload boundary. Mood data is local-only by policy.
 
 ## RLS
-Owner-scoped policies exist across core Brain Vault and Level Up user-data tables. Relationship tables are scoped through their owning parent where appropriate. Deny-by-default remains the baseline for tables without frontend access.
-
-Migration `033_rls_policy_initplan_indexes` wraps the owner-policy JWT claim lookup in a scalar subquery on seven owner-scoped tables while preserving the same owner comparison and deny-by-default behavior. It also adds `idx_knowledge_items_chapter_id`.
+All current public application tables have RLS enabled. User-facing tables have owner-scoped policies; service-managed Brain Soul/YouTube tables intentionally have no frontend policies and are restricted to backend/service-role access. Deny-by-default remains the baseline for tables without frontend access.
 
 ## Migration state
-Repository migration head: 033.
-Live Supabase migration head: **033**, verified 2026-10-12 against project `Cognix-Core` (`jarfusheiqkfcbeljvhj`). Live history records migration `033_rls_policy_initplan_indexes` with version `20261012034910`.
+The application-managed `public.cognix_schema_migrations` registry is applied through migration `044_restrict_service_managed_brain_soul_youtube.sql` in production. Migration 044 revokes `anon` and `authenticated` table/sequence privileges for `brain_soul_context`, `brain_soul_syntheses`, `youtube_channels`, and `brain_youtube_videos`, and revokes those grants by default for newly-created public tables/sequences.
 
-Evidence: Supabase project migration history queried live on 2026-10-12.
+The separate Supabase CLI migration history remains at the historical `033_rls_policy_initplan_indexes` head. These are two different ledgers and must not be treated as interchangeable. The application migration runner is authoritative for the backend's ordered SQL migration set through 044.
 
 ### Confirmed migration numbering defect
 Two historical migrations use the 010 number:
 - 010_agent_active_layer.sql
 - 010_intelligence_life_reliability.sql
 
-Do not silently rename either migration during documentation migration.
+Do not silently rename either migration.
 
 ## Book Intelligence extension
 Durable processing/knowledge state includes immutable book versions/fingerprints, duplicate matches, progress snapshots, append-only reading events, source-linked knowledge items, versioned chapter/book summaries, lesson packs, derived books/synthesis projects and Markdown/plain-text reading ledgers.
 
 Invariants: exact duplicates stop; interrupted work resumes; partial knowledge remains partial; every knowledge item traces to source spans; cross-book synthesis preserves contributing versions/disagreement; originals remain separate; reprocessing creates a new version.
 
-## Live advisor verification — 2026-10-12
-- Supabase performance advisor no longer reports the seven owner-policy `auth_rls_initplan` findings.
-- Supabase performance advisor no longer reports the unindexed `knowledge_items.chapter_id` foreign key.
-- Remaining performance notices are INFO-level unused-index findings; do not drop indexes without workload evidence.
-- Separate security warning remains: Supabase Auth leaked-password protection is disabled and must be enabled/verified in Auth settings.
+## Live schema verification — 2026-10-16
+- Production contains the full public application schema, including Brain Soul and YouTube tracker tables.
+- All current public tables have RLS enabled.
+- User-facing tables have active policies; the four service-managed Brain Soul/YouTube tables intentionally have zero frontend policies and no `anon`/`authenticated` table or sequence privileges.
+- Migration 044 is recorded in `public.cognix_schema_migrations` with an applied timestamp and has been verified by read-only privilege queries.
+- Supabase Auth leaked-password protection remains disabled. Per the current release decision, this free-tier/provider limitation is explicitly accepted and is not a database migration blocker.
 
 ## Resolved verification
-- Live Supabase migration head is 033, verified 2026-10-12.
-- Current Secret Vault KDF implementation is PBKDF2-SHA256 with 600,000 iterations and AES-GCM in the browser; the historical Argon2id wording is not the current implementation.
+- The previous 033-only database documentation is superseded by the application migration registry through 044.
+- Supabase performance findings for the seven owner-policy `auth_rls_initplan` cases and the `knowledge_items.chapter_id` foreign key were previously remediated.
+- Remaining performance notices are INFO-level unused-index findings; do not drop indexes without workload evidence.
+- Secret Vault implementation remains PBKDF2-SHA256 with 600,000 iterations and AES-GCM in the browser; the historical Argon2id wording is not the current implementation.
