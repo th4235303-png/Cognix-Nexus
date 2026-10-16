@@ -38,7 +38,7 @@ This section supersedes conflicting historical status below. Use the GitHub `mai
 
 ## Remaining work — required before release
 
-1. Verify the latest workflow run after the most recent status-only change; the preceding Production CI run passed build, backend checks, and live `/health` + `/ready`.
+1. Verify the latest workflow run after the most recent status/documentation updates; the preceding Production CI run passed build, backend checks, and live `/health` + `/ready`.
 2. Enable Supabase Auth leaked-password protection or record an explicitly approved exception.
 3. Complete a production backup → isolated restore → rollback drill; CI's isolated drill is not a substitute.
 4. Reconcile live environment-variable **names** against code, `render.yaml`, CI, recovery and test workflows without exposing secret values.
@@ -48,19 +48,17 @@ This section supersedes conflicting historical status below. Use the GitHub `mai
 8. Review unused indexes using actual query-plan/usage evidence; delete none automatically.
 9. Re-run Cloudinary fresh round-trip evidence if required by release policy.
 10. Prove Google Drive with a real export, retry and idempotency check.
-11. Re-run Cloudinary fresh round-trip evidence if required by release policy.
-12. Prove Google Drive with a real export, retry and idempotency check.
-13. Re-run Supabase Storage/B2/provider/RAG evidence on the final revision where required.
-14. Run controlled 9-category / 170-file Book Intelligence acceptance.
-15. Run authenticated Playwright production smoke.
-16. Complete WCAG keyboard/screen-reader/responsive checks.
-17. Capture Lighthouse/performance baseline.
-18. Verify Sentry live ingestion.
-19. Run mobile EAS/device smoke.
-20. Run GDPR owner-data export/delete and cleanup verification.
-21. Complete final production smoke on the exact release revision.
-22. Obtain release approval and tag only after all required gates are green.
-23. Only then activate Phases 13–21 one controlled phase at a time with evidence.
+11. Re-run Supabase Storage/B2/provider/RAG evidence on the final revision where required.
+12. Run controlled 9-category / 170-file Book Intelligence acceptance.
+13. Run authenticated Playwright production smoke.
+14. Complete WCAG keyboard/screen-reader/responsive checks.
+15. Capture Lighthouse/performance baseline.
+16. Verify Sentry live ingestion.
+17. Run mobile EAS/device smoke.
+18. Run GDPR owner-data export/delete and cleanup verification.
+19. Complete final production smoke on the exact release revision.
+20. Obtain release approval and tag only after all required gates are green.
+21. Only then activate Phases 13–21 one controlled phase at a time with evidence.
 
 ## Explicitly deferred / optional
 
