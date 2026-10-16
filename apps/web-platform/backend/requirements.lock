@@ -16,3 +16,4 @@ PyMuPDF==1.28.2
 boto3==1.43.108
 coverage[toml]==7.10.7
 python-json-logger==3.3.0
+feedparser==6.0.12
