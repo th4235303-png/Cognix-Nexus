@@ -1,0 +1,2 @@
+This compatibility directory preserves the legacy Render root-directory contract.
+The canonical backend source lives under apps/web-platform/backend.
