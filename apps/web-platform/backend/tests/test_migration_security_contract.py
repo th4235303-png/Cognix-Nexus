@@ -10,7 +10,7 @@ MIGRATIONS = BACKEND / "migrations"
 
 
 class MigrationSecurityContractTests(unittest.TestCase):
-    def test_runtime_migrations_020_to_043_are_registered_once_in_order_and_required(self):
+    def test_runtime_migrations_020_to_044_are_registered_once_in_order_and_required(self):
         persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8").lower()
         start = persistence.index("migration_names = (")
         end = persistence.index(")\n        with self.connect", start)
@@ -39,6 +39,7 @@ class MigrationSecurityContractTests(unittest.TestCase):
             "041_phase22_book_acceptance_schema.sql",
             "042_brain_soul.sql",
             "043_youtube_tracker.sql",
+            "044_restrict_service_managed_brain_soul_youtube.sql",
         ]
         tail = registered[-len(expected):]
         self.assertEqual(tail, expected)
@@ -142,6 +143,23 @@ class MigrationSecurityContractTests(unittest.TestCase):
         for migration_name in ("026_level_up_owner_isolation.sql", "031_book_intelligence.sql"):
             extension_sql = (MIGRATIONS / migration_name).read_text(encoding="utf-8").lower()
             self.assertIn("enable row level security", extension_sql)
+
+    def test_service_managed_brain_soul_and_youtube_tables_revoke_data_api_grants(self):
+        sql = (MIGRATIONS / "044_restrict_service_managed_brain_soul_youtube.sql").read_text(encoding="utf-8").lower()
+        for table in (
+            "brain_soul_context",
+            "brain_soul_syntheses",
+            "youtube_channels",
+            "brain_youtube_videos",
+        ):
+            with self.subTest(table=table):
+                self.assertIn(f"public.{table}", sql)
+        self.assertIn("revoke all privileges on table", sql)
+        self.assertIn("from anon, authenticated", sql)
+        self.assertIn("alter default privileges in schema public", sql)
+        self.assertIn("revoke all on tables from anon, authenticated", sql)
+        self.assertIn("revoke all on sequences from anon, authenticated", sql)
+        self.assertNotRegex(sql, r"\\bgrant\\s+")
 
     def test_authenticated_owner_paths_match_parent_owner_and_leave_null_owners_out(self):
         persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8").lower()
