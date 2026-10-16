@@ -470,6 +470,7 @@ class Database:
             "041_phase22_book_acceptance_schema.sql",
             "042_brain_soul.sql",
             "043_youtube_tracker.sql",
+            "044_restrict_service_managed_brain_soul_youtube.sql",
         )
         with self.connect() as conn:
             with conn.cursor() as cur:
