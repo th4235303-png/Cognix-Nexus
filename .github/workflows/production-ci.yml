@@ -105,5 +105,34 @@ jobs:
           COGNIX_API_BASE_URL: https://cognix-core-ypak.onrender.com
         run: python3 apps/web-platform/backend/scripts/render_health_check.py
 
+      - name: Verify live frontend HTTPS and HTML response
+        if: github.event_name != 'pull_request'
+        run: |
+          python3 - <<'PY'
+          import ssl
+          import urllib.request
+
+          url = "https://cognix-nexus-frontend.onrender.com/"
+          request = urllib.request.Request(
+              url,
+              headers={"User-Agent": "Cognix-Production-Smoke/1.0"},
+          )
+          with urllib.request.urlopen(
+              request, timeout=30, context=ssl.create_default_context()
+          ) as response:
+              content_type = response.headers.get("Content-Type", "")
+              body = response.read(1024 * 1024)
+              if not 200 <= response.status < 300:
+                  raise SystemExit(f"frontend returned HTTP {response.status}")
+              if "text/html" not in content_type.lower():
+                  raise SystemExit(f"unexpected frontend content type: {content_type}")
+              if not body.strip():
+                  raise SystemExit("frontend returned an empty HTML response")
+              print(
+                  f"PASS frontend HTTPS: HTTP {response.status}, "
+                  f"content-type={content_type}, bytes_checked={len(body)}"
+              )
+          PY
+
       - name: Confirm CI Readiness (Not Production Authorization)
-        run: echo "Build, tests, and live API readiness passed. Production release still requires verified production backup/restore evidence and remediation of remaining Supabase security warnings; CI success is not release authorization."
+        run: echo "Build, tests, API health/readiness, and frontend HTTPS smoke passed. Supabase leaked-password protection is explicitly deferred under the current free-tier decision. Production release still requires real backup/restore/rollback and remaining external acceptance evidence; CI success is not release authorization."
