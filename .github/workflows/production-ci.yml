@@ -103,7 +103,7 @@ jobs:
         if: github.event_name != 'pull_request'
         env:
           COGNIX_API_BASE_URL: https://cognix-core-ypak.onrender.com
-        run: python3 scripts/render_health_check.py
+        run: python3 apps/web-platform/backend/scripts/render_health_check.py
 
       - name: Confirm CI Readiness (Not Production Authorization)
         run: echo "Build and test checks passed. Production release still requires reviewed and applied database migrations, backup/restore evidence for production, and security-advisor remediation."
