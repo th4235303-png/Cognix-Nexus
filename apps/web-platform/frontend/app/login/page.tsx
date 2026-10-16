@@ -55,7 +55,7 @@ export default function LoginPage() {
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label htmlFor="login-email" className="mb-1.5 block text-xs font-medium text-muted-foreground">Email</label>
-              <input id="login-email" name="email" autoComplete="email" required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 w-full rounded-lg border border-border/50 bg-background-elevated px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus-glow focus:outline-none transition-all" placeholder="you@logixa.io" />
+              <input id="login-email" name="email" autoComplete="email" required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 w-full rounded-lg border border-border/50 bg-background-elevated px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus-glow focus:outline-none transition-all" placeholder="you@cognix.io" />
             </div>
             <div>
               <div className="mb-1.5 flex items-center justify-between">

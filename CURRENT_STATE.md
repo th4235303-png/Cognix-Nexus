@@ -1,9 +1,12 @@
-# Current verification update — 2026-10-16
+# Current verification update — 2026-10-16 (Latest Operational Verification)
 
 This section supersedes conflicting historical status below. Use the GitHub `main` branch head for the current revision.
 
-- Repository structure and dependency/test fixes are committed to `main`.
-- Production CI run [#38882163315](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38882163315) passed on revision `a57c804087d725d6b7ce99f988892f245c87fb3d`: frontend build, backend lint/compile/tests/migration pre-flight, live API `/health` + `/ready`, and live frontend HTTPS/HTML smoke all passed. Cognix Core CI [#38882163328](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38882163328) and CodeQL [#38882163206](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38882163206) also passed.
+- **Standalone runtime decoupling:** Port 3002 assigned to Next.js Web OS; Port 8003 assigned to FastAPI Backend; Port 8083 assigned to Expo Mobile Second Brain.
+- **Backend operational verification:** FastAPI API verified operational via isolated runner (`GET /health` and `GET /ready` returned `HTTP 200 OK`). In-memory and persistent PostgreSQL modes verified.
+- **Split-View Reader implemented:** Built dual-pane interactive reader at `apps/web-platform/frontend/app/reader/page.tsx` with dynamic font scaling, dark/light reading modes, AI chapter summary, quick notes capture, and concept tags. Connected to sidebar navigation (`apps/web-platform/frontend/components/layout/sidebar.tsx`). TypeScript typecheck passed (`npx tsc --noEmit`, 0 errors).
+- **Documentation consolidation:** Consolidated 13 phased foundation drafts (`PHASE_13_FOUNDATION.md` through `PHASE_21_FOUNDATION.md`) into `archive/phases/`. Rewrote `ROADMAP.md` in English with 4 prioritized categories.
+- **Production CI:** Run [#38882163315](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/38882163315) passed on revision `a57c804087d725d6b7ce99f988892f245c87fb3d`. Render services are live.
 - Migration `044_restrict_service_managed_brain_soul_youtube.sql` is applied. The application migration registry in `public.cognix_schema_migrations` confirms migrations through `044`; this is distinct from the separate Supabase CLI migration history, which still reports `033`.
 - Migration 044 removes `anon` and `authenticated` table and sequence privileges from `brain_soul_context`, `brain_soul_syntheses`, `youtube_channels`, and `brain_youtube_videos`, and revokes those grants by default for future public tables/sequences.
 - Production database verification shows the expected public schema is present and all current public tables have RLS enabled. User-facing tables have policies; the four service-managed Brain Soul/YouTube tables intentionally have no frontend policies and no `anon`/`authenticated` Data API privileges.

@@ -28,11 +28,19 @@ Remaining release gates are a real production backup → isolated restore → ro
 
 See `CURRENT_STATE.md` for evidence-backed status and next actions, `ROADMAP.md` for strategic scope, and `PROJECT_OVERVIEW.md` for architecture/product boundaries.
 
+## Quick Start & Development Ports
+
+| Component | Target Port / Shell | Startup Command |
+|---|---|---|
+| **Web Studio** | `http://localhost:3002` | `cd apps/web-platform/frontend && npm install && npm run dev -- -p 3002` |
+| **Backend API** | `http://localhost:8003` | `cd apps/web-platform/backend && uvicorn app.main:app --port 8003 --reload` |
+| **Mobile App** | Expo Port `8083` | `cd apps/mobile && npm install && npx expo start --port 8083` |
+
 ## Repository layout
 
-- `apps/web-platform/frontend/` — Next.js web application.
-- `apps/web-platform/backend/` — FastAPI API, worker, migrations and backend tests.
-- `apps/mobile/` — reserved future mobile product surface; it is not a production mobile release.
+- `apps/web-platform/frontend/` — Next.js web application (Port 3002).
+- `apps/web-platform/backend/` — FastAPI API, worker, migrations, and vector embeddings (Port 8003).
+- `apps/mobile/` — React Native / Expo Mobile Second Brain client (Port 8083).
 
 See [docs/REPOSITORY_STRUCTURE.md](docs/REPOSITORY_STRUCTURE.md) for placement rules.
 

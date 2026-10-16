@@ -1,5 +1,18 @@
-# Cognix Brain Vault Mobile
+# 🧠 Cognix Brain Vault Mobile
 
-Expo client foundation for the Brain Vault APIs.
+Personal Knowledge OS & Second Brain mobile client for Cognix Nexus.
 
-Set `EXPO_PUBLIC_COGNIX_API_URL` to the deployed Cognix API before running the app. The first client is intentionally read-focused until the Supabase session handoff is wired.
+## Features
+
+- **⚡ Quick Capture:** Capture ideas, research snippets, quotes, and links on the go with instant tagging (#idea, #research, #todo).
+- **📚 Knowledge Vault:** Browse your ingested book library, chunk counts, and AI summaries.
+- **🎯 Level Up 20 (Flashcards):** Daily spaced repetition cards generated from research and books with interactive answer reveal.
+- **🔒 Encrypted Secret Vault:** PIN-protected biometric storage for sensitive private keys, notes, and strategic plans.
+
+## Quick Start
+
+```bash
+cd apps/mobile
+npm install
+npm run start
+```

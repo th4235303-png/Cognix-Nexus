@@ -53,7 +53,7 @@ export default function ForgotPasswordPage() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="mb-1.5 block text-xs font-medium text-muted-foreground">Email</label>
-                  <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 w-full rounded-lg border border-border/50 bg-background-elevated px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus-glow focus:outline-none transition-all" placeholder="you@logixa.io" />
+                  <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="h-11 w-full rounded-lg border border-border/50 bg-background-elevated px-3.5 text-sm text-foreground placeholder:text-muted-foreground/50 focus-glow focus:outline-none transition-all" placeholder="you@cognix.io" />
                 </div>
                 <button type="submit" disabled={loading} className="btn-glow flex h-11 w-full items-center justify-center gap-2 rounded-lg bg-primary text-sm font-medium text-primary-foreground transition-all hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60">
                   {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <><span>Send reset link</span><ArrowRight className="h-4 w-4" /></>}

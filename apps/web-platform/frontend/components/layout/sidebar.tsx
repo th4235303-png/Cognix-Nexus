@@ -48,6 +48,7 @@ const navSections = [
     label: 'Brain Vault',
     items: [
       { label: 'Book Library', href: '/books', icon: BookOpen },
+      { label: 'Split-View Reader', href: '/reader', icon: FileText },
       { label: 'Knowledge Vault', href: '/knowledge', icon: CheckCircle2 },
       { label: 'Second Brain', href: '/notes', icon: Brain },
       { label: 'Brain Query', href: '/chat', icon: MessageSquare },
@@ -109,7 +110,7 @@ export function Sidebar({
               Cognix Core
             </p>
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              Logixa Ecosystem
+              Brain Vault OS
             </p>
           </div>
         )}
@@ -236,7 +237,7 @@ export function MobileNav({
           <div>
             <p className="text-sm font-semibold text-foreground">Cognix Core</p>
             <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              Logixa Ecosystem
+              Brain Vault OS
             </p>
           </div>
         </div>

@@ -19,10 +19,18 @@ For long books, the product flow is:
 
 Library / Inbox → duplicate gate → AI Reading Room → partial/final distillation → Knowledge Vault → cross-book lessons / derived books.
 
+## Standalone Platform Scope & Ports
+
+| Surface | Platform | Local Development Port |
+|---|---|---|
+| **Web Studio & OS** | Next.js + React + Split-View Reader | `http://localhost:3002` |
+| **Backend API** | FastAPI + In-Memory / PostgreSQL | `http://localhost:8003` |
+| **Mobile Second Brain** | React Native / Expo (`apps/mobile`) | Expo Metro `8083` |
+
 ## System architecture
 
-- Frontend: Next.js + React + TypeScript + Tailwind CSS.
-- API: FastAPI.
+- Frontend: Next.js + React + TypeScript + Tailwind CSS (Port 3002) with interactive Split-View Reader (`/reader`).
+- API: FastAPI (Port 8003).
 - Worker: dedicated Python processing worker.
 - Persistence/Auth: PostgreSQL / Supabase, with Supabase Auth and backend JWT verification.
 - Vector retrieval: PostgreSQL/pgvector.

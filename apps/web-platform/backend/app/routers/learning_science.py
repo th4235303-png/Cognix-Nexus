@@ -238,3 +238,80 @@ def review_path_item(item_id: str, payload: PathItemReview, request: Request) ->
             detail="Path item not found, not owned by you, or already reviewed",
         )
     return row
+
+
+class QuizGenerateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=10)
+    max_cards: int = Field(default=5, ge=1, le=20)
+    notify_telegram: bool = False
+
+
+class QuizReviewRequest(BaseModel):
+    repetition: int = Field(default=0, ge=0)
+    interval_days: int = Field(default=1, ge=1)
+    ease_factor: float = Field(default=2.5, ge=1.3)
+    quality: int = Field(ge=0, le=5)
+
+
+class ConceptMapRequest(BaseModel):
+    topic: str = Field(min_length=1, max_length=200)
+    content: str = Field(min_length=10)
+
+
+@router.post("/quiz/generate")
+async def generate_quiz_endpoint(payload: QuizGenerateRequest):
+    """Auto-generate SM-2 active recall flashcards from notes or learning material."""
+    from app.services.spaced_repetition_quiz import SpacedRepetitionQuizService
+    from app.services.telegram import send_telegram_message
+
+    cards = SpacedRepetitionQuizService.generate_quiz_from_notes(
+        title=payload.title,
+        content=payload.content,
+        max_cards=payload.max_cards,
+    )
+
+    if payload.notify_telegram and cards:
+        tg_data = SpacedRepetitionQuizService.format_telegram_quiz(cards[0])
+        await send_telegram_message(
+            text=tg_data["text"],
+            inline_keyboard=tg_data["inline_keyboard"],
+        )
+
+    return {
+        "status": "success",
+        "title": payload.title,
+        "count": len(cards),
+        "cards": cards,
+    }
+
+
+@router.post("/quiz/review")
+def review_quiz_card(payload: QuizReviewRequest):
+    """Compute updated SM-2 interval and ease factor after flashcard recall."""
+    from app.services.spaced_repetition_quiz import SpacedRepetitionQuizService
+
+    return SpacedRepetitionQuizService.calculate_sm2(
+        repetition=payload.repetition,
+        interval_days=payload.interval_days,
+        ease_factor=payload.ease_factor,
+        quality=payload.quality,
+    )
+
+
+@router.post("/concept-map")
+def generate_concept_map_endpoint(payload: ConceptMapRequest):
+    """Generate interactive Mermaid mindmap diagram from note content."""
+    from app.services.concept_graph import ConceptGraphService
+
+    mermaid_code = ConceptGraphService.generate_mermaid_mindmap(
+        topic=payload.topic,
+        content=payload.content,
+    )
+
+    return {
+        "status": "success",
+        "topic": payload.topic,
+        "mermaid_syntax": mermaid_code,
+    }
+

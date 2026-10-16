@@ -67,8 +67,15 @@ If a document claims current state, it must point to canonical status/evidence. 
 | Google Drive | export/backup | CURRENT_STATE + deployment/storage docs |
 | OpenAI-compatible provider | AI | CURRENT_STATE + AI/RAG docs |
 | Sentry | monitoring | CURRENT_STATE |
-| Expo/EAS | mobile | CURRENT_STATE |
 | Optional backlog | Upstash/PostHog/Doppler/k6/Better Stack/Mintlify/Cloudflare WAF/R2/vector/search/orchestration | ROADMAP |
+
+### 5.1 Local Development Ports & Verification
+
+- **Web Studio (Next.js):** `cd apps/web-platform/frontend && npm install && npm run dev -- -p 3002`
+- **Backend API (FastAPI):** `cd apps/web-platform/backend && uvicorn app.main:app --port 8003 --reload`
+- **Mobile Second Brain (Expo):** `cd apps/mobile && npx expo start --port 8083`
+- **Health Verification:** `curl http://localhost:8003/health` & `curl http://localhost:8003/ready` (HTTP 200)
+- **Frontend Typecheck:** `cd apps/web-platform/frontend && npx tsc --noEmit` (Passing)
 
 ## 6. Definition of done
 - Correct canonical owner exists.

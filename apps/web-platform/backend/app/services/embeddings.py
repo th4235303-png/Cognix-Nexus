@@ -25,6 +25,13 @@ class EmbeddingRoute:
 # key is present and it supports the database's fixed vector dimension.
 _DEFAULT_ROUTES: tuple[EmbeddingRoute, ...] = (
     EmbeddingRoute(
+        "openai",
+        "OPENAI_API_KEY",
+        "https://api.openai.com/v1/embeddings",
+        "text-embedding-3-small",
+        (1536,),
+    ),
+    EmbeddingRoute(
         "voyage",
         "VOYAGE_API_KEY",
         "https://api.voyageai.com/v1/embeddings",

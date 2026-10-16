@@ -68,15 +68,9 @@ if sentry_sdk and os.getenv("SENTRY_DSN", "").strip():
         traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0.0")),
     )
 
-app = FastAPI(
-    title="Cognix Nexus API",
-    version=API_VERSION,
-    description="Research intelligence and personal knowledge OS API for Cognix Nexus.",
-)
 
-
-@app.on_event("startup")
-def validate_production_configuration() -> None:
+def _startup() -> None:
+    """Validate production configuration and initialize database on startup."""
     environment = os.getenv("COGNIX_ENV", "").strip().lower()
     if environment == "production":
         if not os.getenv("DATABASE_URL", "").strip():
@@ -95,10 +89,29 @@ def validate_production_configuration() -> None:
             logger.warning("brain soul seed skipped — migration may not be applied yet")
 
 
-@app.on_event("shutdown")
-def close_database_pool() -> None:
+def _shutdown() -> None:
+    """Close database connection pool on shutdown."""
     if store.database is not None:
         store.database.close()
+
+
+from contextlib import asynccontextmanager as _asynccontextmanager
+
+
+@_asynccontextmanager
+async def _lifespan(application: FastAPI):
+    """Modern lifespan handler replacing deprecated @app.on_event."""
+    _startup()
+    yield
+    _shutdown()
+
+
+app = FastAPI(
+    title="Cognix Nexus API",
+    version=API_VERSION,
+    description="Research intelligence and personal knowledge OS API for Cognix Nexus.",
+    lifespan=_lifespan,
+)
 
 
 @app.exception_handler(Exception)
