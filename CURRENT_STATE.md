@@ -1,144 +1,80 @@
-# Current verification update — 2026-10-15 07:10 UTC
+# Current verification update — 2026-10-16
 
 This update supersedes conflicting historical status below.
 
-- Current main revision: `54be85aa883b589b392d14279ea73e830951a522`.
-- Cognix Core CI and CodeQL are green on this revision. Backend CI confirms migration smoke (all 41 registered migrations), unit/integration tests, Book Intelligence synthetic acceptance, backup/isolated restore drill, coverage gate, and dependency audit all passed.
-- Render API, worker and frontend deployments for this revision are all LIVE. API logs show repeated `GET /health 200 OK`; worker logs show `worker_started persistence=postgresql database_configured=True`.
-- Supabase `public.cognix_schema_migrations` records migrations 034–041 as applied, including `041_phase22_book_acceptance_schema.sql`.
-- **Release remains BLOCKED pending final production verification.** A current post-deploy `/ready` response has not yet been captured; safe live environment-variable name reconciliation, public frontend/auth/API smoke, real provider/Google Drive acceptance, controlled 9-category/170-file Book Intelligence acceptance, accessibility/performance/apps/mobile/Sentry/GDPR and final release smoke remain outstanding. Do not activate Phases 13–21 or tag a release before these gates pass.
+- Current `main` revision: `19954526b251fd407618aef84c3d03493af7a903`.
+- Branch cleanup is complete: only `main` remains; stale Dependabot branches/PRs were merged when safe and closed when not safe to merge.
+- Safe dependency updates now on `main` include Pillow 12.3.0, PyJWT 2.15.1, python-json-logger 4.2.0 and psycopg 3.3.6.
+- Next.js 16 and the remaining stale Radix/cmdk/uvicorn Dependabot updates were intentionally closed rather than force-merged. They can be reconsidered as fresh updates against current `main` when deliberately tested.
+- A repository compatibility symlink `web-platform -> apps/web-platform` was added because the connected Render services still have legacy `web-platform/...` paths configured. This is a compatibility bridge, not the canonical source layout.
+- Render services currently use legacy root/build paths (`web-platform/backend` and `web-platform/frontend`) while the repository's canonical paths are `apps/web-platform/backend` and `apps/web-platform/frontend`. The compatibility symlink is intended to unblock the existing services; the Render service configuration should still be migrated to the canonical paths when the connected Render control surface permits it.
+- Render API, worker and frontend deployments for the previous known-good revision were live, but the API deployment for the reorganized revision failed before the compatibility bridge was added. A fresh post-change deployment must be observed before marking production healthy.
+- Release remains **BLOCKED pending final production verification**. `/ready`, safe live environment-variable-name reconciliation, public frontend/auth/API smoke, real provider/Google Drive acceptance, controlled 9-category/170-file Book Intelligence acceptance, accessibility/performance/mobile/Sentry/GDPR and final release smoke remain outstanding.
 - Supabase Auth leaked-password protection remains a security WARN pending an explicit enable/exception decision. INFO-level unused indexes must be reviewed, not automatically deleted.
-- Live service URLs: frontend https://cognix-nexus-frontend.onrender.com ; worker https://cognix-core-worker-runtime.onrender.com. The API public URL should be taken from Render service configuration rather than guessed.
 
----
+## Repository
 
-# Cognix Nexus — Current State
+- Canonical active application paths are `apps/web-platform/frontend` and `apps/web-platform/backend`.
+- `apps/mobile` is the reserved mobile product surface.
+- `archive/legacy` is historical/reference material and is not active runtime code.
+- `docs/REPOSITORY_STRUCTURE.md` documents the canonical layout; the repository Git tree is the authoritative path inventory.
 
-## Latest verified audit — 2026-10-15
-
-This section supersedes older live-status statements below where they conflict. Historical evidence remains useful only when explicitly labelled historical.
-
-### Repository
-
-- Latest main commit observed after this audit: `40558ee3f6bed1c1d2dde79c80942754a6353534` (`fix(auth): restore current owner dependency for media and release routers`).
-- The latest fix restores `get_current_owner_id()` in `app.auth`, matching the existing Phase 18/19 media router and Phase 20/21 release-evidence router imports that caused the latest API startup failure.
-- Phase 13–21 runtime implementation is present in the repository. The latest documented implementation set reports 243/243 local deterministic tests across Ph13–21, but production activation remains gated.
-- No `vercel.json` exists and repository search found no Vercel references. Vercel is therefore **not verified as a deployment target**.
-
-### Render
+## Render
 
 - Connected workspace: `Cognix Core`.
-- Live services: `Cognix-Core` API, `cognix-core-worker-runtime`, and `cognix-nexus-frontend`.
-- API service configuration: Python, `apps/web-platform/backend`, `pip install -r requirements.lock`, `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, `/health`, auto-deploy on commit, Singapore region.
-- Worker configuration: Python, `apps/web-platform/backend`, same locked build, `python -m app.worker`, `/health`, auto-deploy on commit, Singapore region.
-- Frontend configuration: Node, repository root, build `cd apps/web-platform/frontend && npm ci && npm run build`, start `cd apps/web-platform/frontend && npm start`, Singapore region.
-- Worker deploy for commit `5067c12b3235a87b2881f320350706b54ee0b5a2` is **LIVE**.
-- The matching API deploy failed after a successful build because `media_boundary.py` and `release_evidence.py` imported `get_current_owner_id`, which was absent from `app.auth`. The failure is now fixed in main commit `40558ee3...`; a new Render API deploy still needs to be observed before marking the runtime healthy.
-- Render currently hosts the frontend as well. This supersedes the older documentation assumption that Netlify was the active frontend host.
-- Live environment-variable enumeration is not available through the connected Render action surface; do not claim blueprint/live env parity until an inventory is captured.
+- Live services: `Cognix-Core`, `cognix-core-worker-runtime`, and `cognix-nexus-frontend`.
+- API URL: `https://cognix-core-ypak.onrender.com`.
+- Frontend URL: `https://cognix-nexus-frontend.onrender.com`.
+- Worker URL: `https://cognix-core-worker-runtime.onrender.com`.
+- All three services auto-deploy from `main`.
+- The connected Render service configuration still reports legacy paths. The repository compatibility symlink was added so those paths resolve to the canonical `apps/web-platform` tree.
+- Do not call production PASS until a new deploy from revision `19954526b251fd407618aef84c3d03493af7a903` is observed and `/health` + `/ready` are externally verified.
 
-### Supabase
+## Supabase
 
-- Production project: `Cognix-Core` (`jarfusheiqkfcbeljvhj`), region `ap-southeast-1`, status `ACTIVE_HEALTHY`, PostgreSQL 17.11.
-- Live migration head: `033_rls_policy_initplan_indexes` (`20261012034910`).
-- Security advisor: one WARN remains — Supabase Auth leaked-password protection is disabled.
-- Performance advisor: INFO-level unused-index findings remain (69 at audit time). No critical performance lint was reported by the connected advisor.
-- Restore-drill project `Cognix-Core-restore-drill` is also `ACTIVE_HEALTHY`.
-- Do not remove the unused indexes automatically. Review query plans/usage and remove only after confirming they are genuinely unnecessary.
+- Production project: `Cognix-Core` (`jarfusheiqkfcbeljvhj`), region `ap-southeast-1`, status `ACTIVE_HEALTHY`.
+- Migration 033 was the previously verified production baseline; repository migrations now extend through 043, so production migration promotion must be deliberate and evidence-backed.
+- Security advisor: leaked-password protection remains a WARN.
+- Performance advisor: unused-index findings remain informational; no automatic deletion.
+- Restore-drill project remains a dedicated verification target.
 
-### Cloudflare
+## Remaining work — required before release
 
-- One Cloudflare account is connected.
-- Current account audit returned **0 zones, 0 Workers scripts, and 0 Pages projects**.
-- R2 is not enabled; the Cloudflare API explicitly reports that R2 must first be enabled in the dashboard.
-- Therefore Cloudflare is currently **not an active production dependency** for the Cognix deployment path. Existing backend R2/Cloudflare adapter code remains compatibility/optional infrastructure until a real zone or service is provisioned.
+1. Observe a successful Render deploy for the current `main` revision.
+2. Capture external `/health` and `/ready` evidence from the intended public API.
+3. Confirm worker health/logs on the matching revision.
+4. Reconcile live environment-variable **names** against code, `render.yaml`, CI, recovery and test workflows without exposing secret values.
+5. Confirm production frontend domain/TLS, API URL, Supabase public configuration and auth redirect URLs.
+6. Decide whether to migrate the Render dashboard service paths from the compatibility bridge to the canonical `apps/web-platform/...` paths.
+7. Decide whether Vercel/Netlify remain intentionally unused; Render is the currently observed frontend host.
+8. Review Supabase leaked-password protection and document PASS/exception.
+9. Review unused indexes using actual query-plan/usage evidence; delete none automatically.
+10. Complete final backup → isolated restore → rollback evidence.
+11. Re-run Cloudinary fresh round-trip evidence if required by release policy.
+12. Prove Google Drive with a real export, retry and idempotency check.
+13. Re-run Supabase Storage/B2/provider/RAG evidence on the final revision where required.
+14. Run controlled 9-category / 170-file Book Intelligence acceptance.
+15. Run authenticated Playwright production smoke.
+16. Complete WCAG keyboard/screen-reader/responsive checks.
+17. Capture Lighthouse/performance baseline.
+18. Verify Sentry live ingestion.
+19. Run mobile EAS/device smoke.
+20. Run GDPR owner-data export/delete and cleanup verification.
+21. Complete final production smoke on the exact release revision.
+22. Obtain release approval and tag only after all required gates are green.
+23. Only then activate Phases 13–21 one controlled phase at a time with evidence.
 
-### Other providers / release gates
-
-- Cloudinary integration exists in the application, but a fresh asset round-trip was not re-run during this audit because the available Cloudinary list surface returned incompatible metadata-schema responses. Do not convert older evidence into a fresh 2026-10-15 PASS.
-- Google Drive export remains an external acceptance gate and must be proven with a real export plus retry/idempotency verification on the intended OAuth account/folder.
-- Supabase Storage/B2/provider/RAG checks have historical passing evidence, but release policy requires fresh evidence when the final revision/configuration changes.
-
-## 1. Release status
-
-**BLOCKED — pre-final-production-verification.**
-
-The immediate Render API startup defect has been identified and patched, but the patch has not yet been deployed and re-verified. Final smoke, tagging and Phase 13–21 production activation remain blocked until the full release gate is green.
-
-## 2. Completed / code-ready
-
-- Research foundation and human-review lifecycle.
-- Brain Vault and Book Intelligence foundations through Phase 1–12.
-- Durable processing, evidence lineage, owner isolation, RRF retrieval and export foundations.
-- Phase 13–21 runtime implementation and deterministic test contracts are present in the repository.
-- Supabase migration 033 is live and targeted RLS/initplan/index findings from the earlier audit are resolved.
-- Render API, worker and frontend services exist with commit-triggered deployment.
-- Provider-key-only AI routing and fixed 1536-dimension production embedding compatibility are implemented.
-- Latest API startup defect caused by a missing `get_current_owner_id` auth dependency is patched in main.
-
-## 3. Remaining work — required before release
-
-### A. Deploy and verify the Render API fix first
-
-1. Let Render build/deploy main commit `40558ee3f6bed1c1d2dde79c80942754a6353534`.
-2. Confirm the API starts without import errors.
-3. Capture `/health` and `/ready` external evidence from the intended public API.
-4. Confirm worker health/logs after the matching API revision is live.
-5. Capture a safe live environment-variable **name** inventory and reconcile it with code, `render.yaml`, CI, recovery and test workflows. Never print secret values.
-
-### B. Frontend hosting reconciliation
-
-6. Treat Render `cognix-nexus-frontend` as the current frontend host unless the owner intentionally chooses another platform.
-7. Verify production domain, TLS, public API URL, Supabase public configuration and auth redirect URLs on the actual frontend host.
-8. If Vercel is intended instead, create/confirm the Vercel project and migrate the deployment configuration deliberately; no current repository/account evidence establishes Vercel today.
-9. Remove or archive stale Netlify-only deployment instructions only after confirming no operational dependency remains.
-
-### C. Supabase
-
-10. Keep migration head 033 as the current production baseline unless a reviewed migration is intentionally promoted.
-11. Decide whether to enable leaked-password protection. The current advisor still reports it disabled; if the current plan/settings cannot enable it, document the limitation rather than claiming PASS.
-12. Review the 69 INFO unused-index findings; remove none automatically.
-13. Run a fresh database readiness/advisor capture after any schema change.
-14. Complete the isolated restore/rollback drill against the dedicated restore target and record cleanup.
-
-### D. Provider acceptance
-
-15. Re-run provider/storage acceptance on the intended release revision.
-16. Prove Google Drive with a real export, retry and idempotency check using the correct OAuth account and root folder.
-17. Re-run Cloudinary write/read/checksum evidence if release policy requires fresh proof.
-18. Re-run Supabase Storage and B2 write/read/checksum evidence if the final release revision changed the relevant code/configuration.
-19. Verify Cohere 1536-dimension embedding production compatibility and RAG/citation behavior on the final revision.
-
-### E. Product/release gates
-
-20. Run controlled Book Intelligence acceptance: 9 categories / 170-file corpus, duplicate fingerprint, checkpoint/resume, durable ledger, distillation, lesson packs, derived-book lineage and export.
-21. Run authenticated Playwright production smoke across the intended pages and critical flows.
-22. Complete WCAG keyboard, screen-reader, responsive and accessibility verification.
-23. Capture Lighthouse/performance baseline and investigate regressions.
-24. Run Sentry live ingestion verification.
-25. Run mobile EAS/device smoke.
-26. Run GDPR owner-data export/delete and cleanup verification.
-27. Run production backup → isolated restore → rollback drill.
-28. Complete grouped manual verification last.
-29. Run final production smoke against the exact release revision.
-30. Obtain release approval and tag only after all required gates are green.
-
-### F. Phase 13–21 activation
-
-31. Do **not** activate Phase 13–21 production runtime merely because the code exists.
-32. After release approval, activate Phase 13 → 14 → 15 → 16 → 17 → 18 → 19 → 20 → 21 one controlled phase at a time, with its own evidence.
-
-## 4. Explicitly deferred / optional
+## Explicitly deferred / optional
 
 - Paid LLM activation.
 - Google Drive re-authorization/account-owner consent if required by the final OAuth flow.
-- Cloudflare Workers/Pages/R2 production adoption; currently no active Cloudflare resource is present.
-- Vercel adoption; currently no repository or connected-account evidence.
-- R2 as a production storage provider unless scale/requirements justify it and the resource is explicitly provisioned.
+- Cloudflare Workers/Pages/R2 production adoption; no active Cloudflare production resource is currently evidenced.
+- Vercel adoption; no current repository/account evidence establishes Vercel as an active target.
+- R2 production adoption unless explicitly provisioned and justified.
 - Upstash Redis/QStash expansion.
 - PostHog, Doppler/Infisical, k6/Artillery, Better Stack, Mintlify/Docusaurus and dedicated search/vector infrastructure.
 
-## 5. Source-of-truth rules
+## Source-of-truth rules
 
 - `CURRENT_STATE.md` owns current evidence, blockers and next actions.
 - `ROADMAP.md` owns strategic phases, acceptance, deferred scope and backlog.
@@ -146,5 +82,5 @@ The immediate Render API startup defect has been identified and patched, but the
 - `docs/DEPLOYMENT.md` owns deployment configuration and release procedure.
 - `docs/STORAGE.md` owns provider roles and storage routing.
 - Historical documents under `archive/legacy/` are not current operational truth.
-- Static code, configured secrets, prepared contracts or a live deployment are not production PASS by themselves.
-- Record only observed results, including revision/time/cleanup status; never record secret values.
+- A configured service, code contract, test result or deployment artifact is not production PASS by itself; release PASS requires observed evidence for the final revision/configuration.
+- Never record secret values.
