@@ -8,10 +8,18 @@ services:
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
+      - key: COGNIX_ENV
+        value: "production"
+      - key: DEBUG
+        value: "false"
+      - key: COGNIX_DEV_MODE
+        value: "false"
+      - key: COGNIX_LOG_LEVEL
+        value: "INFO"
       - key: COGNIX_CORS_ORIGINS
-        sync: false
+        value: "https://cognix-nexus-frontend.onrender.com"
       - key: COGNIX_ALLOWED_HOSTS
-        sync: false
+        value: "cognix-core-ypak.onrender.com,cognix-nexus-frontend.onrender.com"
       - key: COGNIX_RATE_LIMIT_PER_MINUTE
         value: "120"
       - key: COGNIX_RATE_LIMIT_MAX_IDENTITIES
@@ -23,11 +31,11 @@ services:
       - key: COGNIX_AUTH_REQUIRED
         value: "true"
       - key: COGNIX_JWT_JWKS_URL
-        sync: false
+        value: "https://jarfusheiqkfcbeljvhj.supabase.co/auth/v1/.well-known/jwks.json"
       - key: COGNIX_JWT_ISSUER
-        sync: false
+        value: "https://jarfusheiqkfcbeljvhj.supabase.co/auth/v1"
       - key: COGNIX_JWT_AUDIENCE
-        sync: false
+        value: "authenticated"
       - key: COGNIX_PROCESSING_PROVIDER
         value: "ai"
       - key: GEMINI_API_KEY
@@ -81,7 +89,7 @@ services:
       - key: COGNIX_B2_REGION
         value: "eu-central-003"
       - key: SUPABASE_URL
-        sync: false
+        value: "https://jarfusheiqkfcbeljvhj.supabase.co"
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: COGNIX_SUPABASE_STORAGE_BUCKET
@@ -91,13 +99,21 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        sync: false
+        value: "https://cognix-core-ypak.onrender.com/integrations/google-drive/callback"
       - key: GOOGLE_REFRESH_TOKEN
         sync: false
       - key: GOOGLE_DRIVE_ROOT_FOLDER_ID
         sync: false
       - key: SENTRY_DSN
         sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: "production"
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: "0.2"
+      - key: COGNIX_OCR_TESSERACT_CONFIG
+        value: "--psm 3"
+      - key: TELEGRAM_ENABLED
+        value: "false"
 
   - type: web
     name: cognix-core-worker-runtime
@@ -108,6 +124,14 @@ services:
     startCommand: python -m app.worker
     healthCheckPath: /health
     envVars:
+      - key: COGNIX_ENV
+        value: "production"
+      - key: DEBUG
+        value: "false"
+      - key: COGNIX_DEV_MODE
+        value: "false"
+      - key: COGNIX_LOG_LEVEL
+        value: "INFO"
       - key: DATABASE_URL
         sync: false
       - key: COGNIX_REQUIRE_DATABASE
@@ -152,6 +176,8 @@ services:
         value: "raw"
       - key: CLOUDINARY_DELIVERY_TYPE
         value: "authenticated"
+      - key: CLOUDINARY_MAX_RAW_BYTES
+        value: "10485760"
       - key: COGNIX_B2_ENDPOINT
         sync: false
       - key: COGNIX_B2_BUCKET
@@ -163,7 +189,7 @@ services:
       - key: COGNIX_B2_REGION
         value: "eu-central-003"
       - key: SUPABASE_URL
-        sync: false
+        value: "https://jarfusheiqkfcbeljvhj.supabase.co"
       - key: SUPABASE_SERVICE_ROLE_KEY
         sync: false
       - key: COGNIX_SUPABASE_STORAGE_BUCKET
@@ -175,6 +201,16 @@ services:
       - key: GOOGLE_CLIENT_SECRET
         sync: false
       - key: GOOGLE_REDIRECT_URI
-        sync: false
+        value: "https://cognix-core-ypak.onrender.com/integrations/google-drive/callback"
       - key: GOOGLE_REFRESH_TOKEN
         sync: false
+      - key: GOOGLE_DRIVE_ROOT_FOLDER_ID
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_ENVIRONMENT
+        value: "production"
+      - key: SENTRY_TRACES_SAMPLE_RATE
+        value: "0.2"
+      - key: COGNIX_OCR_TESSERACT_CONFIG
+        value: "--psm 3"
