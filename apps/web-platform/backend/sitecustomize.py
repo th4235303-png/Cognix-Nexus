@@ -8,10 +8,13 @@ through a transaction pooler.
 
 from __future__ import annotations
 
-from psycopg_pool import ConnectionPool as _ConnectionPool
+import psycopg_pool
 
 
-class ConnectionPool(_ConnectionPool):
+_ConnectionPool = psycopg_pool.ConnectionPool
+
+
+class _CognixConnectionPool(_ConnectionPool):
     """ConnectionPool with prepared statements disabled by default."""
 
     def __init__(self, *args, **kwargs):
@@ -19,3 +22,6 @@ class ConnectionPool(_ConnectionPool):
         pool_kwargs.setdefault("prepare_threshold", None)
         kwargs["kwargs"] = pool_kwargs
         super().__init__(*args, **kwargs)
+
+
+psycopg_pool.ConnectionPool = _CognixConnectionPool
