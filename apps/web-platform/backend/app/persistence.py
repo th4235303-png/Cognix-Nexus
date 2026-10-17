@@ -24,7 +24,7 @@ class Database:
             conninfo=self.dsn,
             min_size=max(1, int(os.getenv("COGNIX_DB_POOL_MIN", "1"))),
             max_size=max(1, int(os.getenv("COGNIX_DB_POOL_MAX", "10"))),
-            kwargs={"row_factory": dict_row, "options": "-c search_path=public,extensions"},
+            kwargs={"row_factory": dict_row, "options": "-c search_path=public,extensions", "prepare_threshold": None},
             open=False,
         )
         self._pool.open(wait=True)

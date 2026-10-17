@@ -61,6 +61,18 @@ def _cors_origins() -> list[str]:
     return configured or list(DEFAULT_CORS_ORIGINS)
 
 
+def validate_production_configuration() -> None:
+    """Validate mandatory production configuration without starting the app."""
+    environment = os.getenv("COGNIX_ENV", "").strip().lower()
+    if environment != "production":
+        return
+    if not os.getenv("DATABASE_URL", "").strip():
+        raise RuntimeError("DATABASE_URL must be set in production")
+    if not auth_required():
+        raise RuntimeError("Authentication must be enabled in production; set COGNIX_AUTH_REQUIRED=true")
+    _cors_origins()
+
+
 if sentry_sdk and os.getenv("SENTRY_DSN", "").strip():
     sentry_sdk.init(
         dsn=os.environ["SENTRY_DSN"],
@@ -71,12 +83,7 @@ if sentry_sdk and os.getenv("SENTRY_DSN", "").strip():
 
 def _startup() -> None:
     """Validate production configuration and initialize database on startup."""
-    environment = os.getenv("COGNIX_ENV", "").strip().lower()
-    if environment == "production":
-        if not os.getenv("DATABASE_URL", "").strip():
-            raise RuntimeError("DATABASE_URL must be set in production")
-        if not auth_required():
-            raise RuntimeError("Authentication must be enabled in production; set COGNIX_AUTH_REQUIRED=true")
+    validate_production_configuration()
     if store.database is not None:
         try:
             store.initialize()
