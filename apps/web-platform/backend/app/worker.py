@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import sitecustomize  # noqa: F401,E402 — apply psycopg pooler compatibility before app imports
 import asyncio
 import logging
 import os
