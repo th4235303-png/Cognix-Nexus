@@ -1,3 +1,16 @@
+# Authoritative Release Checkpoint — 2026-10-17 (Owner-Approved Conditional Production Sign-Off)
+
+**Release Decision: Production Ready — Conditional Sign-Off (Owner-Approved Launch with Explicitly Deferred Post-Launch Work)**
+
+- **Operational Health:** FastAPI Backend API (`GET /health` = 200, `GET /ready` = 200 with persistent PostgreSQL reachable) and Next.js Web OS Frontend (`GET /` = 200) verified live.
+- **Database Security & RLS:** Supabase `Cognix-Core` (`jarfusheiqkfcbeljvhj`, ap-southeast-1) has RLS enabled across all public tables. Migration 044 applied in `public.cognix_schema_migrations` (44 ledger records), enforcing service-role-only boundaries on Brain Soul and YouTube tracker tables. Leaked-password protection is explicitly accepted/deferred under free-tier policy.
+- **AI Routing:** Multi-provider sequential failover operational (Gemini → Groq → OpenRouter → Mistral → Cohere → Cloudflare → Hugging Face).
+- **Post-Launch Qualifications & Backlog:**
+  1. Google Drive fresh OAuth re-authorization and two-way sync designated as client action / post-launch work.
+  2. Worker runtime stability (`cognix-core-worker-runtime`) monitored post-launch.
+
+---
+
 # Current verification update — 2026-10-16 (Latest Operational Verification)
 
 This section supersedes conflicting historical status below. Use the GitHub `main` branch head for the current revision.
