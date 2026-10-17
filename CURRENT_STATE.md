@@ -85,3 +85,19 @@ This section supersedes conflicting historical status below. Use the GitHub `mai
 - Historical documents under `archive/legacy/` are not current operational truth.
 - A configured service, code contract, test result or deployment artifact is not production PASS by itself; release PASS requires observed evidence for the final revision/configuration.
 - Never record secret values.
+
+
+## Production verification update — 2026-10-17 UTC
+
+This update supersedes earlier statements that the worker compatibility fix was already runtime-verified.
+
+- **Latest CI:** Production CI/CD Pipeline run [#39051755391](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/39051755391) passed on commit `82604e9461480dafb5462d25b61eebed774c98eb`. Backend lint/compile/migration preflight/tests and frontend production build all passed.
+- **Worker root cause:** Render logs repeatedly showed `psycopg.errors.DuplicatePreparedStatement: prepared statement "_pg3_0" already exists` when the worker loaded `sources`. The prior deployment at commit `f673ae08c6f8d44ecc5868b19d94e7026a12a64a` continued to fail. The latest code explicitly imports `sitecustomize` at the top of `app/worker.py` before application imports, so the pooler compatibility default is applied before `app.persistence` imports `ConnectionPool`.
+- **Worker runtime status:** NOT VERIFIED / BLOCKER until a deployment containing commit `82604e9461480dafb5462d25b61eebed774c98eb` is confirmed and subsequent logs show stable polling without prepared-statement failures. Historical failure events must not be treated as proof of current failure after the new deploy, but the new revision must be observed before PASS.
+- **API and frontend:** Previously observed live `/health` 200, `/ready` 200 with PostgreSQL reachable, frontend root 200. These checks do not prove worker stability or authenticated end-to-end flows.
+- **API keys and external providers:** No secret values are recorded. A key being present/configured is not proof of validity. Provider-by-provider live requests are still required for Gemini, Groq, Mistral, Cohere, NVIDIA NIM, OpenRouter and embedding providers; storage upload/signed-URL round trips for Supabase Storage, Backblaze B2 and Cloudinary; and live Upstash/Telegram checks. Do not mark these PASS without fresh runtime evidence.
+- **Database security:** Migration 044 and RLS/access boundaries remain documented as verified against the application migration ledger and current schema evidence. Supabase CLI migration history still reports 033 and should be reconciled separately rather than misrepresented as 044.
+- **Explicitly accepted policy:** Supabase Auth leaked-password protection remains owner-accepted/deferred on the current free-tier plan and is not a release blocker.
+- **Owner/client action:** Google Drive export requires fresh account-owner OAuth consent and a real export/retry/idempotency check.
+- **Other outstanding release gates:** Production backup/isolated restore/rollback drill; authenticated production smoke with a dedicated test account; live environment-variable name reconciliation without exposing values; RAG/book intelligence corpus acceptance; Sentry ingestion; mobile device/EAS smoke; GDPR export/delete verification; accessibility/performance checks; and final smoke on the exact release revision.
+- **Current release verdict:** CONDITIONAL / NOT FULLY GREEN. CI is green, but do not issue unconditional production sign-off until the worker runtime is stable and the applicable live integration checks above are evidenced.
