@@ -1,205 +1,198 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
   <defs>
-    <!-- Deep Cosmic Ambient Glow -->
-    <radialGradient id="cnBackdropGlow" cx="50%" cy="50%" r="50%">
+    <!-- Ambient Neural Backdrop Glow -->
+    <radialGradient id="brainAura" cx="50%" cy="50%" r="50%">
       <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.25" />
-      <stop offset="45%" stop-color="#0284c7" stop-opacity="0.12" />
-      <stop offset="75%" stop-color="#1e1b4b" stop-opacity="0.05" />
+      <stop offset="50%" stop-color="#0284c7" stop-opacity="0.1" />
       <stop offset="100%" stop-color="#020617" stop-opacity="0" />
     </radialGradient>
 
-    <!-- Left Hemisphere: Electric Cyan to Vivid Cobalt -->
-    <linearGradient id="hemLeftGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+    <!-- Left Hemisphere Gradient -->
+    <linearGradient id="brainGradLeft" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#67e8f9" />
-      <stop offset="35%" stop-color="#00e5ff" />
-      <stop offset="75%" stop-color="#0284c7" />
+      <stop offset="40%" stop-color="#00e5ff" />
+      <stop offset="85%" stop-color="#0284c7" />
       <stop offset="100%" stop-color="#0f172a" />
     </linearGradient>
 
-    <!-- Right Hemisphere: Luminescent Aqua to Neon Indigo -->
-    <linearGradient id="hemRightGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+    <!-- Right Hemisphere Gradient -->
+    <linearGradient id="brainGradRight" x1="100%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#a5f3fc" />
-      <stop offset="35%" stop-color="#38bdf8" />
-      <stop offset="75%" stop-color="#3b82f6" />
+      <stop offset="40%" stop-color="#38bdf8" />
+      <stop offset="85%" stop-color="#2563eb" />
       <stop offset="100%" stop-color="#1e1b4b" />
     </linearGradient>
 
-    <!-- Synapse Ribbon Glow Gradients -->
-    <linearGradient id="synapseGlow1" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#00f2fe" />
-      <stop offset="50%" stop-color="#ffffff" />
+    <!-- Synapse Neon Glow -->
+    <linearGradient id="synapseGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="50%" stop-color="#00f2fe" />
       <stop offset="100%" stop-color="#38bdf8" />
     </linearGradient>
 
-    <linearGradient id="synapseGlow2" x1="0%" y1="100%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#3b82f6" />
-      <stop offset="50%" stop-color="#60a5fa" />
-      <stop offset="100%" stop-color="#a5f3fc" />
-    </linearGradient>
-
-    <!-- Core Nexus Quantum Glow -->
-    <linearGradient id="coreNexusGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#ffffff" />
-      <stop offset="50%" stop-color="#38bdf8" />
-      <stop offset="100%" stop-color="#0284c7" />
-    </linearGradient>
-
-    <!-- Precision Glow Filters -->
-    <filter id="brainGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="6" result="blur" />
+    <!-- Filters for Neon Glow -->
+    <filter id="neonFilter" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
 
-    <filter id="coreSparkle" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="10" result="blur" />
+    <filter id="nodeSparkle" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
-    </filter>
-
-    <!-- Bevel Shading Filter -->
-    <filter id="dropBevel" x="-10%" y="-10%" width="120%" height="120%">
-      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.6" />
     </filter>
   </defs>
 
-  <!-- Ambient Digital Halo -->
-  <circle cx="250" cy="250" r="225" fill="url(#cnBackdropGlow)" />
+  <!-- Ambient Glow Behind Brain -->
+  <circle cx="250" cy="250" r="210" fill="url(#brainAura)" />
 
-  <!-- Outer Cybernetic Neural Halo Track -->
-  <circle cx="250" cy="250" r="215" fill="none" stroke="rgba(0, 229, 255, 0.2)" stroke-width="1.5" stroke-dasharray="3 8" />
-  <circle cx="250" cy="250" r="195" fill="none" stroke="rgba(56, 189, 248, 0.3)" stroke-width="2" />
+  <!-- Subtle Neural Orbit Ring -->
+  <ellipse cx="250" cy="255" rx="205" ry="195" fill="none" stroke="rgba(0, 229, 255, 0.18)" stroke-width="1.5" stroke-dasharray="4 8" />
 
-  <!-- Orbiting Synaptic Spark Nodes on Track -->
-  <circle cx="250" cy="35" r="4" fill="#00e5ff" filter="url(#brainGlow)" />
-  <circle cx="250" cy="465" r="3" fill="#38bdf8" opacity="0.8" />
-  <circle cx="35" cy="250" r="3" fill="#38bdf8" opacity="0.8" />
-  <circle cx="465" cy="250" r="4" fill="#00e5ff" filter="url(#brainGlow)" />
-
-  <!-- ================= INNOVATIVE CYBERNETIC NEURAL BRAIN NEXUS ================= -->
+  <!-- ================= CLEAR & ICONIC CYBERNETIC BRAIN ================= -->
   <g transform="translate(250, 250)">
 
-    <!-- ========== LEFT CEREBRAL HEMISPHERE (Analytical & Algorithmic Core) ========== -->
-    <g filter="url(#dropBevel)">
-      <!-- Outer Cortical Shield -->
-      <path d="M -12 -165 
-               C -75 -165, -165 -125, -175 -50 
-               C -182 -5, -160 35, -170 70 
-               C -180 105, -155 145, -115 165 
-               C -75 185, -25 170, -12 155 
-               C -12 120, -40 100, -40 70 
-               C -40 40, -12 25, -12 -20 
-               C -12 -70, -45 -100, -12 -165 Z" 
-            fill="url(#hemLeftGrad)" 
-            opacity="0.95" />
+    <!-- ========== LEFT HEMISPHERE (Analytical Cortex) ========== -->
+    <g>
+      <!-- Base Solid Silhouette with Depth -->
+      <path d="M -10 -150 
+               C -50 -155, -95 -140, -125 -105 
+               C -155 -70, -165 -25, -150 25 
+               C -165 55, -165 95, -145 125 
+               C -125 155, -85 165, -50 155 
+               C -25 145, -15 125, -10 100 
+               Z" 
+            fill="url(#brainGradLeft)" 
+            stroke="#00e5ff" 
+            stroke-width="3" 
+            stroke-linejoin="round" />
 
-      <!-- Inner Cortical Folding Ribbons (Sculpted Gyri & Sulci) -->
-      <!-- Frontal Lobe Arc -->
-      <path d="M -22 -145 
-               C -65 -145, -135 -115, -145 -55 
-               C -150 -15, -115 5, -85 -10 
-               C -60 -25, -35 -15, -22 -40 Z" 
-            fill="#06b6d4" 
-            opacity="0.85" />
+      <!-- Left Cortical Sulci & Gyri (Distinct Iconic Brain Folds) -->
+      <!-- Frontal Lobe Fold -->
+      <path d="M -10 -90 
+               C -40 -95, -80 -105, -105 -65 
+               C -120 -40, -110 -15, -85 -10 
+               C -60 -5, -35 -20, -10 -15" 
+            fill="none" 
+            stroke="#e0f2fe" 
+            stroke-width="3.5" 
+            stroke-linecap="round" 
+            filter="url(#neonFilter)" />
 
-      <!-- Parietal / Motor Ribbon -->
-      <path d="M -22 -20 
-               C -60 -5, -125 -10, -140 35 
-               C -150 70, -110 95, -75 75 
-               C -50 60, -35 70, -22 55 Z" 
-            fill="#0284c7" 
-            opacity="0.9" />
+      <!-- Parietal Lobe Fold -->
+      <path d="M -10 35 
+               C -45 35, -85 20, -115 45 
+               C -135 65, -125 95, -95 105 
+               C -65 115, -35 85, -10 85" 
+            fill="none" 
+            stroke="#38bdf8" 
+            stroke-width="3.5" 
+            stroke-linecap="round" 
+            filter="url(#neonFilter)" />
 
-      <!-- Occipital / Temporal Base Ribbon -->
-      <path d="M -22 75 
-               C -55 85, -125 95, -100 145 
-               C -80 165, -35 155, -22 135 Z" 
-            fill="#0369a1" 
-            opacity="0.85" />
+      <!-- Temporal / Occipital Base Arc -->
+      <path d="M -10 -35 
+               C -45 -40, -70 -15, -50 15 
+               C -35 35, -15 25, -10 25" 
+            fill="none" 
+            stroke="#00f2fe" 
+            stroke-width="3" 
+            stroke-linecap="round" />
+
+      <!-- Top Frontal Ridge -->
+      <path d="M -45 -125 C -75 -105, -70 -80, -45 -85" 
+            fill="none" 
+            stroke="#67e8f9" 
+            stroke-width="2.5" 
+            stroke-linecap="round" />
     </g>
 
-    <!-- ========== RIGHT CEREBRAL HEMISPHERE (Generative & Intuitive Core) ========== -->
-    <g filter="url(#dropBevel)">
-      <!-- Outer Cortical Shield -->
-      <path d="M 12 -165 
-               C 75 -165, 165 -125, 175 -50 
-               C 182 -5, 160 35, 170 70 
-               C 180 105, 155 145, 115 165 
-               C 75 185, 25 170, 12 155 
-               C 12 120, 40 100, 40 70 
-               C 40 40, 12 25, 12 -20 
-               C 12 -70, 45 -100, 12 -165 Z" 
-            fill="url(#hemRightGrad)" 
-            opacity="0.95" />
+    <!-- ========== RIGHT HEMISPHERE (Creative Cortex) ========== -->
+    <g>
+      <!-- Base Solid Silhouette with Depth -->
+      <path d="M 10 -150 
+               C 50 -155, 95 -140, 125 -105 
+               C 155 -70, 165 -25, 150 25 
+               C 165 55, 165 95, 145 125 
+               C 125 155, 85 165, 50 155 
+               C 25 145, 15 125, 10 100 
+               Z" 
+            fill="url(#brainGradRight)" 
+            stroke="#38bdf8" 
+            stroke-width="3" 
+            stroke-linejoin="round" />
 
-      <!-- Inner Cortical Folding Ribbons (Sculpted Gyri & Sulci) -->
-      <!-- Frontal Lobe Arc -->
-      <path d="M 22 -145 
-               C 65 -145, 135 -115, 145 -55 
-               C 150 -15, 115 5, 85 -10 
-               C 60 -25, 35 -15, 22 -40 Z" 
-            fill="#38bdf8" 
-            opacity="0.85" />
+      <!-- Right Cortical Sulci & Gyri (Distinct Iconic Brain Folds) -->
+      <!-- Frontal Lobe Fold -->
+      <path d="M 10 -90 
+               C 40 -95, 80 -105, 105 -65 
+               C 120 -40, 110 -15, 85 -10 
+               C 60 -5, 35 -20, 10 -15" 
+            fill="none" 
+            stroke="#e0f2fe" 
+            stroke-width="3.5" 
+            stroke-linecap="round" 
+            filter="url(#neonFilter)" />
 
-      <!-- Parietal / Motor Ribbon -->
-      <path d="M 22 -20 
-               C 60 -5, 125 -10, 140 35 
-               C 150 70, 110 95, 75 75 
-               C 50 60, 35 70, 22 55 Z" 
-            fill="#2563eb" 
-            opacity="0.9" />
+      <!-- Parietal Lobe Fold -->
+      <path d="M 10 35 
+               C 45 35, 85 20, 115 45 
+               C 135 65, 125 95, 95 105 
+               C 65 115, 35 85, 10 85" 
+            fill="none" 
+            stroke="#38bdf8" 
+            stroke-width="3.5" 
+            stroke-linecap="round" 
+            filter="url(#neonFilter)" />
 
-      <!-- Occipital / Temporal Base Ribbon -->
-      <path d="M 22 75 
-               C 55 85, 125 95, 100 145 
-               C 80 165, 35 155, 22 135 Z" 
-            fill="#1d4ed8" 
-            opacity="0.85" />
+      <!-- Temporal / Occipital Base Arc -->
+      <path d="M 10 -35 
+               C 45 -40, 70 -15, 50 15 
+               C 35 35, 15 25, 10 25" 
+            fill="none" 
+            stroke="#00f2fe" 
+            stroke-width="3" 
+            stroke-linecap="round" />
+
+      <!-- Top Frontal Ridge -->
+      <path d="M 45 -125 C 75 -105, 70 -80, 45 -85" 
+            fill="none" 
+            stroke="#67e8f9" 
+            stroke-width="2.5" 
+            stroke-linecap="round" />
     </g>
 
-    <!-- ========== LUMINESCENT SYNAPSE CONDUITS (BRAIN PATHWAYS) ========== -->
-    <g stroke="url(#synapseGlow1)" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.9" filter="url(#brainGlow)">
-      <!-- Left hemisphere neural circuits -->
-      <path d="M -95 -80 C -60 -105, -35 -70, -22 -60" />
-      <path d="M -115 15 C -80 0, -45 25, -22 15" />
-      <path d="M -80 100 C -55 90, -40 115, -22 95" />
+    <!-- ========== CENTRAL CEREBRAL FISSURE & SYNAPSE BRIDGES ========== -->
+    <!-- Center Crevice Fissure (Glow Line) -->
+    <line x1="0" y1="-140" x2="0" y2="120" stroke="#030712" stroke-width="7" stroke-linecap="round" />
+    <line x1="0" y1="-135" x2="0" y2="115" stroke="#00e5ff" stroke-width="2.5" stroke-linecap="round" opacity="0.8" />
 
-      <!-- Right hemisphere neural circuits -->
-      <path d="M 95 -80 C 60 -105, 35 -70, 22 -60" />
-      <path d="M 115 15 C 80 0, 45 25, 22 15" />
-      <path d="M 80 100 C 55 90, 40 115, 22 95" />
+    <!-- Corpus Callosum Synapse Bridges (Connecting Left and Right) -->
+    <g stroke="url(#synapseGlow)" stroke-width="3" stroke-linecap="round">
+      <path d="M -15 -105 C 0 -115, 0 -115, 15 -105" />
+      <path d="M -15 -45 C 0 -55, 0 -55, 15 -45" />
+      <path d="M -15 10 C 0 0, 0 0, 15 10" />
+      <path d="M -15 65 C 0 55, 0 55, 15 65" />
     </g>
 
-    <!-- Constellation Synaptic Nodes -->
-    <g fill="#ffffff" filter="url(#brainGlow)">
-      <circle cx="-95" cy="-80" r="3.5" />
-      <circle cx="-115" cy="15" r="3.5" />
-      <circle cx="-80" cy="100" r="3.5" />
-      <circle cx="95" cy="-80" r="3.5" />
-      <circle cx="115" cy="15" r="3.5" />
-      <circle cx="80" cy="100" r="3.5" />
-    </g>
+    <!-- ========== SYNAPTIC NODES & QUANTUM SPARKS ========== -->
+    <g fill="#ffffff" filter="url(#nodeSparkle)">
+      <!-- Left hemisphere nodes -->
+      <circle cx="-105" cy="-65" r="4.5" />
+      <circle cx="-85" cy="-10" r="4" />
+      <circle cx="-115" cy="45" r="4" />
+      <circle cx="-95" cy="105" r="4.5" />
+      <circle cx="-45" cy="-125" r="3.5" />
 
-    <!-- ========== CENTRAL NEXUS BRIDGE (CORPUS CALLOSUM & QUANTUM CORE) ========== -->
-    <!-- Interconnecting Synapse Arcs bridging both hemispheres -->
-    <path d="M -22 -110 C -5 -118, 5 -118, 22 -110" stroke="#00f2fe" stroke-width="3" stroke-linecap="round" fill="none" />
-    <path d="M -22 -60 C -5 -65, 5 -65, 22 -60" stroke="#67e8f9" stroke-width="3.5" stroke-linecap="round" fill="none" />
-    <path d="M -22 15 C -5 20, 5 20, 22 15" stroke="#38bdf8" stroke-width="3.5" stroke-linecap="round" fill="none" />
-    <path d="M -22 95 C -5 105, 5 105, 22 95" stroke="#00e5ff" stroke-width="3" stroke-linecap="round" fill="none" />
+      <!-- Right hemisphere nodes -->
+      <circle cx="105" cy="-65" r="4.5" />
+      <circle cx="85" cy="-10" r="4" />
+      <circle cx="115" cy="45" r="4" />
+      <circle cx="95" cy="105" r="4.5" />
+      <circle cx="45" cy="-125" r="3.5" />
 
-    <!-- Center Glowing Nexus Core -->
-    <!-- Quantum Nexus Outer Ring -->
-    <circle cx="0" cy="0" r="32" fill="#030712" stroke="url(#synapseGlow1)" stroke-width="3" filter="url(#dropBevel)" />
-    <circle cx="0" cy="0" r="24" fill="none" stroke="#00f2fe" stroke-width="1.5" stroke-dasharray="3 4" />
-
-    <!-- 4-Pointed Nexus Core Star -->
-    <g filter="url(#coreSparkle)">
-      <path d="M 0 -18 
-               C 2 -6, 6 -2, 18 0 
-               C 6 2, 2 6, 0 18 
-               C -2 6, -6 2, -18 0 
-               C -6 -2, -2 -6, 0 -18 Z" 
-            fill="url(#coreNexusGrad)" />
-      <!-- Radiant Center Bead -->
-      <circle cx="0" cy="0" r="4.5" fill="#ffffff" />
+      <!-- Center Nexus Sparks -->
+      <circle cx="0" cy="-10" r="5" fill="#00e5ff" />
+      <circle cx="0" cy="-10" r="3" fill="#ffffff" />
     </g>
   </g>
 </svg>
