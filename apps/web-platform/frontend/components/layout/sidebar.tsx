@@ -42,6 +42,7 @@ const navSections = [
       { label: 'Processing Queue', href: '/processing', icon: Gauge },
       { label: 'Review Center', href: '/review', icon: ListChecks },
       { label: 'Approved Knowledge', href: '/approved', icon: CheckCircle2 },
+      { label: 'Agent Workflows', href: '/workflows', icon: GitBranch },
     ],
   },
   {
