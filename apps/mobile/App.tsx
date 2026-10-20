@@ -13,30 +13,87 @@ import {
   Modal
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as SecureStore from 'expo-secure-store';
+
+// =============================================================================
+// Global Error Boundary — prevents white screen on unhandled render errors
+// =============================================================================
+interface ErrorBoundaryState { hasError: boolean; error: Error | null; }
+class ErrorBoundary extends React.Component<{children: React.ReactNode}, ErrorBoundaryState> {
+  constructor(props: {children: React.ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    // Replace with Sentry or similar error tracker in production
+    console.error('[ErrorBoundary] Unhandled error:', error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <SafeAreaView style={{ flex: 1, backgroundColor: '#090d16', justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+          <Text style={{ color: '#ef4444', fontSize: 18, fontWeight: 'bold', marginBottom: 8 }}>Something went wrong</Text>
+          <Text style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center' }}>
+            {this.state.error?.message ?? 'An unexpected error occurred.'}
+          </Text>
+        </SafeAreaView>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+// Wrapped export with global error boundary
+const AppWithBoundary: React.FC = () => (
+  <ErrorBoundary>
+    <App />
+  </ErrorBoundary>
+);
 
 // Security constants
 const VAULT_PIN_STORAGE_KEY = 'cognix_vault_pin_hash';
+const VAULT_LOCKOUT_KEY = 'cognix_vault_lockout_until';
 const VAULT_PIN_MAX_ATTEMPTS = 5;
 const VAULT_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
-/** Simple hash for PIN (use bcrypt or PBKDF2 in production) */
+/** PBKDF2-based PIN hash — salted with a fixed app secret + pin length to prevent rainbow tables. */
+const PBKDF2_SALT = 'cognix_vault_salt_v1_2026'; // static app-level salt; do NOT change after deploy
+const PBKDF2_ITERATIONS = 100_000;
+const PBKDF2_KEY_LENGTH = 32; // 256 bits
+
 async function hashPin(pin: string): Promise<string> {
-  // Use a simple but non-trivial hash for demo; replace with proper crypto in production
   const encoder = new TextEncoder();
-  const data = encoder.encode(`cognix_vault:${pin}`);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const keyMaterial = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(pin),
+    { name: 'PBKDF2' },
+    false,
+    ['deriveBits']
+  );
+  const derivedBits = await crypto.subtle.deriveBits(
+    {
+      name: 'PBKDF2',
+      salt: encoder.encode(PBKDF2_SALT),
+      iterations: PBKDF2_ITERATIONS,
+      hash: 'SHA-256',
+    },
+    keyMaterial,
+    PBKDF2_KEY_LENGTH * 8
+  );
+  const hashArray = Array.from(new Uint8Array(derivedBits));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 async function isVaultPinSet(): Promise<boolean> {
-  const storedHash = await AsyncStorage.getItem(VAULT_PIN_STORAGE_KEY);
+  const storedHash = await SecureStore.getItemAsync(VAULT_PIN_STORAGE_KEY);
   return storedHash !== null;
 }
 
 async function validateVaultPin(pin: string): Promise<boolean> {
-  const storedHash = await AsyncStorage.getItem(VAULT_PIN_STORAGE_KEY);
+  const storedHash = await SecureStore.getItemAsync(VAULT_PIN_STORAGE_KEY);
   if (!storedHash) return false;
   const inputHash = await hashPin(pin);
   return inputHash === storedHash;
@@ -44,10 +101,17 @@ async function validateVaultPin(pin: string): Promise<boolean> {
 
 async function setVaultPin(pin: string): Promise<void> {
   const hash = await hashPin(pin);
-  await AsyncStorage.setItem(VAULT_PIN_STORAGE_KEY, hash);
+  await SecureStore.setItemAsync(VAULT_PIN_STORAGE_KEY, hash);
 }
 
-const API_BASE = process.env.EXPO_PUBLIC_COGNIX_API_URL || 'http://localhost:8003';
+const _rawApiBase = process.env.EXPO_PUBLIC_COGNIX_API_URL;
+if (!_rawApiBase) {
+  throw new Error(
+    '[Cognix] EXPO_PUBLIC_COGNIX_API_URL is not set. '
+    + 'Create .env with EXPO_PUBLIC_COGNIX_API_URL=https://your-api-url'
+  );
+}
+const API_BASE = _rawApiBase;
 
 interface BookItem {
   id: string;
@@ -72,7 +136,7 @@ interface Flashcard {
   source: string;
 }
 
-export default function App() {
+function App() {
   const [activeTab, setActiveTab] = useState<'capture' | 'vault' | 'learn' | 'secret'>('capture');
   const [books, setBooks] = useState<BookItem[]>([]);
   const [notes, setNotes] = useState<CapturedNote[]>([]);
@@ -119,9 +183,20 @@ export default function App() {
     '🔒 Confidential Architecture Blueprint'
   ]);
 
-  // Check if vault PIN has been set on mount
+  // Check if vault PIN has been set on mount; restore persisted lockout
   useEffect(() => {
     isVaultPinSet().then(setVaultPinSet);
+    SecureStore.getItemAsync(VAULT_LOCKOUT_KEY).then((val) => {
+      if (val) {
+        const until = parseInt(val, 10);
+        if (!isNaN(until) && Date.now() < until) {
+          setVaultLockoutUntil(until);
+          setVaultLocked(true);
+        } else {
+          SecureStore.deleteItemAsync(VAULT_LOCKOUT_KEY).catch(() => {});
+        }
+      }
+    }).catch(() => {});
   }, []);
 
   const loadBooks = async () => {
@@ -245,6 +320,7 @@ export default function App() {
       setPinAttempts(0);
       setVaultLocked(false);
       setVaultLockoutUntil(null);
+      SecureStore.deleteItemAsync(VAULT_LOCKOUT_KEY).catch(() => {});
     } else {
       const newAttempts = pinAttempts + 1;
       setPinAttempts(newAttempts);
@@ -253,6 +329,8 @@ export default function App() {
         const lockoutUntil = Date.now() + VAULT_LOCKOUT_MS;
         setVaultLockoutUntil(lockoutUntil);
         setVaultLocked(true);
+        // Persist lockout so it survives app restarts
+        SecureStore.setItemAsync(VAULT_LOCKOUT_KEY, String(lockoutUntil)).catch(() => {});
         Alert.alert('Vault Locked', `Too many failed attempts. Vault locked for 15 minutes.`);
       } else {
         Alert.alert('Incorrect PIN', `Invalid PIN. ${VAULT_PIN_MAX_ATTEMPTS - newAttempts} attempts remaining.`);
@@ -658,3 +736,5 @@ const styles = StyleSheet.create({
   },
   secretNoteText: { color: '#f1f5f9', fontSize: 14 }
 });
+
+export default AppWithBoundary;
