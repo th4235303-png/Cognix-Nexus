@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/lib/supabase';
+import { CognixLogo } from '@/components/shared/CognixLogo';
 
 const navSections = [
   {
@@ -102,19 +103,7 @@ export function Sidebar({
     >
       {/* Logo */}
       <div className="flex h-16 items-center gap-3 border-b border-border/40 px-4">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 border border-primary/30 glow-cyan">
-          <Brain className="h-5 w-5 text-primary" />
-        </div>
-        {!collapsed && (
-          <div className="animate-fade-in">
-            <p className="text-sm font-semibold tracking-tight text-foreground">
-              Cognix Core
-            </p>
-            <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
-              Brain Vault OS
-            </p>
-          </div>
-        )}
+        <CognixLogo size={34} showText={!collapsed} />
       </div>
 
       {/* Navigation */}
