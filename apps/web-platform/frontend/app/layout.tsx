@@ -33,6 +33,8 @@ export default function RootLayout({
       >
         {children}
         <Toaster />
+        {/* Telegram Web App SDK for seamless Mini App integration */}
+        <script src="https://telegram.org/js/telegram-web-app.js" async />
       </body>
     </html>
   );
