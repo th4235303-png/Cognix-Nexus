@@ -1,152 +1,128 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 500" width="100%" height="100%">
   <defs>
-    <!-- Deep Cosmic Cybernetic Aura -->
-    <radialGradient id="cgAura" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#00f2fe" stop-opacity="0.3" />
-      <stop offset="45%" stop-color="#0284c7" stop-opacity="0.12" />
-      <stop offset="75%" stop-color="#1e1b4b" stop-opacity="0.05" />
-      <stop offset="100%" stop-color="#020617" stop-opacity="0" />
+    <!-- Deep Space Cybernetic Atmosphere -->
+    <radialGradient id="cnBackdrop" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#0e2a3b" stop-opacity="0.9" />
+      <stop offset="60%" stop-color="#081924" stop-opacity="0.95" />
+      <stop offset="100%" stop-color="#03090e" stop-opacity="1" />
     </radialGradient>
 
-    <!-- Left Hemisphere 3D Gradient -->
-    <linearGradient id="cgLeftLobe" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#67e8f9" />
-      <stop offset="30%" stop-color="#00e5ff" />
-      <stop offset="70%" stop-color="#0284c7" />
-      <stop offset="100%" stop-color="#0f172a" />
-    </linearGradient>
-
-    <!-- Right Hemisphere 3D Gradient -->
-    <linearGradient id="cgRightLobe" x1="100%" y1="0%" x2="0%" y2="100%">
-      <stop offset="0%" stop-color="#a5f3fc" />
-      <stop offset="30%" stop-color="#38bdf8" />
-      <stop offset="70%" stop-color="#2563eb" />
-      <stop offset="100%" stop-color="#1e1b4b" />
-    </linearGradient>
-
-    <!-- Glowing Synapse Conduit Gradient -->
-    <linearGradient id="cgSynapse" x1="0%" y1="0%" x2="100%" y2="0%">
+    <!-- Outer Tech Tile Border Gradient -->
+    <linearGradient id="tileBorderGrad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#00e5ff" />
-      <stop offset="50%" stop-color="#ffffff" />
-      <stop offset="100%" stop-color="#38bdf8" />
+      <stop offset="50%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#0284c7" />
     </linearGradient>
 
-    <!-- Neon Glow Filters -->
-    <filter id="cgNeonGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feGaussianBlur stdDeviation="4.5" result="blur" />
+    <!-- Orbital Data Ring Gradient -->
+    <linearGradient id="orbitalRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.8" />
+      <stop offset="50%" stop-color="#67e8f9" stop-opacity="0.2" />
+      <stop offset="100%" stop-color="#00e5ff" stop-opacity="0.8" />
+    </linearGradient>
+
+    <!-- Neon Glow Filter for Brain and Tech Accents -->
+    <filter id="neonCyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5.5" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
 
-    <filter id="cgCoreSpark" x="-50%" y="-50%" width="200%" height="200%">
-      <feGaussianBlur stdDeviation="8" result="blur" />
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="3" result="blur" />
       <feComposite in="SourceGraphic" in2="blur" operator="over" />
     </filter>
 
-    <filter id="cgDropShadow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="#000000" flood-opacity="0.75" />
+    <filter id="tileDropShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.8" />
     </filter>
   </defs>
 
-  <!-- Ambient Digital Atmosphere -->
-  <circle cx="250" cy="250" r="225" fill="url(#cgAura)" />
+  <!-- Ambient Outer Cyan Halo -->
+  <circle cx="250" cy="250" r="230" fill="none" stroke="rgba(0, 229, 255, 0.15)" stroke-width="1.5" stroke-dasharray="4 8" />
 
-  <!-- Outer Cybernetic Orbit Track with Neural Spark Nodes -->
-  <circle cx="250" cy="250" r="215" fill="none" stroke="rgba(0, 229, 255, 0.2)" stroke-width="1.5" stroke-dasharray="3 9" />
-  <circle cx="250" cy="250" r="195" fill="none" stroke="rgba(56, 189, 248, 0.3)" stroke-width="2" />
+  <!-- ================= INNOVATIVE CYBERNETIC SQUIRCLE VAULT (OUTER EMBLEM) ================= -->
+  <g filter="url(#tileDropShadow)">
+    <!-- Main Dark Teal Squircle Tile (Matching Screenshot Container) -->
+    <rect x="50" y="50" width="400" height="400" rx="100" 
+          fill="url(#cnBackdrop)" 
+          stroke="url(#tileBorderGrad)" 
+          stroke-width="5" />
 
-  <!-- Orbiting Synaptic Nodes -->
-  <circle cx="250" cy="35" r="4" fill="#00e5ff" filter="url(#cgNeonGlow)" />
-  <circle cx="250" cy="465" r="3.5" fill="#38bdf8" opacity="0.8" />
-  <circle cx="35" cy="250" r="3.5" fill="#38bdf8" opacity="0.8" />
-  <circle cx="465" cy="250" r="4" fill="#00e5ff" filter="url(#cgNeonGlow)" />
-  <circle cx="98" cy="98" r="2.5" fill="#67e8f9" opacity="0.7" />
-  <circle cx="402" cy="98" r="2.5" fill="#67e8f9" opacity="0.7" />
-
-  <!-- ================= EXACT LUCIDE BRAIN SCALED & ELEVATED TO 3D GLOWING EMBLEM ================= -->
-  <!-- Scaled precisely to 500x500 box (Scale: 17.5x, Centered at 250, 250) -->
-  <g transform="translate(40, 38) scale(17.5)" filter="url(#cgDropShadow)">
-
-    <!-- ========== LEFT HEMISPHERE (Analytical Core - Exact Lucide Brain Geometry) ========== -->
-    <path d="M 12 5 
-             a 3 3 0 1 0 -5.997 0.125 
-             a 4 4 0 0 0 -2.526 5.77 
-             a 4 4 0 0 0 0.556 6.588 
-             A 4 4 0 1 0 12 18 
-             Z" 
-          fill="url(#cgLeftLobe)" 
-          stroke="#00e5ff" 
-          stroke-width="0.7" 
-          stroke-linejoin="round" />
-
-    <!-- Left Hemisphere Specular Edge Bevel (Top & Outer Glow) -->
-    <path d="M 12 5 
-             a 3 3 0 1 0 -5.997 0.125 
-             a 4 4 0 0 0 -2.526 5.77" 
+    <!-- Inner Secondary Precision Rim -->
+    <rect x="62" y="62" width="376" height="376" rx="90" 
           fill="none" 
-          stroke="#e0f2fe" 
-          stroke-width="0.35" 
-          stroke-linecap="round" 
-          opacity="0.9" />
+          stroke="rgba(0, 229, 255, 0.25)" 
+          stroke-width="1.8" />
+  </g>
 
-    <!-- ========== RIGHT HEMISPHERE (Generative Core - Exact Lucide Brain Geometry) ========== -->
-    <path d="M 12 5 
-             a 3 3 0 1 1 5.997 0.125 
-             a 4 4 0 0 1 2.526 5.77 
-             a 4 4 0 0 1 -0.556 6.588 
-             A 4 4 0 1 1 12 18 
-             Z" 
-          fill="url(#cgRightLobe)" 
-          stroke="#38bdf8" 
-          stroke-width="0.7" 
-          stroke-linejoin="round" />
+  <!-- ================= INNOVATIVE OUTER TECH ELEMENTS (CYBER-CIRCUITRY) ================= -->
+  <!-- 4 Futuristic Corner Telemetry Brackets on Tile -->
+  <g stroke="#00e5ff" stroke-width="2.5" stroke-linecap="round" fill="none" opacity="0.85">
+    <!-- Top-Left Bracket -->
+    <path d="M 85 130 L 85 95 L 120 95" />
+    <!-- Top-Right Bracket -->
+    <path d="M 380 95 L 415 95 L 415 130" />
+    <!-- Bottom-Left Bracket -->
+    <path d="M 85 370 L 85 405 L 120 405" />
+    <!-- Bottom-Right Bracket -->
+    <path d="M 380 405 L 415 405 L 415 370" />
+  </g>
 
-    <!-- Right Hemisphere Specular Edge Bevel (Top & Outer Glow) -->
-    <path d="M 12 5 
-             a 3 3 0 1 1 5.997 0.125 
-             a 4 4 0 0 1 2.526 5.77" 
-          fill="none" 
-          stroke="#ffffff" 
-          stroke-width="0.35" 
-          stroke-linecap="round" 
-          opacity="0.9" />
+  <!-- Circular Quantum Orbital Track Encircling the Brain -->
+  <circle cx="250" cy="250" r="162" fill="none" stroke="url(#orbitalRingGrad)" stroke-width="1.8" stroke-dasharray="3 6" />
+  <circle cx="250" cy="250" r="172" fill="none" stroke="rgba(56, 189, 248, 0.2)" stroke-width="1.2" />
 
-    <!-- ========== LUMINESCENT SULCI & GYRI FOLDS (INTERNAL BRAIN CONDUITS) ========== -->
-    <g stroke="url(#cgSynapse)" stroke-linecap="round" stroke-linejoin="round" fill="none" filter="url(#cgNeonGlow)">
-      <!-- Central Arch Synapse Fold -->
-      <path d="M 15 13 a 4.5 4.5 0 0 1 -3 -4 a 4.5 4.5 0 0 1 -3 4" stroke-width="0.65" />
+  <!-- Orbiting Synaptic Pulse Nodes with Cross Ticks -->
+  <g filter="url(#softGlow)">
+    <!-- Top Node (12 o'clock) -->
+    <circle cx="250" cy="88" r="4.5" fill="#00e5ff" />
+    <circle cx="250" cy="88" r="2" fill="#ffffff" />
+    <line x1="250" y1="78" x2="250" y2="82" stroke="#00e5ff" stroke-width="2" stroke-linecap="round" />
 
-      <!-- Upper Left Ridge -->
-      <path d="M 6.003 5.125 A 3 3 0 0 0 6.401 6.5" stroke-width="0.55" />
-      <!-- Upper Right Ridge -->
-      <path d="M 17.599 6.5 A 3 3 0 0 0 18 5.125" stroke-width="0.55" />
+    <!-- Bottom Node (6 o'clock) -->
+    <circle cx="250" cy="412" r="4.5" fill="#00e5ff" />
+    <circle cx="250" cy="412" r="2" fill="#ffffff" />
+    <line x1="250" y1="418" x2="250" y2="422" stroke="#00e5ff" stroke-width="2" stroke-linecap="round" />
 
-      <!-- Mid Left Ridge -->
-      <path d="M 3.477 10.896 a 4 4 0 0 1 0.585 -0.396" stroke-width="0.55" />
-      <!-- Mid Right Ridge -->
-      <path d="M 19.938 10.5 a 4 4 0 0 1 0.585 0.396" stroke-width="0.55" />
+    <!-- Left Node (9 o'clock) -->
+    <circle cx="88" cy="250" r="4.5" fill="#00e5ff" />
+    <circle cx="88" cy="250" r="2" fill="#ffffff" />
+    <line x1="78" y1="250" x2="82" y2="250" stroke="#00e5ff" stroke-width="2" stroke-linecap="round" />
 
-      <!-- Lower Left Ridge -->
-      <path d="M 6 18 a 4 4 0 0 1 -1.967 -0.516" stroke-width="0.55" />
-      <!-- Lower Right Ridge -->
-      <path d="M 19.967 17.484 A 4 4 0 0 1 18 18" stroke-width="0.55" />
-    </g>
+    <!-- Right Node (3 o'clock) -->
+    <circle cx="412" cy="250" r="4.5" fill="#00e5ff" />
+    <circle cx="412" cy="250" r="2" fill="#ffffff" />
+    <line x1="418" y1="250" x2="422" y2="250" stroke="#00e5ff" stroke-width="2" stroke-linecap="round" />
 
-    <!-- ========== SYNAPTIC QUANTUM NODES (SPARKLING ENERGY POINTS) ========== -->
-    <g fill="#ffffff">
-      <circle cx="12" cy="9" r="0.45" filter="url(#cgNeonGlow)" />
-      <circle cx="6.4" cy="6.5" r="0.35" />
-      <circle cx="17.6" cy="6.5" r="0.35" />
-      <circle cx="4.0" cy="10.5" r="0.35" />
-      <circle cx="20.0" cy="10.5" r="0.35" />
-      <circle cx="6.0" cy="18.0" r="0.35" />
-      <circle cx="18.0" cy="18.0" r="0.35" />
-    </g>
+    <!-- Diagonal Constellation Sparkles -->
+    <circle cx="136" cy="136" r="2.5" fill="#67e8f9" opacity="0.8" />
+    <circle cx="364" cy="136" r="2.5" fill="#67e8f9" opacity="0.8" />
+    <circle cx="136" cy="364" r="2.5" fill="#67e8f9" opacity="0.8" />
+    <circle cx="364" cy="364" r="2.5" fill="#67e8f9" opacity="0.8" />
+  </g>
 
-    <!-- Radiant Central Core Flare -->
-    <g filter="url(#cgCoreSpark)">
-      <!-- 4-pointed diamond spark at the brain's central synapse nexus (12, 11) -->
-      <path d="M 12 9.8 L 12.4 11 L 13.6 11.4 L 12.4 11.8 L 12 13 L 11.6 11.8 L 10.4 11.4 L 11.6 11 Z" fill="#ffffff" />
-      <circle cx="12" cy="11.4" r="0.5" fill="#00e5ff" />
-    </g>
+  <!-- ================= THE BELOVED LUCIDE BRAIN (CLEAN & PRISTINE INSIDE) ================= -->
+  <!-- Scaled & Centered (Scale: 11.5x, Positioned at cx=250, cy=250) -->
+  <g transform="translate(112, 112) scale(11.5)" 
+     stroke="#00e5ff" 
+     stroke-width="1.85" 
+     stroke-linecap="round" 
+     stroke-linejoin="round" 
+     fill="none" 
+     filter="url(#neonCyanGlow)">
+
+    <!-- Left Hemisphere -->
+    <path d="M12 5a3 3 0 1 0-5.997.125 4 4 0 0 0-2.526 5.77 4 4 0 0 0 .556 6.588A4 4 0 1 0 12 18Z" />
+    <!-- Right Hemisphere -->
+    <path d="M12 5a3 3 0 1 1 5.997.125 4 4 0 0 1 2.526 5.77 4 4 0 0 1-.556 6.588A4 4 0 1 1 12 18Z" />
+    <!-- Center Synapse Fold -->
+    <path d="M15 13a4.5 4.5 0 0 1-3-4 4.5 4.5 0 0 1-3 4" />
+    <!-- Folds & Ridges -->
+    <path d="M17.599 6.5a3 3 0 0 0 .399-1.375" />
+    <path d="M6.003 5.125A3 3 0 0 0 6.401 6.5" />
+    <path d="M3.477 10.896a4 4 0 0 1 .585-.396" />
+    <path d="M19.938 10.5a4 4 0 0 1 .585.396" />
+    <path d="M6 18a4 4 0 0 1-1.967-.516" />
+    <path d="M19.967 17.484A4 4 0 0 1 18 18" />
   </g>
 </svg>
