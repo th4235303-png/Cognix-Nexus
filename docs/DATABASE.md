@@ -25,11 +25,11 @@ Vault items store ciphertext, nonce and KDF metadata; plaintext remains client-s
 All current public application tables have RLS enabled. User-facing tables have owner-scoped policies; service-managed Brain Soul/YouTube tables intentionally have no frontend policies and are restricted to backend/service-role access. Deny-by-default remains the baseline for tables without frontend access.
 
 ## Migration state
-The application-managed `public.cognix_schema_migrations` registry is verified through migration `044_restrict_service_managed_brain_soul_youtube.sql` in production. Migration 045 is registered in code and will apply on the next API/worker startup. Migration 044 revokes `anon` and `authenticated` table/sequence privileges for `brain_soul_context`, `brain_soul_syntheses`, `youtube_channels`, and `brain_youtube_videos`, and revokes those grants by default for newly-created public tables/sequences.
+The application-managed `public.cognix_schema_migrations` registry is verified through migration `045_agent_lifecycle_events_job_index.sql` in production. The migration was recorded as applied at `2026-10-21 07:14:58 UTC`. Migration 044 revokes `anon` and `authenticated` table/sequence privileges for `brain_soul_context`, `brain_soul_syntheses`, `youtube_channels`, and `brain_youtube_videos`, and revokes those grants by default for newly-created public tables/sequences.
 
 Migration 045 adds a covering index on `agent_lifecycle_events(job_id)` for the foreign key to `agent_jobs(id)` identified by the Supabase performance advisor. This is additive and does not alter access policies or data.
 
-The separate Supabase CLI migration history remains at the historical `033_rls_policy_initplan_indexes` head. These are two different ledgers and must not be treated as interchangeable. The application migration runner is authoritative for the backend's ordered SQL migration set; migration 045 is the next pending revision.
+The separate Supabase CLI migration history remains at the historical `033_rls_policy_initplan_indexes` head. These are two different ledgers and must not be treated as interchangeable. The application migration runner is authoritative for the backend's ordered SQL migration set; it has applied migration 045.
 
 ### Confirmed migration numbering defect
 Two historical migrations use the 010 number:
@@ -47,11 +47,11 @@ Invariants: exact duplicates stop; interrupted work resumes; partial knowledge r
 - Production contains the full public application schema, including Brain Soul and YouTube tracker tables.
 - All current public tables have RLS enabled.
 - User-facing tables have active policies; the four service-managed Brain Soul/YouTube tables intentionally have zero frontend policies and no `anon`/`authenticated` table or sequence privileges.
-- Migration 044 is recorded in `public.cognix_schema_migrations` with an applied timestamp and has been verified by read-only privilege queries. Migration 045 will be recorded after the API/worker startup migration runner applies it during deployment.
+- Migration 044 is recorded in `public.cognix_schema_migrations` with an applied timestamp and has been verified by read-only privilege queries. Migration 045 is also recorded as applied, and `public.idx_agent_lifecycle_events_job_id` has been verified on `public.agent_lifecycle_events(job_id)`.
 - Supabase Auth leaked-password protection remains disabled. Per the current release decision, this free-tier/provider limitation is explicitly accepted and is not a database migration blocker.
 
 ## Resolved verification
-- The previous 033-only database documentation is superseded by the application migration registry through 044, with migration 045 pending deployment.
+- The previous 033-only database documentation is superseded by the application migration registry through 045; the index exists in production.
 - Supabase performance findings for the seven owner-policy `auth_rls_initplan` cases and the `knowledge_items.chapter_id` foreign key were previously remediated.
 - Remaining performance notices are INFO-level unused-index findings; do not drop indexes without workload evidence.
 - Secret Vault implementation remains PBKDF2-SHA256 with 600,000 iterations and AES-GCM in the browser; the historical Argon2id wording is not the current implementation.
