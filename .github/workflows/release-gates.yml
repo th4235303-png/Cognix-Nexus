@@ -33,6 +33,11 @@ on:
         required: false
         default: false
         type: boolean
+      run_worker_health:
+        description: "Run Render external health check against deployed worker"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   preflight:
@@ -80,6 +85,7 @@ jobs:
       COGNIX_RUN_SENTRY_PROBE: ${{ inputs.run_sentry_probe }}
       COGNIX_RUN_RECOVERY: ${{ inputs.run_recovery_drill }}
       COGNIX_RUN_RENDER_HEALTH: ${{ inputs.run_render_health }}
+      COGNIX_RUN_WORKER_HEALTH: ${{ inputs.run_worker_health }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -172,7 +178,6 @@ jobs:
       run:
         working-directory: apps/web-platform/backend
     env:
-      # Never run synthetic fixture inserts against production.
       DATABASE_URL: ${{ secrets.COGNIX_BOOK_ACCEPTANCE_DATABASE_URL }}
       COGNIX_REQUIRE_DATABASE: "true"
     steps:
@@ -240,3 +245,26 @@ jobs:
           python-version: "3.12"
       - name: Render external health check
         run: python scripts/render_health_check.py --compare-env-vars
+
+  worker-health:
+    if: ${{ inputs.run_worker_health }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web-platform/backend
+    env:
+      COGNIX_WORKER_BASE_URL: ${{ secrets.COGNIX_WORKER_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify worker health endpoint
+        run: |
+          set -euo pipefail
+          test -n "$COGNIX_WORKER_BASE_URL"
+          curl --fail --silent --show-error --retry 5 --retry-delay 2 \
+            --connect-timeout 10 --max-time 30 \
+            "$COGNIX_WORKER_BASE_URL/health" \
+            | python -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status") == "ok"; assert d.get("persistence") == "postgresql"; assert d.get("database") is True; print(d)'
