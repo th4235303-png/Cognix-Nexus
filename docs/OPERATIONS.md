@@ -1,37 +1,67 @@
 # Cognix Nexus — Operations
 
-> Owner: Operations
-> Update when: runtime operations, health semantics, queue/lease behavior, recovery, or observability changes
-> Last Updated: 2026-10-15
+> Owner: Operations  
+> Update when: runtime operations, health semantics, queue/lease behavior, recovery, or observability changes  
+> Last Updated: 2026-10-21  
 > Do NOT put here: strategic roadmap or static architecture history.
 
-## Runtime
-Frontend: Render (`cognix-nexus-frontend`). API: Render (`Cognix-Core`). Worker: Render (`cognix-core-worker-runtime`). Persistence/Auth: Supabase/PostgreSQL. Netlify is legacy documentation, not the currently verified frontend host.
+## Runtime and deployed revisions
 
-## Current evidence (2026-10-15)
-- Revision `54be85aa883b589b392d14279ea73e830951a522` is deployed LIVE to API, worker and frontend.
-- GitHub Cognix Core CI and CodeQL are green on this revision.
-- API Render logs show repeated `GET /health 200 OK`.
-- Worker Render logs show `worker_started persistence=postgresql database_configured=True`.
-- Supabase migration tracker records migrations 034–041 as applied.
-- A current post-deploy `/ready` response is not yet captured. Do not treat a historical readiness response as evidence for the current revision.
+- Frontend: Render `cognix-nexus-frontend` — latest deployment for `ee1288d9778dcadb3bfa3b183f856e7c5e5bfba6` is LIVE. This revision includes a documentation/checkpoint update; it does not change frontend runtime code.
+- API: Render `Cognix-Core` — latest verified LIVE runtime deployment is `fb1e0b58bd403753c1be7252a1215774aa90e1e2`.
+- Worker: Render `cognix-core-worker-runtime` — latest verified LIVE runtime deployment is `fb1e0b58bd403753c1be7252a1215774aa90e1e2`.
+- Persistence/Auth: Supabase/PostgreSQL.
+- Netlify references elsewhere in the repository may be legacy; Render is the currently verified frontend host.
+
+## Latest CI evidence — 2026-10-21
+
+- [Production release gate](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/39551181681) passed: backend lint/compile/migration/tests, frontend production build and secret-leak check, live API health/readiness, live Worker health/PostgreSQL persistence, and frontend HTTPS/HTML smoke.
+- [Main CI](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/39551181572) passed backend, frontend, mobile, database integration, synthetic Book Intelligence contract, isolated backup/restore test, and dependency audit.
+- [CodeQL](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/39551181507) passed JavaScript/TypeScript and Python analysis.
+- Backend dependency audit reports no known vulnerabilities after upgrading Pillow to 13.0.0.
+- These are CI/service-health passes, not unconditional production authorization. The release decision remains CONDITIONAL pending external acceptance evidence.
 
 ## Health semantics
-- `/health` is liveness and does not require the database.
-- `/ready` reports persistence readiness when database persistence is configured/required.
+
+- API `/health` is liveness and does not require the database.
+- API `/ready` reports persistence readiness when database persistence is configured/required.
 - Production should use `COGNIX_REQUIRE_DATABASE=true` so missing database bindings fail fast.
-- Capture both endpoints after each release candidate; keep timestamp, revision, status and response body, but never include credentials.
+- The automated production release gate checks API health/readiness, Worker `/health` with `status=ok`, `persistence=postgresql`, `database=true`, and frontend HTTPS/HTML response.
+- Render health checks retry transient timeouts/network errors and HTTP 5xx; client-side 4xx failures are not retried.
+- Capture timestamp, revision, status and response body after each release candidate; never include credentials.
 
 ## Worker operations
-Worker jobs use durable leases/fencing and bounded retries. Inspect durable task state, lease fields, retry/backoff state and worker logs when a queue appears stuck. Confirm the worker starts against PostgreSQL and inspect task outcomes before claiming end-to-end processing success.
 
-Export worker state transition is owned by the export service rather than an external synthetic task state.
+- Worker starts with PostgreSQL persistence and polls on a two-second interval. Durable task leases/fencing and bounded retries are implemented.
+- Latest verified worker startup log: `worker_started persistence=postgresql database_configured=True poll_seconds=2.0`.
+- Database status aggregation on 2026-10-21 found four `processing_tasks` in `completed / needs_review`, one `failed / queued` task, one `books` row in `completed / ready`, and one failed book. No active queued/running task was shown by that aggregate, and it does **not** demonstrate that a newly enqueued job reached terminal success.
+- Inspect task lease fields, retry/backoff state and worker logs when a queue appears stuck. Do not retry or delete failed production records until their cause and idempotency implications are understood.
+- The earlier `DuplicatePreparedStatement` error was addressed with Psycopg `prepare_threshold=None`; the latest checked deployment starts successfully. Keep monitoring for recurrence.
+- Export worker state transitions are owned by the export service rather than an external synthetic task state.
 
-## Release checks
-Run frontend install/typecheck/lint/build and backend compileall/test discovery; then smoke authentication, upload limits, Brain Vault retrieval, worker processing, exports, health and readiness. CI green and a live deployment are necessary but not sufficient for release approval.
+## Database security
+
+- All current public application tables have RLS enabled. User-facing tables use owner-scoped policies.
+- Brain Soul/YouTube tables intentionally have no frontend policies and are restricted to backend/service-role access. Migration 044 revokes `anon` and `authenticated` table/sequence privileges for `brain_soul_context`, `brain_soul_syntheses`, `youtube_channels`, and `brain_youtube_videos`. Do not add broad client policies just to silence the RLS advisor.
+- Supabase Auth leaked-password protection remains deferred under the current free-tier decision; enable it if plan/product scope permits.
+
+## Release checks and outstanding acceptance gates
+
+Before unconditional production sign-off, capture evidence for:
+1. Authenticated production browser smoke: login, Supabase session, protected API call, and redirect/CORS behavior using a dedicated E2E account.
+2. A real queued Worker job reaching successful terminal state with DB-backed processing and no prepared-statement error.
+3. Provider E2E/fallback and storage upload/download round trips for Supabase Storage, Backblaze B2, and Cloudinary; verify the configured 1536-dimension Cohere embedding route.
+4. Production Book Intelligence corpus acceptance against its isolated acceptance database; synthetic CI fixtures are not corpus acceptance.
+5. Backup → isolated production-recovery-target restore → rollback drill.
+6. Sentry live ingestion probe.
+7. Fresh Google Drive owner OAuth consent plus export/retry/idempotency if in launch scope.
+8. Mobile EAS/device smoke, accessibility/performance, and GDPR export/delete verification if release-required.
+9. Final smoke against the exact candidate revisions before changing the verdict to Production Ready.
 
 ## Recovery
-Stop promotion first. Restore the previous known-good application revision and preserve database compatibility. For database recovery, use an isolated restore drill or forward-compatible migration strategy. CI has a passing backup/isolated-restore drill; repeat against the intended production recovery target before final release.
 
-## Observability and outstanding gates
-Sentry hooks exist but live ingestion remains unverified. Provider, Google Drive export/retry/idempotency, authenticated browser/device, accessibility/performance, GDPR and final restore evidence must be captured before release status is promoted. Supabase Auth leaked-password protection is intentionally deferred under the current free-tier decision and is not an actionable release blocker.
+Stop promotion first. Restore the previous known-good application revision and preserve database compatibility. Use an isolated restore target for recovery validation; never run synthetic acceptance fixtures against the production database. CI's isolated backup/restore test passing does not replace a production recovery-target drill.
+
+## Release rule
+
+A configured secret, successful build, healthy process, or deployed service is not by itself a production PASS. Final PASS requires observed evidence on the exact release revision. Never record secret values in repository state or release documentation.
