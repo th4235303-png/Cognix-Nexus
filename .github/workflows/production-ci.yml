@@ -56,6 +56,7 @@ jobs:
           echo "backend_changed=$backend_changed" >> "$GITHUB_OUTPUT"
           echo "frontend_changed=$frontend_changed" >> "$GITHUB_OUTPUT"
           echo "Detected source changes: backend=$backend_changed frontend=$frontend_changed"
+  backend-quality:
     name: Backend Lint, Compile & Migration Pre-flight
     runs-on: ubuntu-latest
     timeout-minutes: 15
