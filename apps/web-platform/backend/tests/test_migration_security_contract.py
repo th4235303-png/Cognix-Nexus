@@ -10,7 +10,7 @@ MIGRATIONS = BACKEND / "migrations"
 
 
 class MigrationSecurityContractTests(unittest.TestCase):
-    def test_runtime_migrations_020_to_044_are_registered_once_in_order_and_required(self):
+    def test_runtime_migrations_020_to_045_are_registered_once_in_order_and_required(self):
         persistence = (BACKEND / "app" / "persistence.py").read_text(encoding="utf-8").lower()
         start = persistence.index("migration_names = (")
         end = persistence.index(")\n        with self.connect", start)
@@ -40,6 +40,7 @@ class MigrationSecurityContractTests(unittest.TestCase):
             "042_brain_soul.sql",
             "043_youtube_tracker.sql",
             "044_restrict_service_managed_brain_soul_youtube.sql",
+            "045_agent_lifecycle_events_job_index.sql",
         ]
         tail = registered[-len(expected):]
         self.assertEqual(tail, expected)
@@ -143,6 +144,12 @@ class MigrationSecurityContractTests(unittest.TestCase):
         for migration_name in ("026_level_up_owner_isolation.sql", "031_book_intelligence.sql"):
             extension_sql = (MIGRATIONS / migration_name).read_text(encoding="utf-8").lower()
             self.assertIn("enable row level security", extension_sql)
+
+    def test_045_indexes_agent_lifecycle_event_job_foreign_key(self):
+        sql = (MIGRATIONS / "045_agent_lifecycle_events_job_index.sql").read_text(encoding="utf-8").lower()
+        self.assertIn("create index if not exists idx_agent_lifecycle_events_job_id", sql)
+        self.assertIn("on public.agent_lifecycle_events (job_id)", sql)
+        self.assertNotRegex(sql, r"\\b(drop|delete|truncate)\\b")
 
     def test_service_managed_brain_soul_and_youtube_tables_revoke_data_api_grants(self):
         sql = (MIGRATIONS / "044_restrict_service_managed_brain_soul_youtube.sql").read_text(encoding="utf-8").lower()
