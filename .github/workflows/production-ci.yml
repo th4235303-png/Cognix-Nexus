@@ -124,7 +124,7 @@ jobs:
         working-directory: apps/web-platform/frontend
         env:
           NODE_ENV: production
-          NEXT_PUBLIC_COGNIX_API_URL: https://cognix.yourdomain.com/v1
+          NEXT_PUBLIC_COGNIX_API_URL: https://cognix-core-ypak.onrender.com
         run: npm run build
 
       - name: Verify Secret Leak Prevention
