@@ -72,45 +72,68 @@ RENDER_YAML_ENV_VAR_KEYS: list[str] = [
 ]
 
 
-def fetch_endpoint(base_url: str, path: str, timeout: int) -> dict:
-    """GET a single endpoint and return timing + parsed body."""
+def fetch_endpoint(
+    base_url: str,
+    path: str,
+    timeout: int,
+    attempts: int = 3,
+    retry_delay: float = 2.0,
+) -> dict:
+    """GET a health endpoint, retrying transient startup/network failures."""
     url = base_url.rstrip("/") + path
-    start = time.monotonic()
-    try:
-        req = urllib.request.Request(url, method="GET")
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            elapsed_ms = (time.monotonic() - start) * 1000
-            raw = resp.read()
-            status_code = resp.status
+    started = time.monotonic()
+    last_result: dict = {}
+    for attempt in range(1, max(1, attempts) + 1):
+        attempt_started = time.monotonic()
         try:
-            body = json.loads(raw)
-        except json.JSONDecodeError:
-            body = {"raw": raw.decode("utf-8", errors="replace")}
-        return {
-            "url_path": path,
-            "http_status": status_code,
-            "response_time_ms": round(elapsed_ms, 2),
-            "ok": 200 <= status_code < 300,
-            "body": body,
-        }
-    except urllib.error.HTTPError as exc:
-        elapsed_ms = (time.monotonic() - start) * 1000
-        return {
-            "url_path": path,
-            "http_status": exc.code,
-            "response_time_ms": round(elapsed_ms, 2),
-            "ok": False,
-            "error": str(exc),
-        }
-    except Exception as exc:
-        elapsed_ms = (time.monotonic() - start) * 1000
-        return {
-            "url_path": path,
-            "http_status": None,
-            "response_time_ms": round(elapsed_ms, 2),
-            "ok": False,
-            "error": type(exc).__name__ + ": " + str(exc),
-        }
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                raw = resp.read()
+                status_code = resp.status
+            try:
+                body = json.loads(raw)
+            except json.JSONDecodeError:
+                body = {"raw": raw.decode("utf-8", errors="replace")}
+            last_result = {
+                "url_path": path,
+                "http_status": status_code,
+                "response_time_ms": round((time.monotonic() - attempt_started) * 1000, 2),
+                "total_response_time_ms": round((time.monotonic() - started) * 1000, 2),
+                "attempts": attempt,
+                "ok": 200 <= status_code < 300,
+                "body": body,
+            }
+            # A healthy response ends the retry loop immediately. Retry only
+            # server-side failures; client errors are configuration/auth issues.
+            if last_result["ok"] or status_code < 500 or attempt >= max(1, attempts):
+                return last_result
+        except urllib.error.HTTPError as exc:
+            last_result = {
+                "url_path": path,
+                "http_status": exc.code,
+                "response_time_ms": round((time.monotonic() - attempt_started) * 1000, 2),
+                "total_response_time_ms": round((time.monotonic() - started) * 1000, 2),
+                "attempts": attempt,
+                "ok": False,
+                "error": f"HTTP {exc.code}",
+            }
+            if 400 <= exc.code < 500 or attempt >= max(1, attempts):
+                return last_result
+        except Exception as exc:
+            last_result = {
+                "url_path": path,
+                "http_status": None,
+                "response_time_ms": round((time.monotonic() - attempt_started) * 1000, 2),
+                "total_response_time_ms": round((time.monotonic() - started) * 1000, 2),
+                "attempts": attempt,
+                "ok": False,
+                "error": type(exc).__name__ + ": " + str(exc),
+            }
+            if attempt >= max(1, attempts):
+                return last_result
+        if attempt < max(1, attempts):
+            time.sleep(max(0.0, retry_delay) * attempt)
+    return last_result
 
 
 def compare_env_vars() -> dict:
@@ -141,6 +164,14 @@ def main() -> int:
         help="HTTP request timeout in seconds (default: 30)",
     )
     parser.add_argument(
+        "--attempts", type=int, default=3,
+        help="Attempts per endpoint for transient cold-start/network failures (default: 3)",
+    )
+    parser.add_argument(
+        "--retry-delay", type=float, default=2.0,
+        help="Base delay between retry attempts in seconds (default: 2)",
+    )
+    parser.add_argument(
         "--compare-env-vars",
         action="store_true",
         help=(
@@ -164,8 +195,8 @@ def main() -> int:
         )
         return 1
 
-    health = fetch_endpoint(base_url, "/health", args.timeout)
-    ready = fetch_endpoint(base_url, "/ready", args.timeout)
+    health = fetch_endpoint(base_url, "/health", args.timeout, args.attempts, args.retry_delay)
+    ready = fetch_endpoint(base_url, "/ready", args.timeout, args.attempts, args.retry_delay)
 
     # Extract well-known fields surfaced by Cognix health responses.
     health_body = health.get("body", {})
