@@ -27,7 +27,9 @@ All current public application tables have RLS enabled. User-facing tables have 
 ## Migration state
 The application-managed `public.cognix_schema_migrations` registry is verified through migration `044_restrict_service_managed_brain_soul_youtube.sql` in production. Migration 045 is registered in code and will apply on the next API/worker startup. Migration 044 revokes `anon` and `authenticated` table/sequence privileges for `brain_soul_context`, `brain_soul_syntheses`, `youtube_channels`, and `brain_youtube_videos`, and revokes those grants by default for newly-created public tables/sequences.
 
-Migration 045 adds a covering index on `agent_lifecycle_events(job_id)` for the foreign key to `agent_jobs(id)` identified by the Supabase performance advisor. This is additive and does not alter access policies or data.\n\nThe separate Supabase CLI migration history remains at the historical `033_rls_policy_initplan_indexes` head. These are two different ledgers and must not be treated as interchangeable. The application migration runner is authoritative for the backend's ordered SQL migration set; migration 045 is the next pending revision.
+Migration 045 adds a covering index on `agent_lifecycle_events(job_id)` for the foreign key to `agent_jobs(id)` identified by the Supabase performance advisor. This is additive and does not alter access policies or data.
+
+The separate Supabase CLI migration history remains at the historical `033_rls_policy_initplan_indexes` head. These are two different ledgers and must not be treated as interchangeable. The application migration runner is authoritative for the backend's ordered SQL migration set; migration 045 is the next pending revision.
 
 ### Confirmed migration numbering defect
 Two historical migrations use the 010 number:
