@@ -175,6 +175,7 @@ function App() {
   const [vaultLocked, setVaultLocked] = useState<boolean>(false);
   const [vaultLockoutUntil, setVaultLockoutUntil] = useState<number | null>(null);
   const [vaultPinSet, setVaultPinSet] = useState<boolean | null>(null); // null = loading
+  const [showPin, setShowPin] = useState<boolean>(false);
   const [settingNewPin, setSettingNewPin] = useState<boolean>(false);
   const [confirmPin, setConfirmPin] = useState<string>('');
   const [secretNotes, setSecretNotes] = useState<string[]>([
@@ -543,7 +544,7 @@ function App() {
                   placeholder="PIN (Default: 1234)"
                   placeholderTextColor="#64748b"
                   keyboardType="numeric"
-                  secureTextEntry
+                  secureTextEntry={!showPin}
                   maxLength={4}
                   value={pinInput}
                   onChangeText={setPinInput}
