@@ -67,6 +67,10 @@ def process_book(book_id: str) -> bool:
         try:
             binary_path = book.get("binary_path")
             binary_storage = book.get("binary_storage")
+            if not binary_path and not binary_storage:
+                raise RuntimeError(
+                    "Book binary storage reference is missing; filename metadata alone cannot locate file bytes"
+                )
             filename = (
                 book.get("original_filename")
                 or (Path(binary_path).name if binary_path else None)
@@ -148,7 +152,7 @@ def process_queued_books(limit: int = 2) -> int:
             cur.execute(
                 """SELECT id FROM books
                    WHERE source_kind='upload'
-                     AND (binary_path IS NOT NULL OR binary_storage IS NOT NULL OR original_filename IS NOT NULL)
+                     AND (binary_path IS NOT NULL OR binary_storage IS NOT NULL)
                      AND status IN ('queued','processing','failed')
                      AND processing_attempts < 3
                      AND (
