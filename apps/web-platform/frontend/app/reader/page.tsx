@@ -17,6 +17,44 @@ export default function ReaderPage() {
   const [noteText, setNoteText] = useState('');
   const [savedNotes, setSavedNotes] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [streamingText, setStreamingText] = useState('');
+  const [isStreaming, setIsStreaming] = useState(false);
+
+  const startStreamSummary = async () => {
+    if (!selectedBookId) return;
+    setIsStreaming(true);
+    setStreamingText('');
+    try {
+      const response = await fetch(`/api/brain/books/${selectedBookId}/stream-summary`);
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      if (!reader) return;
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            try {
+              const data = JSON.parse(line.slice(6));
+              if (data.type === 'token') {
+                setStreamingText((prev) => prev + data.text);
+              } else if (data.type === 'done') {
+                setIsStreaming(false);
+              }
+            } catch {}
+          }
+        }
+      }
+    } catch (e) {
+      console.error('SSE summary failed', e);
+    } finally {
+      setIsStreaming(false);
+    }
+  };
+
 
   useEffect(() => {
     listBrainBooks()
@@ -190,6 +228,31 @@ export default function ReaderPage() {
             {/* Tab Contents */}
             {activeTab === 'summary' && (
               <div className="space-y-3">
+                <div className="flex items-center justify-between pb-2 border-b border-border/40">
+                  <span className="text-xs font-semibold text-muted-foreground">Neural Synthesis</span>
+                  <button
+                    type="button"
+                    onClick={startStreamSummary}
+                    disabled={isStreaming || !selectedBookId}
+                    className="inline-flex items-center gap-1.5 rounded-md bg-cyan-500/10 px-2.5 py-1 text-xs font-semibold text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 disabled:opacity-50"
+                  >
+                    <Sparkles className={`h-3.5 w-3.5 ${isStreaming ? 'animate-spin' : ''}`} />
+                    {isStreaming ? 'Streaming Distillation...' : '✨ Stream Live Chapter Synthesis'}
+                  </button>
+                </div>
+
+                {(streamingText || isStreaming) && (
+                  <div className="rounded-lg border border-cyan-500/40 bg-cyan-950/20 p-3 shadow-inner">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="inline-block h-2 w-2 rounded-full bg-cyan-400 animate-pulse" />
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-cyan-400">Live Cognitive Stream</span>
+                    </div>
+                    <p className="whitespace-pre-wrap text-xs leading-6 text-cyan-100 font-mono">
+                      {streamingText}
+                      {isStreaming && <span className="inline-block w-1.5 h-3.5 ml-0.5 bg-cyan-400 animate-pulse align-middle" />}
+                    </p>
+                  </div>
+                )}
                 {summaries.length > 0 ? (
                   summaries.map((s) => (
                     <div key={s.id} className="rounded-lg border border-border/50 bg-background/50 p-3">

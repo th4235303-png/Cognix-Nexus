@@ -18,7 +18,7 @@ class LLMRoute:
 # A provider is eligible only when its own API key is present.
 _DEFAULT_ROUTES: tuple[LLMRoute, ...] = (
     LLMRoute("gemini", "GEMINI_API_KEY", "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", "gemini-2.5-flash"),
-    LLMRoute("groq", "GROQ_API_KEY", "https://api.groq.com/openai/v1/chat/completions", "qwen/qwen3.8-27b"),
+    LLMRoute("groq", "GROQ_API_KEY", "https://api.groq.com/openai/v1/chat/completions", "llama-3.3-70b-versatile"),
     LLMRoute("openrouter", "OPENROUTER_API_KEY", "https://openrouter.ai/api/v1/chat/completions", "openrouter/free"),
     LLMRoute("mistral", "MISTRAL_API_KEY", "https://api.mistral.ai/v1/chat/completions", "ministral-8b-latest"),
     LLMRoute("cohere", "COHERE_API_KEY", "https://api.cohere.ai/compatibility/v1/chat/completions", "command-a-03-2025"),
@@ -74,10 +74,13 @@ class LLMProvider:
 
     async def complete_on_route(self, route: LLMRoute, system: str, user: str) -> str:
         """Call one concrete provider route without failover, for release E2E."""
+        key_val = os.getenv(route.api_key_env, '').strip()
         headers = {
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {os.getenv(route.api_key_env, '').strip()}",
+            "Authorization": f"Bearer {key_val}",
         }
+        if route.name == "gemini":
+            headers["x-goog-api-key"] = key_val
         payload = {
             "model": route.model,
             "messages": [
