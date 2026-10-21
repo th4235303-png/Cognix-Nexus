@@ -178,10 +178,15 @@ class _WorkerHealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in {"/", "/health"}:
             database_ok = bool(store.database and store.database.ping())
-            payload = (
-                '{"status":"ok","service":"cognix-nexus-worker","persistence":"postgresql","database":true}'
-                if database_ok
-                else '{"status":"degraded","service":"cognix-nexus-worker","persistence":"memory-prototype","database":false}'
+            payload = json.dumps(
+                {
+                    "status": "ok" if database_ok else "degraded",
+                    "service": "cognix-nexus-worker",
+                    "persistence": "postgresql" if database_ok else "memory-prototype",
+                    "database": database_ok,
+                    "revision": os.getenv("RENDER_GIT_COMMIT", "").strip() or "unknown",
+                },
+                separators=(",", ":"),
             ).encode("utf-8")
             self.send_response(200)
             self.send_header("content-type", "application/json")
