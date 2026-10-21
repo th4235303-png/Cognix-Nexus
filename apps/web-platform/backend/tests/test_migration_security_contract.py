@@ -149,7 +149,7 @@ class MigrationSecurityContractTests(unittest.TestCase):
         sql = (MIGRATIONS / "045_agent_lifecycle_events_job_index.sql").read_text(encoding="utf-8").lower()
         self.assertIn("create index if not exists idx_agent_lifecycle_events_job_id", sql)
         self.assertIn("on public.agent_lifecycle_events (job_id)", sql)
-        self.assertNotRegex(sql, r"\\b(drop|delete|truncate)\\b")
+        self.assertNotRegex(sql, r"\b(drop|delete|truncate)\b")
 
     def test_service_managed_brain_soul_and_youtube_tables_revoke_data_api_grants(self):
         sql = (MIGRATIONS / "044_restrict_service_managed_brain_soul_youtube.sql").read_text(encoding="utf-8").lower()
