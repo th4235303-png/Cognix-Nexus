@@ -4,7 +4,7 @@ import sitecustomize  # noqa: F401,E402 — apply psycopg pooler compatibility b
 import asyncio
 import logging
 import os
-import time
+import signal
 import threading
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -23,6 +23,13 @@ logger = logging.getLogger("cognix.worker")
 
 POLL_SECONDS = float(os.getenv("COGNIX_WORKER_POLL_SECONDS", "2"))
 LEASE_HEARTBEAT_SECONDS = 5 * 60
+SHUTDOWN_REQUESTED = threading.Event()
+
+
+def _request_shutdown(signum: int, _frame) -> None:
+    """Stop claiming new work and let the current unit of work finish."""
+    logger.info("worker_shutdown_requested signal=%s", signum)
+    SHUTDOWN_REQUESTED.set()
 
 
 def _advance_with_lease(task_id: str, claim_token: str) -> dict:
@@ -134,6 +141,9 @@ def run_once() -> int:
     process can enqueue work for this worker. In-memory mode remains useful
     for local development and tests.
     """
+    if SHUTDOWN_REQUESTED.is_set():
+        logger.info("worker_shutdown_skipping_cycle")
+        return 0
     store.refresh()
     candidates = [
         task
@@ -142,6 +152,9 @@ def run_once() -> int:
     ]
     processed = 0
     for task in sorted(candidates, key=lambda item: (item["updated_at"], item["created_at"]), reverse=True):
+        if SHUTDOWN_REQUESTED.is_set():
+            logger.info("worker_shutdown_stopping_new_tasks")
+            break
         claim_token = None
         if store.database:
             claim_token = store.database.claim_task(task["id"])
@@ -201,28 +214,36 @@ class _WorkerHealthHandler(BaseHTTPRequestHandler):
         return
 
 
-def _start_health_server() -> None:
+def _start_health_server() -> ThreadingHTTPServer:
     port = int(os.getenv("PORT", "10000"))
     server = ThreadingHTTPServer(("0.0.0.0", port), _WorkerHealthHandler)
     threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server
 
 
 def main() -> None:
     logging.basicConfig(level=os.getenv("COGNIX_WORKER_LOG_LEVEL", "INFO"))
-    _start_health_server()
-    require_database = os.getenv("COGNIX_REQUIRE_DATABASE", "true" if os.getenv("COGNIX_ENV", "").strip().lower() == "production" else "false").strip().lower() in {"1", "true", "yes", "on"}
-    if require_database and store.database is None:
-        raise RuntimeError("COGNIX_REQUIRE_DATABASE is enabled but DATABASE_URL is not configured")
-    logger.info("worker_started persistence=%s database_configured=%s poll_seconds=%s", store.persistence_mode, bool(store.database), POLL_SECONDS)
+    SHUTDOWN_REQUESTED.clear()
+    signal.signal(signal.SIGTERM, _request_shutdown)
+    signal.signal(signal.SIGINT, _request_shutdown)
+    health_server = _start_health_server()
     try:
-        while True:
+        require_database = os.getenv("COGNIX_REQUIRE_DATABASE", "true" if os.getenv("COGNIX_ENV", "").strip().lower() == "production" else "false").strip().lower() in {"1", "true", "yes", "on"}
+        if require_database and store.database is None:
+            raise RuntimeError("COGNIX_REQUIRE_DATABASE is enabled but DATABASE_URL is not configured")
+        logger.info("worker_started persistence=%s database_configured=%s poll_seconds=%s", store.persistence_mode, bool(store.database), POLL_SECONDS)
+        while not SHUTDOWN_REQUESTED.is_set():
             run_once()
+            if SHUTDOWN_REQUESTED.is_set():
+                break
             try:
                 books_processed = process_queued_books(limit=2)
                 if books_processed:
                     logger.info("book_processing_cycle processed=%d", books_processed)
             except Exception as exc:
                 logger.warning("book_processing_cycle_failed error_type=%s", type(exc).__name__)
+            if SHUTDOWN_REQUESTED.is_set():
+                break
             try:
                 indexed = asyncio.run(_index_unembedded_chunks())
                 if indexed:
@@ -235,11 +256,19 @@ def main() -> None:
                     logger.info("book_processing_finalize completed=%d", completed_books)
             except Exception as exc:
                 logger.warning("embedding_index_cycle_failed error_type=%s", type(exc).__name__)
+            if SHUTDOWN_REQUESTED.is_set():
+                break
             enqueue_due_agent_schedules()
+            if SHUTDOWN_REQUESTED.is_set():
+                break
             run_due_agent_jobs()
+            if SHUTDOWN_REQUESTED.is_set():
+                break
             _advance_exports()
-            time.sleep(POLL_SECONDS)
+            SHUTDOWN_REQUESTED.wait(max(0.0, POLL_SECONDS))
     finally:
+        health_server.shutdown()
+        health_server.server_close()
         if store.database:
             store.database.close()
 
