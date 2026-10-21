@@ -21,6 +21,13 @@
 - Backend dependency audit reports no known vulnerabilities after upgrading Pillow to 13.0.0.
 - These are CI/service-health passes, not unconditional production authorization. The release decision remains CONDITIONAL pending external acceptance evidence.
 
+## Deployment configuration drift — release blocker
+
+- The repository `render.yaml` specifies `rootDir: apps/web-platform/backend` for the API and Worker, but the live Render service records currently report `rootDir: web-platform/backend`.
+- API and Worker still report the last verified deployed revision `fb1e0b58bd403753c1be7252a1215774aa90e1e2`; recent backend commits have not reached those services.
+- This is not fixable through the available Render connector because it does not expose a service Root Directory update operation. An operator must change Root Directory for both services in the Render dashboard, preserve current secrets/environment variables, then deploy and verify the exact SHA.
+- Migration 045 is registered in source but is **not applied in production** until the corrected services start from a revision containing it. Do not claim the queue guard or index is live before that verification.
+
 ## Health semantics
 
 - API `/health` is liveness and does not require the database.
