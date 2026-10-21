@@ -471,6 +471,7 @@ class Database:
             "042_brain_soul.sql",
             "043_youtube_tracker.sql",
             "044_restrict_service_managed_brain_soul_youtube.sql",
+            "045_agent_lifecycle_events_job_index.sql",
         )
         with self.connect() as conn:
             with conn.cursor() as cur:
