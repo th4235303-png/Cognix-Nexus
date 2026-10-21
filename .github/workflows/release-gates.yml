@@ -86,6 +86,8 @@ jobs:
       COGNIX_RUN_RECOVERY: ${{ inputs.run_recovery_drill }}
       COGNIX_RUN_RENDER_HEALTH: ${{ inputs.run_render_health }}
       COGNIX_RUN_WORKER_HEALTH: ${{ inputs.run_worker_health }}
+      COGNIX_API_BASE_URL: ${{ secrets.COGNIX_API_BASE_URL }}
+      COGNIX_WORKER_BASE_URL: ${{ secrets.COGNIX_WORKER_BASE_URL }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
