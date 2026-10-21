@@ -4,7 +4,7 @@
 Designed for automated production pipelines and containerless deployments (systemd / PM2).
 Features:
 - Pre-flight PostgreSQL connectivity check with exponential backoff.
-- Executes ordered SQL migrations (`001_initial.sql` through `044_restrict_service_managed_brain_soul_youtube.sql`).
+- Executes ordered SQL migrations (`001_initial.sql` through `045_agent_lifecycle_events_job_index.sql`).
 - Leverages transactional DDL and PostgreSQL advisory lock (`pg_advisory_xact_lock`) for zero race conditions.
 - Validates applied schema revisions against `cognix_schema_migrations`.
 - Non-zero exit code on failure to prevent deployment of broken states.
