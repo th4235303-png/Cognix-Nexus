@@ -44,6 +44,7 @@ GATES = (
     Gate("book_acceptance_database", ("COGNIX_BOOK_ACCEPTANCE_DATABASE_URL",)),
     Gate("database_recovery", ("DATABASE_URL", "COGNIX_RECOVERY_TARGET_DATABASE_URL", "COGNIX_RECOVERY_TARGET_ISOLATED")),
     Gate("render_health", ("COGNIX_API_BASE_URL",)),
+    Gate("worker_health", ("COGNIX_WORKER_BASE_URL",)),
 )
 
 
@@ -60,6 +61,7 @@ def main() -> int:
         "sentry": os.getenv("COGNIX_RUN_SENTRY_PROBE", "").strip().lower() == "true",
         "recovery": os.getenv("COGNIX_RUN_RECOVERY", "").strip().lower() == "true",
         "render": os.getenv("COGNIX_RUN_RENDER_HEALTH", "").strip().lower() == "true",
+        "worker": os.getenv("COGNIX_RUN_WORKER_HEALTH", "").strip().lower() == "true",
     }
     any_selected = any(selected.values())
     group_by_gate = {
@@ -74,6 +76,7 @@ def main() -> int:
         "authenticated_browser": "browser",
         "sentry": "sentry",
         "render_health": "render",
+        "worker_health": "worker",
     }
     active_groups = {key for key, value in selected.items() if value}
     active_gates = [
