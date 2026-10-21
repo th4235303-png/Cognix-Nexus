@@ -105,6 +105,29 @@ jobs:
           COGNIX_API_BASE_URL: https://cognix-core-ypak.onrender.com
         run: python3 apps/web-platform/backend/scripts/render_health_check.py
 
+      - name: Verify live API revision matches the candidate commit
+        if: github.event_name != 'pull_request'
+        env:
+          COGNIX_API_BASE_URL: https://cognix-core-ypak.onrender.com
+          EXPECTED_DEPLOY_REVISION: ${{ github.sha }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          import urllib.request
+
+          url = os.environ["COGNIX_API_BASE_URL"].rstrip("/") + "/health"
+          with urllib.request.urlopen(url, timeout=30) as response:
+              payload = json.loads(response.read())
+          actual = payload.get("revision")
+          expected = os.environ["EXPECTED_DEPLOY_REVISION"]
+          if actual != expected:
+              raise SystemExit(
+                  f"API revision mismatch: expected {expected}, got {actual!r}"
+              )
+          print(f"PASS API revision matches candidate: {actual}")
+          PY
+
       - name: Verify live worker health and PostgreSQL persistence
         if: github.event_name != 'pull_request'
         run: |
@@ -113,7 +136,7 @@ jobs:
             --retry 5 --retry-all-errors --retry-delay 2 --retry-max-time 180 \
             --connect-timeout 10 --max-time 30 \
             https://cognix-core-worker-runtime.onrender.com/health \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status") == "ok", d; assert d.get("persistence") == "postgresql", d; assert d.get("database") is True, d; print("PASS worker health: status=ok persistence=postgresql database=true")'
+            | python3 -c 'import json,os,sys; d=json.load(sys.stdin); assert d.get("status") == "ok", d; assert d.get("persistence") == "postgresql", d; assert d.get("database") is True, d; assert d.get("revision") == os.environ["GITHUB_SHA"], {"expected_revision": os.environ["GITHUB_SHA"], "response": d}; print("PASS worker health: status=ok persistence=postgresql database=true revision="+d["revision"])'
 
       - name: Verify live frontend HTTPS and HTML response
         if: github.event_name != 'pull_request'
