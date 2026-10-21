@@ -12,7 +12,50 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  backend-quality:
+  detect-changes:
+    name: Detect deployed-service source changes
+    runs-on: ubuntu-latest
+    outputs:
+      backend_changed: ${{ steps.paths.outputs.backend_changed }}
+      frontend_changed: ${{ steps.paths.outputs.frontend_changed }}
+    steps:
+      - name: Checkout full history for path comparison
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Classify changed paths
+        id: paths
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" || -z "${BEFORE_SHA:-}" || "$BEFORE_SHA" =~ ^0+$ ]]; then
+            base="$(git rev-parse HEAD^ 2>/dev/null || true)"
+          else
+            base="$BEFORE_SHA"
+          fi
+          if [[ -n "$base" ]] && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            changed_files="$(git diff --name-only "$base" "$GITHUB_SHA")"
+          else
+            changed_files="$(git diff-tree --no-commit-id --name-only -r "$GITHUB_SHA")"
+          fi
+          backend_changed=false
+          frontend_changed=false
+          while IFS= read -r path; do
+            case "$path" in
+              apps/web-platform/backend/*|render.yaml)
+                backend_changed=true
+                ;;
+            esac
+            case "$path" in
+              apps/web-platform/frontend/*|render.yaml)
+                frontend_changed=true
+                ;;
+            esac
+          done <<< "$changed_files"
+          echo "backend_changed=$backend_changed" >> "$GITHUB_OUTPUT"
+          echo "frontend_changed=$frontend_changed" >> "$GITHUB_OUTPUT"
+          echo "Detected source changes: backend=$backend_changed frontend=$frontend_changed"
     name: Backend Lint, Compile & Migration Pre-flight
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -93,7 +136,7 @@ jobs:
 
   production-gate:
     name: Production Release Gate
-    needs: [backend-quality, frontend-build]
+    needs: [detect-changes, backend-quality, frontend-build]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -106,7 +149,7 @@ jobs:
         run: python3 apps/web-platform/backend/scripts/render_health_check.py
 
       - name: Verify live API revision matches the candidate commit
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && needs.detect-changes.outputs.backend_changed == 'true'
         env:
           COGNIX_API_BASE_URL: https://cognix-core-ypak.onrender.com
           EXPECTED_DEPLOY_REVISION: ${{ github.sha }}
@@ -136,7 +179,17 @@ jobs:
             --retry 5 --retry-all-errors --retry-delay 2 --retry-max-time 180 \
             --connect-timeout 10 --max-time 30 \
             https://cognix-core-worker-runtime.onrender.com/health \
-            | python3 -c 'import json,os,sys; d=json.load(sys.stdin); assert d.get("status") == "ok", d; assert d.get("persistence") == "postgresql", d; assert d.get("database") is True, d; assert d.get("revision") == os.environ["GITHUB_SHA"], {"expected_revision": os.environ["GITHUB_SHA"], "response": d}; print("PASS worker health: status=ok persistence=postgresql database=true revision="+d["revision"])'
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status") == "ok", d; assert d.get("persistence") == "postgresql", d; assert d.get("database") is True, d; print("PASS worker health: status=ok persistence=postgresql database=true")'
+
+      - name: Verify live worker revision matches the candidate commit
+        if: github.event_name != 'pull_request' && needs.detect-changes.outputs.backend_changed == 'true'
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --retry 5 --retry-all-errors --retry-delay 2 --retry-max-time 180 \
+            --connect-timeout 10 --max-time 30 \
+            https://cognix-core-worker-runtime.onrender.com/health \
+            | python3 -c 'import json,os,sys; d=json.load(sys.stdin); assert d.get("revision") == os.environ["GITHUB_SHA"], {"expected_revision": os.environ["GITHUB_SHA"], "response": d}; print("PASS worker revision matches candidate: "+d["revision"])'
 
       - name: Verify live frontend HTTPS and HTML response
         if: github.event_name != 'pull_request'
