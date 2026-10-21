@@ -2,7 +2,7 @@
 
 > Owner: Database/schema
 > Update when: schema, migration ledger, RLS, ownership or lineage rules change
-> Last Updated: 2026-10-16
+> Last Updated: 2026-10-21
 > Do NOT put here: live release status unless it is directly a schema fact.
 
 ## Persistence
@@ -25,9 +25,9 @@ Vault items store ciphertext, nonce and KDF metadata; plaintext remains client-s
 All current public application tables have RLS enabled. User-facing tables have owner-scoped policies; service-managed Brain Soul/YouTube tables intentionally have no frontend policies and are restricted to backend/service-role access. Deny-by-default remains the baseline for tables without frontend access.
 
 ## Migration state
-The application-managed `public.cognix_schema_migrations` registry is applied through migration `044_restrict_service_managed_brain_soul_youtube.sql` in production. Migration 044 revokes `anon` and `authenticated` table/sequence privileges for `brain_soul_context`, `brain_soul_syntheses`, `youtube_channels`, and `brain_youtube_videos`, and revokes those grants by default for newly-created public tables/sequences.
+The application-managed `public.cognix_schema_migrations` registry is applied through migration `045_agent_lifecycle_events_job_index.sql` in production. Migration 044 revokes `anon` and `authenticated` table/sequence privileges for `brain_soul_context`, `brain_soul_syntheses`, `youtube_channels`, and `brain_youtube_videos`, and revokes those grants by default for newly-created public tables/sequences.
 
-The separate Supabase CLI migration history remains at the historical `033_rls_policy_initplan_indexes` head. These are two different ledgers and must not be treated as interchangeable. The application migration runner is authoritative for the backend's ordered SQL migration set through 044.
+Migration 045 adds a covering index on `agent_lifecycle_events(job_id)` for the foreign key to `agent_jobs(id)` identified by the Supabase performance advisor. This is additive and does not alter access policies or data.\n\nThe separate Supabase CLI migration history remains at the historical `033_rls_policy_initplan_indexes` head. These are two different ledgers and must not be treated as interchangeable. The application migration runner is authoritative for the backend's ordered SQL migration set through 044.
 
 ### Confirmed migration numbering defect
 Two historical migrations use the 010 number:
@@ -45,7 +45,7 @@ Invariants: exact duplicates stop; interrupted work resumes; partial knowledge r
 - Production contains the full public application schema, including Brain Soul and YouTube tracker tables.
 - All current public tables have RLS enabled.
 - User-facing tables have active policies; the four service-managed Brain Soul/YouTube tables intentionally have zero frontend policies and no `anon`/`authenticated` table or sequence privileges.
-- Migration 044 is recorded in `public.cognix_schema_migrations` with an applied timestamp and has been verified by read-only privilege queries.
+- Migration 044 is recorded in `public.cognix_schema_migrations` with an applied timestamp and has been verified by read-only privilege queries. Migration 045 is applied by the API/worker startup migration runner after deployment.
 - Supabase Auth leaked-password protection remains disabled. Per the current release decision, this free-tier/provider limitation is explicitly accepted and is not a database migration blocker.
 
 ## Resolved verification
