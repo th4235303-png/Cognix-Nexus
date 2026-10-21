@@ -105,6 +105,16 @@ jobs:
           COGNIX_API_BASE_URL: https://cognix-core-ypak.onrender.com
         run: python3 apps/web-platform/backend/scripts/render_health_check.py
 
+      - name: Verify live worker health and PostgreSQL persistence
+        if: github.event_name != 'pull_request'
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --retry 5 --retry-all-errors --retry-delay 2 --retry-max-time 180 \
+            --connect-timeout 10 --max-time 30 \
+            https://cognix-core-worker-runtime.onrender.com/health \
+            | python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status") == "ok", d; assert d.get("persistence") == "postgresql", d; assert d.get("database") is True, d; print("PASS worker health: status=ok persistence=postgresql database=true")'
+
       - name: Verify live frontend HTTPS and HTML response
         if: github.event_name != 'pull_request'
         run: |
