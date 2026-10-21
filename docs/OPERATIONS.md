@@ -27,14 +27,16 @@
 - API `/ready` reports persistence readiness when database persistence is configured/required.
 - Production should use `COGNIX_REQUIRE_DATABASE=true` so missing database bindings fail fast.
 - The automated production release gate checks API health/readiness, Worker `/health` with `status=ok`, `persistence=postgresql`, `database=true`, and frontend HTTPS/HTML response.
+- Migration 045 adds `idx_agent_lifecycle_events_job_id` for the foreign key to `agent_jobs(id)` flagged by the Supabase performance advisor. Confirm it is applied after the next API/Worker startup migration.
 - Render health checks retry transient timeouts/network errors and HTTP 5xx; client-side 4xx failures are not retried.
 - Capture timestamp, revision, status and response body after each release candidate; never include credentials.
 
 ## Worker operations
 
 - Worker starts with PostgreSQL persistence and polls on a two-second interval. Durable task leases/fencing and bounded retries are implemented.
+- Queue selection now requires a real `binary_path` or `binary_storage` reference; filename-only orphan rows are no longer selected for processing. A regression test protects this contract. The existing failed synthetic book record is left untouched for explicit data-owner review.
 - Latest verified worker startup log: `worker_started persistence=postgresql database_configured=True poll_seconds=2.0`.
-- Database status aggregation on 2026-10-21 found four `processing_tasks` in `completed / needs_review`, one `failed / queued` task, one `books` row in `completed / ready`, and one failed book. No active queued/running task was shown by that aggregate, and it does **not** demonstrate that a newly enqueued job reached terminal success.
+- Database status aggregation on 2026-10-21 found four `processing_tasks` in `completed / needs_review`, one `failed / queued` task (a 403 fetching Wikipedia), one `books` row in `completed / ready`, and one failed synthetic E2E book (missing binary/path metadata). These old rows were not mutated. No active queued/running task was shown by that aggregate, and it does **not** demonstrate that a newly enqueued job reached terminal success.
 - Inspect task lease fields, retry/backoff state and worker logs when a queue appears stuck. Do not retry or delete failed production records until their cause and idempotency implications are understood.
 - The earlier `DuplicatePreparedStatement` error was addressed with Psycopg `prepare_threshold=None`; the latest checked deployment starts successfully. Keep monitoring for recurrence.
 - Export worker state transitions are owned by the export service rather than an external synthetic task state.
