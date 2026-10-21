@@ -23,6 +23,7 @@ from app.store import store
 from app.ownership import reset_request_owner, set_request_owner
 
 API_VERSION = "1.0.0"
+DEPLOYMENT_REVISION = os.getenv("RENDER_GIT_COMMIT", "").strip() or "unknown"
 DEFAULT_CORS_ORIGINS = ("http://localhost:3000",)
 logger = logging.getLogger("cognix")
 if not logger.handlers:
@@ -280,7 +281,7 @@ def root() -> dict[str, str]:
 
 @app.get("/health")
 def health() -> dict[str, str]:
-    return {"status": "ok", "service": "cognix-nexus-api", "version": API_VERSION}
+    return {"status": "ok", "service": "cognix-nexus-api", "version": API_VERSION, "revision": DEPLOYMENT_REVISION}
 
 
 @app.get("/ready")
@@ -297,6 +298,7 @@ def readiness() -> dict[str, object]:
         "status": "ready" if ready else "not_ready",
         "service": "cognix-nexus-api",
         "version": API_VERSION,
+        "revision": DEPLOYMENT_REVISION,
         "database_configured": database_configured,
         "database_reachable": database_reachable,
         "persistence_mode": store.persistence_mode,
