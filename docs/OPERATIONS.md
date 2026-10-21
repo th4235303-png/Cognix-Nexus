@@ -7,26 +7,26 @@
 
 ## Runtime and deployed revisions
 
-- Frontend: Render `cognix-nexus-frontend` — latest deployment for `ee1288d9778dcadb3bfa3b183f856e7c5e5bfba6` is LIVE. This revision includes a documentation/checkpoint update; it does not change frontend runtime code.
-- API: Render `Cognix-Core` — latest verified LIVE runtime deployment is `fb1e0b58bd403753c1be7252a1215774aa90e1e2`.
-- Worker: Render `cognix-core-worker-runtime` — latest verified LIVE runtime deployment is `fb1e0b58bd403753c1be7252a1215774aa90e1e2`.
+- Frontend: Render `cognix-nexus-frontend` — latest deployment for `e774856186dfae3fd6f2c181b65e7877b4633961` is LIVE.
+- API: Render `Cognix-Core` — LIVE on `e774856186dfae3fd6f2c181b65e7877b4633961`, Root Directory `apps/web-platform/backend`.
+- Worker: Render `cognix-core-worker-runtime` — LIVE on `e774856186dfae3fd6f2c181b65e7877b4633961`, Root Directory `apps/web-platform/backend`.
 - Persistence/Auth: Supabase/PostgreSQL.
 - Netlify references elsewhere in the repository may be legacy; Render is the currently verified frontend host.
 
 ## Latest CI evidence — 2026-10-21
 
-- [Production release gate](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/39551181681) passed: backend lint/compile/migration/tests, frontend production build and secret-leak check, live API health/readiness, live Worker health/PostgreSQL persistence, and frontend HTTPS/HTML smoke.
-- [Main CI](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/39551181572) passed backend, frontend, mobile, database integration, synthetic Book Intelligence contract, isolated backup/restore test, and dependency audit.
-- [CodeQL](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/39551181507) passed JavaScript/TypeScript and Python analysis.
+- [Production release gate rerun](https://github.com/th4235303-png/Cognix-Nexus/actions/runs/39556498025) passed: backend lint/compile/migration/tests, frontend production build and secret-leak check, live API health/readiness and exact revision, live Worker health/PostgreSQL persistence, and frontend HTTPS/HTML smoke.
+- Latest Render API and Worker deploys are both LIVE on `e774856186dfae3fd6f2c181b65e7877b4633961`.
+- Application migration registry records migration 045 applied; read-only SQL confirms `idx_agent_lifecycle_events_job_id` exists.
 - Backend dependency audit reports no known vulnerabilities after upgrading Pillow to 13.0.0.
 - These are CI/service-health passes, not unconditional production authorization. The release decision remains CONDITIONAL pending external acceptance evidence.
 
-## Deployment configuration drift — release blocker
+## Deployment configuration drift — resolved
 
-- The repository `render.yaml` specifies `rootDir: apps/web-platform/backend` for the API and Worker, but the live Render service records currently report `rootDir: web-platform/backend`.
-- API and Worker still report the last verified deployed revision `fb1e0b58bd403753c1be7252a1215774aa90e1e2`; recent backend commits have not reached those services.
-- This is not fixable through the available Render connector because it does not expose a service Root Directory update operation. An operator must change Root Directory for both services in the Render dashboard, preserve current secrets/environment variables, then deploy and verify the exact SHA.
-- Migration 045 is registered in source but is **not applied in production** until the corrected services start from a revision containing it. Do not claim the queue guard or index is live before that verification.
+- Both live Render API and Worker Root Directories now match `render.yaml`: `apps/web-platform/backend`.
+- Both services have redeployed from the same exact commit; the production release gate now verifies API and Worker health and revision successfully.
+- GitHub issue [#75](https://github.com/th4235303-png/Cognix-Nexus/issues/75) is closed as completed.
+- Migration 045 is applied in the application migration ledger and the expected index exists in production.
 
 ## Health semantics
 
@@ -34,7 +34,7 @@
 - API `/ready` reports persistence readiness when database persistence is configured/required.
 - Production should use `COGNIX_REQUIRE_DATABASE=true` so missing database bindings fail fast.
 - The automated production release gate checks API health/readiness, Worker `/health` with `status=ok`, `persistence=postgresql`, `database=true`, and frontend HTTPS/HTML response.
-- Migration 045 adds `idx_agent_lifecycle_events_job_id` for the foreign key to `agent_jobs(id)` flagged by the Supabase performance advisor. Confirm it is applied after the next API/Worker startup migration.
+- Migration 045 adds `idx_agent_lifecycle_events_job_id` for the foreign key to `agent_jobs(id)` flagged by the Supabase performance advisor. It is recorded as applied in `public.cognix_schema_migrations`; read-only SQL confirms the index exists.
 - Render health checks retry transient timeouts/network errors and HTTP 5xx; client-side 4xx failures are not retried.
 - Capture timestamp, revision, status and response body after each release candidate; never include credentials.
 
