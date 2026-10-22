@@ -9,6 +9,7 @@ from app.ownership import get_source_for_request, get_task_for_request, owner_fo
 from app.services.processing import TaskLeaseLost, advance
 from app.services.task_retry import MAX_PROCESSING_RETRIES
 from app.store import now_iso, store
+from app.services.upstash_queue import enqueue_processing
 
 router = APIRouter()
 
@@ -72,6 +73,7 @@ def create_processing_task(payload: ProcessingCreate, request: Request) -> dict:
     source["updated_at"] = now_iso()
     store.save_source(source)
     store.add_activity("processing_started", payload.source_id, previous, "processing")
+    task["queue"] = enqueue_processing(task_id, payload.source_id)
     return task
 
 
