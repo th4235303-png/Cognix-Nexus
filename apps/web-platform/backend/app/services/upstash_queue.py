@@ -4,6 +4,9 @@ from urllib.parse import quote
 import httpx
 
 
+QSTASH_US_URL = "https://qstash-us-east-1.upstash.io"
+
+
 def redis_ping() -> bool:
     url = os.getenv("UPSTASH_REDIS_REST_URL", "").strip().rstrip("/")
     token = os.getenv("UPSTASH_REDIS_REST_TOKEN", "").strip()
@@ -29,7 +32,7 @@ def redis_set(key: str, value: str, ttl: int = 3600) -> bool:
 
 
 def publish_qstash(payload: dict) -> dict:
-    base = os.getenv("QSTASH_URL", "https://qstash.upstash.io").rstrip("/")
+    base = os.getenv("QSTASH_URL", QSTASH_US_URL).rstrip("/")
     token = os.getenv("QSTASH_TOKEN", "").strip()
     callback = os.getenv("QSTASH_CALLBACK_URL", "").strip()
     callback_token = os.getenv("QSTASH_CALLBACK_TOKEN", "").strip()
