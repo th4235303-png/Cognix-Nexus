@@ -159,12 +159,12 @@ class _WorkerHealthHandler(BaseHTTPRequestHandler):
                     "service": "cognix-nexus-worker",
                     "persistence": "postgresql" if database_ok else "memory-prototype",
                     "database": database_ok,
-                    "queue": "qstash+redis" if os.getenv("QSTASH_TOKEN") and os.getenv("UPSTASH_REDIS_REST_TOKEN") else "postgres-poll",
+                    "queue": "qstash+redis" if os.getenv("QSTASH_CALLBACK_TOKEN") and os.getenv("UPSTASH_REDIS_REST_URL") and os.getenv("UPSTASH_REDIS_REST_TOKEN") else "postgres-poll",
                     "revision": os.getenv("RENDER_GIT_COMMIT", "").strip() or "unknown",
                 },
                 separators=(",", ":"),
             ).encode("utf-8")
-            self.send_response(200)
+            self.send_response(200 if database_ok else 503)
             self.send_header("content-type", "application/json")
             self.send_header("content-length", str(len(payload)))
             self.end_headers()
