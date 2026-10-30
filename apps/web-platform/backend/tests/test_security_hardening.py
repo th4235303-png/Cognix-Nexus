@@ -4,6 +4,7 @@ from unittest.mock import patch
 
 import httpx
 from fastapi import Request
+from fastapi.testclient import TestClient
 
 from app.auth import _decode_token, _http_get_with_retries, _verify_with_supabase, auth_required, authenticate_request
 from app.main import _cors_origins, app, global_exception_handler, validate_production_configuration, v1_app, rate_limit
@@ -228,6 +229,21 @@ class SecurityHardeningTests(unittest.TestCase):
             self.assertEqual(_cors_origins(), ["https://a.example", "https://b.example"])
 
 
+
+    def test_telegram_webhook_is_public_only_with_secret(self):
+        client = TestClient(app)
+        payload = {"message": {"text": "/help"}}
+        with patch.dict(os.environ, {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false"}, clear=False):
+            with patch.dict(os.environ, {"TELEGRAM_WEBHOOK_SECRET": ""}, clear=False):
+                self.assertEqual(client.post("/telegram/webhook", json=payload).status_code, 503)
+            with patch.dict(os.environ, {"TELEGRAM_WEBHOOK_SECRET": "expected-secret"}, clear=False):
+                self.assertEqual(client.post("/telegram/webhook", json=payload).status_code, 401)
+                response = client.post(
+                    "/telegram/webhook",
+                    json=payload,
+                    headers={"X-Telegram-Bot-Api-Secret-Token": "expected-secret"},
+                )
+                self.assertEqual(response.status_code, 200)
 
 if __name__ == "__main__":
     unittest.main()
