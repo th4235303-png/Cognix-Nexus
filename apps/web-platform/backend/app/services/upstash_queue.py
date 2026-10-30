@@ -35,7 +35,6 @@ def publish_qstash(payload: dict) -> dict:
     base = os.getenv("QSTASH_URL", QSTASH_US_URL).rstrip("/")
     token = os.getenv("QSTASH_TOKEN", "").strip()
     callback = os.getenv("QSTASH_CALLBACK_URL", "").strip()
-    callback_token = os.getenv("QSTASH_CALLBACK_TOKEN", "").strip()
     if not token or not callback:
         return {"published": False, "reason": "qstash_not_configured"}
     try:
@@ -44,7 +43,6 @@ def publish_qstash(payload: dict) -> dict:
             headers={
                 "Authorization": f"Bearer {token}",
                 "Content-Type": "application/json",
-                "Upstash-Forward-Authorization": f"Bearer {callback_token}",
             },
             json=payload,
             timeout=5,

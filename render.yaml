@@ -32,8 +32,6 @@ services:
         sync: false
       - key: QSTASH_CALLBACK_URL
         value: "https://cognix-core-worker-runtime.onrender.com/qstash/process"
-      - key: QSTASH_CALLBACK_TOKEN
-        sync: false
       - key: UPSTASH_REDIS_REST_URL
         value: "https://enabling-arachnid-199174.upstash.io"
       - key: UPSTASH_REDIS_REST_TOKEN
@@ -150,7 +148,11 @@ services:
         sync: false
       - key: COGNIX_REQUIRE_DATABASE
         value: "true"
-      - key: QSTASH_CALLBACK_TOKEN
+      - key: QSTASH_CALLBACK_URL
+        value: "https://cognix-core-worker-runtime.onrender.com/qstash/process"
+      - key: QSTASH_CURRENT_SIGNING_KEY
+        sync: false
+      - key: QSTASH_NEXT_SIGNING_KEY
         sync: false
       - key: UPSTASH_REDIS_REST_URL
         value: "https://enabling-arachnid-199174.upstash.io"

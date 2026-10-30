@@ -149,6 +149,26 @@ def run_once() -> int:
     return processed
 
 
+def _verify_qstash_request(signature: str, raw_body: bytes) -> bool:
+    """Verify QStash's signed JWT, destination URL, and raw-body hash."""
+    current_key = os.getenv("QSTASH_CURRENT_SIGNING_KEY", "").strip()
+    next_key = os.getenv("QSTASH_NEXT_SIGNING_KEY", "").strip()
+    destination = os.getenv("QSTASH_CALLBACK_URL", "").strip()
+    if not signature or not destination or not current_key or not next_key:
+        return False
+    expected_body = base64.urlsafe_b64encode(hashlib.sha256(raw_body).digest()).decode("ascii").rstrip("=")
+    for signing_key in (current_key, next_key):
+        try:
+            claims = jwt.decode(signature, signing_key, algorithms=["HS256"], issuer="Upstash", leeway=10)
+        except jwt.PyJWTError:
+            continue
+        body_claim = claims.get("body")
+        if claims.get("sub") == destination and isinstance(body_claim, str):
+            if hmac.compare_digest(body_claim.rstrip("="), expected_body):
+                return True
+    return False
+
+
 class _WorkerHealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         if self.path in {"/", "/health"}:
@@ -159,7 +179,7 @@ class _WorkerHealthHandler(BaseHTTPRequestHandler):
                     "service": "cognix-nexus-worker",
                     "persistence": "postgresql" if database_ok else "memory-prototype",
                     "database": database_ok,
-                    "queue": "qstash+redis" if os.getenv("QSTASH_CALLBACK_TOKEN") and os.getenv("UPSTASH_REDIS_REST_URL") and os.getenv("UPSTASH_REDIS_REST_TOKEN") else "postgres-poll",
+                    "queue": "qstash+redis" if os.getenv("QSTASH_CURRENT_SIGNING_KEY") and os.getenv("QSTASH_NEXT_SIGNING_KEY") and os.getenv("UPSTASH_REDIS_REST_URL") and os.getenv("UPSTASH_REDIS_REST_TOKEN") else "postgres-poll",
                     "revision": os.getenv("RENDER_GIT_COMMIT", "").strip() or "unknown",
                 },
                 separators=(",", ":"),
@@ -178,14 +198,19 @@ class _WorkerHealthHandler(BaseHTTPRequestHandler):
             self.send_response(404)
             self.end_headers()
             return
-        expected = os.getenv("QSTASH_CALLBACK_TOKEN", "").strip()
-        if not expected or self.headers.get("Authorization", "") != f"Bearer {expected}":
-            self.send_response(401)
+        if not all(os.getenv(name, "").strip() for name in ("QSTASH_CURRENT_SIGNING_KEY", "QSTASH_NEXT_SIGNING_KEY", "QSTASH_CALLBACK_URL")):
+            self.send_response(503)
             self.end_headers()
             return
         try:
             length = int(self.headers.get("content-length", "0"))
-            payload = json.loads(self.rfile.read(length) or b"{}")
+            raw_body = self.rfile.read(length)
+            signature = self.headers.get("Upstash-Signature", "")
+            if not _verify_qstash_request(signature, raw_body):
+                self.send_response(401)
+                self.end_headers()
+                return
+            payload = json.loads(raw_body or b"{}")
             task_id = str(payload.get("task_id", "")).strip()
             if not task_id:
                 self.send_response(400)

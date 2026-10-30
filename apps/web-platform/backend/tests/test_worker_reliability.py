@@ -3,6 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from app.services.lease_runner import LeaseLostError, run_with_lease_heartbeat
+from app.worker import _verify_qstash_request
 from app.services.task_retry import (
     MAX_PROCESSING_RETRIES,
     retry_delay_seconds,
@@ -85,6 +86,40 @@ class WorkerRetryPolicyTests(unittest.TestCase):
                 )
         self.assertEqual(persisted, [])
 
+
+    def test_qstash_callback_verifies_current_and_next_signing_keys(self):
+        import base64
+        import hashlib
+        import jwt
+        import time
+
+        body = b'{"task_id":"audit-probe"}'
+        body_hash = base64.urlsafe_b64encode(hashlib.sha256(body).digest()).decode("ascii").rstrip("=")
+        url = "https://cognix-core-worker-runtime.onrender.com/qstash/process"
+        claims = {
+            "iss": "Upstash",
+            "sub": url,
+            "exp": int(time.time()) + 300,
+            "nbf": int(time.time()) - 1,
+            "body": body_hash,
+        }
+        with patch.dict(
+            "os.environ",
+            {
+                "QSTASH_CURRENT_SIGNING_KEY": "current-test-key",
+                "QSTASH_NEXT_SIGNING_KEY": "next-test-key",
+                "QSTASH_CALLBACK_URL": url,
+            },
+            clear=False,
+        ):
+            current_signature = jwt.encode(claims, "current-test-key", algorithm="HS256")
+            next_signature = jwt.encode(claims, "next-test-key", algorithm="HS256")
+            self.assertTrue(_verify_qstash_request(current_signature, body))
+            self.assertTrue(_verify_qstash_request(next_signature, body))
+            self.assertFalse(_verify_qstash_request(current_signature, body + b"!"))
+            wrong_url_claims = {**claims, "sub": url + "/wrong"}
+            wrong_url_signature = jwt.encode(wrong_url_claims, "current-test-key", algorithm="HS256")
+            self.assertFalse(_verify_qstash_request(wrong_url_signature, body))
 
 if __name__ == "__main__":
     unittest.main()
