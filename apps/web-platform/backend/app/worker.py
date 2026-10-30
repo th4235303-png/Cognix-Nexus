@@ -2,12 +2,17 @@ from __future__ import annotations
 
 import sitecustomize  # noqa: F401,E402 — apply psycopg pooler compatibility before app imports
 import asyncio
+import base64
+import hashlib
+import hmac
 import logging
 import os
 import signal
 import threading
 import json
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+
+import jwt
 from app.services.embeddings import embedding_provider
 from app.services.agent import enqueue_due_agent_schedules, run_due_agent_jobs
 from app.services.export_worker import advance_export_job
