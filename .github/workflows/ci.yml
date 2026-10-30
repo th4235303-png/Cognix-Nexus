@@ -34,11 +34,7 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - name: Audit frontend dependencies
-        run: |
-          npm audit --audit-level=high > npm-audit.txt 2>&1 || {
-            cat npm-audit.txt
-            echo "::warning::High-severity npm audit findings remain; scan is recorded but does not block this gate."
-          }
+        run: npm audit --audit-level=high
       - run: npm run build
       - name: Validate Playwright harness
         run: |
