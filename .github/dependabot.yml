@@ -4,9 +4,29 @@ updates:
     directory: /apps/web-platform/frontend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      frontend-nonbreaking:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+      frontend-major:
+        applies-to: version-updates
+        update-types:
+          - major
   - package-ecosystem: pip
     directory: /apps/web-platform/backend
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
+    open-pull-requests-limit: 3
+    groups:
+      backend-nonbreaking:
+        applies-to: version-updates
+        update-types:
+          - minor
+          - patch
+      backend-major:
+        applies-to: version-updates
+        update-types:
+          - major
