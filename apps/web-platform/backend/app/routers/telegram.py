@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import hmac
 import logging
 import os
 from typing import Any
-from fastapi import APIRouter, Request
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from ..services.telegram import send_telegram_message
@@ -96,6 +97,12 @@ async def send_cognix_morning_digest(topic_id: int | None = None) -> dict[str, A
 @router.post("/webhook")
 async def telegram_webhook(request: Request) -> dict[str, Any]:
     """Native Telegram Webhook handler for Cognix Nexus."""
+    expected_secret = os.getenv("TELEGRAM_WEBHOOK_SECRET", "").strip()
+    provided_secret = request.headers.get("X-Telegram-Bot-Api-Secret-Token", "").strip()
+    if not expected_secret:
+        raise HTTPException(status_code=503, detail="Telegram webhook is not configured")
+    if not provided_secret or not hmac.compare_digest(provided_secret, expected_secret):
+        raise HTTPException(status_code=401, detail="Invalid Telegram webhook secret")
     try:
         update = await request.json()
     except Exception:
