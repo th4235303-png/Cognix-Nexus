@@ -30,7 +30,7 @@ class MultiProviderRoutingTests(unittest.TestCase):
             names,
             ["gemini", "groq", "openrouter", "mistral", "cohere", "cloudflare", "huggingface"],
         )
-        self.assertEqual(groq.model, "qwen/qwen3.8-27b")
+        self.assertEqual(groq.model, "llama-3.3-70b-versatile")
         self.assertEqual(groq.url, "https://api.groq.com/openai/v1/chat/completions")
         self.assertEqual(
             cloudflare.url,
