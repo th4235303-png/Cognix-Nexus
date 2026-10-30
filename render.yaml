@@ -26,6 +26,18 @@ services:
         value: "10000"
       - key: COGNIX_REQUIRE_DATABASE
         value: "true"
+      - key: QSTASH_URL
+        value: "https://qstash-us-east-1.upstash.io"
+      - key: QSTASH_TOKEN
+        sync: false
+      - key: QSTASH_CALLBACK_URL
+        value: "https://cognix-core-worker-runtime.onrender.com/qstash/process"
+      - key: QSTASH_CALLBACK_TOKEN
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        value: "https://enabling-arachnid-199174.upstash.io"
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: COGNIX_AUTH_REQUIRED
@@ -136,6 +148,12 @@ services:
         sync: false
       - key: COGNIX_REQUIRE_DATABASE
         value: "true"
+      - key: QSTASH_CALLBACK_TOKEN
+        sync: false
+      - key: UPSTASH_REDIS_REST_URL
+        value: "https://enabling-arachnid-199174.upstash.io"
+      - key: UPSTASH_REDIS_REST_TOKEN
+        sync: false
       - key: COGNIX_WORKER_POLL_SECONDS
         value: "2"
       - key: COGNIX_PROCESSING_PROVIDER
