@@ -73,7 +73,7 @@ class LevelUpTests(unittest.TestCase):
         ):
             provider = LLMProvider()
             self.assertTrue(provider.configured)
-            self.assertEqual(provider.configured_routes[0].model, "qwen/qwen3.8-27b")
+            self.assertEqual(provider.configured_routes[0].model, "llama-3.3-70b-versatile")
 
     def test_feature_matrix_contains_all_20(self):
         # Keep auth fail-closed in production; opt into dev mode only for this route contract test.
