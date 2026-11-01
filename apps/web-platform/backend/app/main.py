@@ -112,6 +112,18 @@ async def _lifespan(application: FastAPI):
     """Modern lifespan handler replacing deprecated @app.on_event."""
     _startup()
     await configure_telegram_webhook()
+    # Startup Telegram notification
+    try:
+        from app.routers.telegram import send_telegram_message
+        import os as _os
+        _topic = int(_os.getenv("TELEGRAM_TOPIC_ID", "0")) or None
+        if _topic:
+            await send_telegram_message(
+                "🟢 <b>Cognix Nexus Backend</b> is now online and ready!",
+                topic_id=_topic,
+            )
+    except Exception:
+        pass
     yield
     _shutdown()
 
@@ -130,15 +142,36 @@ app = FastAPI(
 async def global_exception_handler(request: Request, exc: Exception):
     if sentry_sdk:
         sentry_sdk.capture_exception(exc)
+    path = _safe_request_path(request)
+    error_type = type(exc).__name__
     logger.error(
         "Unhandled request",
         extra={
             "request_id": getattr(request.state, "request_id", "unknown"),
             "method": request.method,
-            "path": _safe_request_path(request),
-            "error_type": type(exc).__name__,
+            "path": path,
+            "error_type": error_type,
         },
     )
+    # Best-effort Telegram error alert
+    try:
+        import asyncio
+        async def _alert():
+            try:
+                from app.routers.telegram import send_telegram_message
+                topic_id = int(os.getenv("TELEGRAM_TOPIC_ID", "0")) or None
+                alert = (
+                    "🚨 <b>Cognix Nexus Error</b>\n\n"
+                    f"📍 Path: <code>{path[:100]}</code>\n"
+                    f"❌ Error: <code>{error_type}</code>\n"
+                    f"📝 {str(exc)[:300]}"
+                )
+                await send_telegram_message(alert, topic_id=topic_id)
+            except Exception:
+                pass
+        asyncio.ensure_future(_alert())
+    except Exception:
+        pass
     return JSONResponse(
         status_code=500,
         content={"detail": {"code": "INTERNAL_ERROR", "message": "Internal server error"}},
