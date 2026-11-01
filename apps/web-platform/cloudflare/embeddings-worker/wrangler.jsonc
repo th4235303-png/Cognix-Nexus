@@ -1,0 +1,10 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "cognix-nexus-embeddings",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-10-05",
+  "ai": { "binding": "AI" },
+  "vars": {
+    "ALLOWED_ORIGIN": "https://cognix-nexus.vercel.app"
+  }
+}

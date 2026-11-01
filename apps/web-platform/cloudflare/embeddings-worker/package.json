@@ -1,0 +1,14 @@
+{
+  "name": "cognix-nexus-embeddings",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260920.0",
+    "wrangler": "^4.40.0"
+  }
+}
