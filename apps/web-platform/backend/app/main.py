@@ -19,6 +19,7 @@ except ImportError:
 
 from app.auth import auth_required, authenticate_request
 from app.routers import activity, advanced_layer, brain_advanced, book_intelligence, brain_agent, brain_documents, brain_media, brain_soul, brain_vault, core_integration, exports, integrations, intelligence, learning_science, level_up, life_integration, media_boundary, processing, release_evidence, reviews, sources, usage, telegram, youtube_tracker, deep_research
+from app.services.telegram_webhook_setup import configure_telegram_webhook
 from app.store import store
 from app.ownership import reset_request_owner, set_request_owner
 
@@ -110,6 +111,7 @@ from contextlib import asynccontextmanager as _asynccontextmanager
 async def _lifespan(application: FastAPI):
     """Modern lifespan handler replacing deprecated @app.on_event."""
     _startup()
+    await configure_telegram_webhook()
     yield
     _shutdown()
 
