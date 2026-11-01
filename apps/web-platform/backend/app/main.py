@@ -117,6 +117,8 @@ async def _lifespan(application: FastAPI):
 
 
 app = FastAPI(
+    docs_url="/docs" if os.getenv("COGNIX_ENV", "development").lower() != "production" else None,
+    redoc_url="/redoc" if os.getenv("COGNIX_ENV", "development").lower() != "production" else None,
     title="Cognix Nexus API",
     version=API_VERSION,
     description="Research intelligence and personal knowledge OS API for Cognix Nexus.",
