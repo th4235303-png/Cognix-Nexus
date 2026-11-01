@@ -8,6 +8,8 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 
 from ..services.telegram import send_telegram_message
+from ..store import store
+from html import escape as html_escape
 
 logger = logging.getLogger("cognix.telegram")
 
@@ -192,5 +194,140 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                 return {"ok": True}
             payload = TelegramActionPayload(action="cognix_quick_capture", raw_message=content, topic_id=topic_id)
             return await handle_telegram_action(payload)
+
+        # Command: /brain - Brain vault statistics
+        elif text.startswith("/brain"):
+            try:
+                if store.database:
+                    with store.database.connect() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT COUNT(*) AS cnt FROM sources")
+                            src_count = cur.fetchone()["cnt"]
+                            cur.execute("SELECT COUNT(*) AS cnt FROM processing_tasks")
+                            task_count = cur.fetchone()["cnt"]
+                            cur.execute("SELECT COUNT(*) AS cnt FROM claims")
+                            claim_count = cur.fetchone()["cnt"]
+                    reply = (
+                        "\U0001f9e0 <b>[Cognix] Brain Vault Stats</b>\n\n"
+                        f"\U0001f4da Sources: <code>{src_count}</code>\n"
+                        f"\u2699\ufe0f Tasks: <code>{task_count}</code>\n"
+                        f"\U0001f4dd Claims: <code>{claim_count}</code>"
+                    )
+                else:
+                    reply = "\u26a0\ufe0f Database not connected."
+                await send_telegram_message(reply, topic_id=topic_id)
+            except Exception:
+                logger.exception("Telegram /brain failed")
+                await send_telegram_message("\u26a0\ufe0f Could not fetch brain stats.", topic_id=topic_id)
+            return {"ok": True, "command": "brain"}
+
+        # Command: /sources - list recent sources
+        elif text.startswith("/sources"):
+            try:
+                if store.database:
+                    with store.database.connect() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT id, title, source_type FROM sources ORDER BY created_at DESC LIMIT 5")
+                            rows = cur.fetchall()
+                    lines = ["\U0001f4da <b>[Cognix] Recent Sources</b>\n"]
+                    for r in (rows or []):
+                        title = html_escape(str(r.get("title", "?"))[:45])
+                        lines.append(f"  \u2022 <code>{title}</code> [{r.get('source_type', '?')}]")
+                    if not rows:
+                        lines.append("<i>No sources yet.</i>")
+                    await send_telegram_message("\n".join(lines), topic_id=topic_id)
+                else:
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+            except Exception:
+                logger.exception("Telegram /sources failed")
+                await send_telegram_message("\u26a0\ufe0f Could not fetch sources.", topic_id=topic_id)
+            return {"ok": True, "command": "sources"}
+
+        # Command: /reviews - pending reviews
+        elif text.startswith("/review"):
+            try:
+                if store.database:
+                    with store.database.connect() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT COUNT(*) AS cnt FROM reviews")
+                            total = cur.fetchone()["cnt"]
+                            cur.execute("SELECT COUNT(*) AS cnt FROM reviews WHERE status = 'pending'")
+                            pending = cur.fetchone()["cnt"]
+                    reply = f"\U0001f50d <b>[Cognix] Reviews</b>\n\nTotal: <code>{total}</code>\nPending: <code>{pending}</code>"
+                    await send_telegram_message(reply, topic_id=topic_id)
+                else:
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+            except Exception:
+                logger.exception("Telegram /reviews failed")
+                await send_telegram_message("\u26a0\ufe0f Could not fetch reviews.", topic_id=topic_id)
+            return {"ok": True, "command": "reviews"}
+
+        # Command: /tasks - processing task breakdown
+        elif text.startswith("/tasks"):
+            try:
+                if store.database:
+                    with store.database.connect() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT status, COUNT(*) AS cnt FROM processing_tasks GROUP BY status ORDER BY cnt DESC")
+                            rows = cur.fetchall()
+                    lines = ["\u2699\ufe0f <b>[Cognix] Processing Tasks</b>\n"]
+                    for r in (rows or []):
+                        lines.append(f"  \u2022 {r['status']}: <code>{r['cnt']}</code>")
+                    if not rows:
+                        lines.append("<i>No tasks found.</i>")
+                    await send_telegram_message("\n".join(lines), topic_id=topic_id)
+                else:
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+            except Exception:
+                logger.exception("Telegram /tasks failed")
+                await send_telegram_message("\u26a0\ufe0f Could not fetch tasks.", topic_id=topic_id)
+            return {"ok": True, "command": "tasks"}
+
+        # Command: /exports - recent export jobs
+        elif text.startswith("/export") and not text.startswith("/exports"):
+            pass  # fall through
+        elif text.startswith("/export"):
+            try:
+                if store.database:
+                    with store.database.connect() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT id, status, created_at FROM export_jobs ORDER BY created_at DESC LIMIT 5")
+                            rows = cur.fetchall()
+                    lines = ["\U0001f4e6 <b>[Cognix] Recent Exports</b>\n"]
+                    for r in (rows or []):
+                        st_icon = "\u2705" if r.get("status") == "completed" else "\u23f3"
+                        eid = str(r["id"])[:8]
+                        lines.append(f"  {st_icon} {eid}... [{r.get('status', '?')}]")
+                    if not rows:
+                        lines.append("<i>No exports found.</i>")
+                    await send_telegram_message("\n".join(lines), topic_id=topic_id)
+                else:
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+            except Exception:
+                logger.exception("Telegram /exports failed")
+                await send_telegram_message("\u26a0\ufe0f Could not fetch exports.", topic_id=topic_id)
+            return {"ok": True, "command": "exports"}
+
+        # Command: /activity - recent events
+        elif text.startswith("/activity"):
+            try:
+                if store.database:
+                    with store.database.connect() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT event_type, created_at FROM activity_events ORDER BY created_at DESC LIMIT 5")
+                            rows = cur.fetchall()
+                    lines = ["\U0001f4c5 <b>[Cognix] Recent Activity</b>\n"]
+                    for r in (rows or []):
+                        ts = str(r.get("created_at", ""))[:16]
+                        lines.append(f"  \u2022 [{ts}] {r.get('event_type', '?')}")
+                    if not rows:
+                        lines.append("<i>No recent activity.</i>")
+                    await send_telegram_message("\n".join(lines), topic_id=topic_id)
+                else:
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+            except Exception:
+                logger.exception("Telegram /activity failed")
+                await send_telegram_message("\u26a0\ufe0f Could not fetch activity.", topic_id=topic_id)
+            return {"ok": True, "command": "activity"}
 
     return {"ok": True}
