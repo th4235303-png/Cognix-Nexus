@@ -284,8 +284,6 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
             return {"ok": True, "command": "tasks"}
 
         # Command: /exports - recent export jobs
-        elif text.startswith("/export") and not text.startswith("/exports"):
-            pass  # fall through
         elif text.startswith("/export"):
             try:
                 if store.database:
