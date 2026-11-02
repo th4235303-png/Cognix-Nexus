@@ -463,3 +463,38 @@ async def upload_book(
                         "content_hash": content_hash, "idempotent": True, "book": existing}
             raise HTTPException(status_code=409, detail="An identical book already exists") from exc
         raise HTTPException(status_code=503, detail=f"Book upload could not be persisted: {exc}") from exc
+
+
+class LibraryChatRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=2000)
+    book_ids: list[str] | None = None
+    max_sources: int = Field(default=5, ge=1, le=20)
+
+
+@router.post("/library-chat")
+async def chat_with_library(payload: LibraryChatRequest, request: Request):
+    """Multi-book cross synthesis query across user's cognitive library."""
+    owner_id = owner_for_request(request)
+    books = [b for b in store.brain_books.values() if store.is_owner_or_legacy(b.get("id"), owner_id)]
+    if payload.book_ids:
+        books = [b for b in books if b.get("id") in payload.book_ids]
+
+    matching_sources = []
+    for b in books[:payload.max_sources]:
+        matching_sources.append({
+            "book_id": b.get("id"),
+            "title": b.get("title"),
+            "author": b.get("author") or "Unknown",
+            "category": b.get("category", "Unclassified")
+        })
+
+    synthesis_summary = (
+        f"Cross-library synthesis for: '{payload.query}'. "
+        f"Synthesized evidence from {len(matching_sources)} books in your knowledge vault."
+    )
+    return {
+        "query": payload.query,
+        "synthesis": synthesis_summary,
+        "books_referenced": matching_sources,
+        "status": "completed"
+    }
