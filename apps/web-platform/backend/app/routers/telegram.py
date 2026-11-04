@@ -47,20 +47,20 @@ async def handle_telegram_action(payload: TelegramActionPayload) -> dict[str, An
     elif action.startswith("cognix_grade_easy:"):
         card_id = action.split(":", 1)[1]
         msg = f"✅ <b>Interval Extended:</b> Card <code>{card_id}</code> scheduled for review in +4 days."
-        await send_telegram_message(msg, topic_id=payload.topic_id)
+        await send_telegram_message(msg, topic_id=payload.topic_id, chat_id=payload.chat_id)
         return {"status": "ok", "action": "grade_easy", "id": card_id}
 
     elif action.startswith("cognix_grade_hard:"):
         card_id = action.split(":", 1)[1]
         msg = f"🔁 <b>Interval Reset:</b> Card <code>{card_id}</code> will be shown again tomorrow."
-        await send_telegram_message(msg, topic_id=payload.topic_id)
+        await send_telegram_message(msg, topic_id=payload.topic_id, chat_id=payload.chat_id)
         return {"status": "ok", "action": "grade_hard", "id": card_id}
 
     # 3. Quick Note/Link Capture to Brain Vault
     elif action == "cognix_quick_capture" and payload.raw_message:
         note_text = payload.raw_message.strip()
         msg = f"🧠 <b>Captured into Brain Vault Inbox:</b>\n<i>\"{note_text[:120]}\"</i>\nQueued for AI distillation."
-        await send_telegram_message(msg, topic_id=payload.topic_id)
+        await send_telegram_message(msg, topic_id=payload.topic_id, chat_id=payload.chat_id)
         return {"status": "ok", "action": "quick_captured", "content": note_text}
 
     return {"status": "ignored", "action": action}
