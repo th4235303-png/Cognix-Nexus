@@ -69,6 +69,26 @@ class TelegramChatRoutingTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(_AsyncClient.payload["chat_id"], "-1001234567890")
 
+    async def test_non_approved_chat_send_is_blocked(self):
+        _AsyncClient.payload = None
+        env = {
+            "TELEGRAM_BOT_TOKEN": "test-bot-token",
+            "TELEGRAM_CHAT_ID": "-1003992125718",
+            "TELEGRAM_ALLOWED_CHAT_ID": "-1003992125718",
+            "TELEGRAM_TOPIC_ID": "",
+            "TELEGRAM_ENABLED": "true",
+        }
+        with patch.dict(os.environ, env, clear=False), patch.object(
+            telegram.httpx, "AsyncClient", _AsyncClient
+        ):
+            result = await telegram.send_telegram_message(
+                "must not leak to another chat",
+                chat_id="-1001234567890",
+            )
+
+        self.assertIsNone(result)
+        self.assertIsNone(_AsyncClient.payload)
+
     async def test_morning_digest_uses_url_buttons_compatible_with_group_chats(self):
         _AsyncClient.payload = None
         env = {

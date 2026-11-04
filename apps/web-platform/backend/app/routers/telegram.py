@@ -16,6 +16,12 @@ logger = logging.getLogger("cognix.telegram")
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 FRONTEND_URL = os.getenv("FRONTEND_BASE_URL", "https://cognix-nexus-frontend.onrender.com")
+TELEGRAM_ALLOWED_CHAT_ID = os.getenv("TELEGRAM_ALLOWED_CHAT_ID", "").strip()
+
+
+def _is_allowed_telegram_chat(chat_id: int | str | None) -> bool:
+    """Limit bot interactions to the explicitly approved Telegram group when configured."""
+    return not TELEGRAM_ALLOWED_CHAT_ID or str(chat_id).strip() == TELEGRAM_ALLOWED_CHAT_ID
 
 
 class TelegramActionPayload(BaseModel):
@@ -33,6 +39,10 @@ class TelegramActionPayload(BaseModel):
 @router.post("/action")
 async def handle_telegram_action(payload: TelegramActionPayload) -> dict[str, Any]:
     """Handle inbound Telegram action callback for Cognix Nexus."""
+    if not _is_allowed_telegram_chat(payload.chat_id):
+        logger.warning("Ignored Telegram action from non-approved chat")
+        return {"status": "ignored", "reason": "chat_not_allowed"}
+
     action = payload.action
     logger.info("Cognix received Telegram action: %s", action)
 
@@ -134,6 +144,10 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
         text = msg.get("text", "").strip()
         topic_id = msg.get("message_thread_id")
         chat_id = msg.get("chat", {}).get("id")
+
+        if not _is_allowed_telegram_chat(chat_id):
+            logger.warning("Ignored Telegram message from non-approved chat")
+            return {"ok": True, "ignored": "chat_not_allowed"}
 
         if not text:
             return {"ok": True}
