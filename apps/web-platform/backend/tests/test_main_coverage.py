@@ -96,7 +96,7 @@ class MainCoverageTests(unittest.TestCase):
 
     def test_readiness_without_database_when_database_optional(self):
         with patch.object(main.store, "database", None), \
-             patch.object(main, "REQUIRE_DATABASE", False), \
+             patch.object(main, "REQUIRE_DATABASE", False):
             result = main.readiness()
         self.assertEqual(result["persistence_mode"], "memory-prototype")
         self.assertEqual(result["status"], "ready")
