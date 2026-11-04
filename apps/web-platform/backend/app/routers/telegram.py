@@ -86,7 +86,7 @@ async def send_cognix_morning_digest(
     )
     keyboard = [
         [
-            {"text": "🧠 Open Brain Vault (Mini App)", "web_app": {"url": FRONTEND_URL}},
+            {"text": "🧠 Open Brain Vault (Mini App)", "url": FRONTEND_URL},
         ],
         [
             {"text": "💡 Review Flashcards", "callback_data": "cognix_reveal:daily_deck"},
@@ -149,7 +149,7 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                 "👇 Click below to open Brain Vault inside Telegram:"
             )
             buttons = [
-                [{"text": "🧠 Open Brain Vault", "web_app": {"url": FRONTEND_URL}}]
+                [{"text": "🧠 Open Brain Vault", "url": FRONTEND_URL}]
             ]
             await send_telegram_message(help_text, topic_id=topic_id, chat_id=chat_id, inline_keyboard=buttons)
             return {"ok": True, "command": "help"}
@@ -165,7 +165,7 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                 "• <b>Google Drive:</b> <code>Connected & Synchronized</code>"
             )
             buttons = [
-                [{"text": "🧠 Open Brain Vault", "web_app": {"url": FRONTEND_URL}}]
+                [{"text": "🧠 Open Brain Vault", "url": FRONTEND_URL}]
             ]
             await send_telegram_message(status_text, topic_id=topic_id, chat_id=chat_id, inline_keyboard=buttons)
             return {"ok": True, "command": "status"}
