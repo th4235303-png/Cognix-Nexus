@@ -23,15 +23,17 @@ async def send_telegram_message(
     text: str,
     *,
     topic_id: int | None = None,
+    chat_id: int | str | None = None,
     parse_mode: str = "HTML",
     inline_keyboard: list[list[dict[str, str]]] | None = None,
     disable_web_page_preview: bool = False,
 ) -> dict[str, Any] | None:
     """Send an asynchronous message to Telegram group/topic for Cognix Nexus."""
-    token, chat_id, default_topic, enabled = _get_config()
+    token, configured_chat_id, default_topic, enabled = _get_config()
+    destination_chat_id = str(chat_id).strip() if chat_id is not None else configured_chat_id
     effective_topic = topic_id if topic_id is not None else default_topic
 
-    if not token or not chat_id:
+    if not token or not destination_chat_id:
         logger.info("[Telegram:Cognix:DryRun] %s", text.replace("\n", " "))
         return None
 
@@ -41,7 +43,7 @@ async def send_telegram_message(
 
     url = f"{TELEGRAM_API_BASE}/bot{token}/sendMessage"
     payload: dict[str, Any] = {
-        "chat_id": chat_id,
+        "chat_id": destination_chat_id,
         "text": text,
         "parse_mode": parse_mode,
         "disable_web_page_preview": disable_web_page_preview,
