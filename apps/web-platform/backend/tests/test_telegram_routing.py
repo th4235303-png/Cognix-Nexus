@@ -69,6 +69,24 @@ class TelegramChatRoutingTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(_AsyncClient.payload["chat_id"], "-1001234567890")
 
+    async def test_morning_digest_uses_url_buttons_compatible_with_group_chats(self):
+        _AsyncClient.payload = None
+        env = {
+            "TELEGRAM_BOT_TOKEN": "test-bot-token",
+            "TELEGRAM_CHAT_ID": "",
+            "TELEGRAM_TOPIC_ID": "",
+            "TELEGRAM_ENABLED": "true",
+        }
+        with patch.dict(os.environ, env, clear=False), patch.object(
+            telegram.httpx, "AsyncClient", _AsyncClient
+        ):
+            from app.routers.telegram import send_cognix_morning_digest
+            await send_cognix_morning_digest(chat_id=123456)
+
+        keyboard = _AsyncClient.payload["reply_markup"]["inline_keyboard"]
+        self.assertEqual(keyboard[0][0]["url"], "https://cognix-nexus-frontend.onrender.com")
+        self.assertNotIn("web_app", keyboard[0][0])
+
 
 if __name__ == "__main__":
     unittest.main()
