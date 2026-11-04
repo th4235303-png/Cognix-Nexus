@@ -31,7 +31,12 @@ async def send_telegram_message(
     """Send an asynchronous message to Telegram group/topic for Cognix Nexus."""
     token, configured_chat_id, default_topic, enabled = _get_config()
     destination_chat_id = str(chat_id).strip() if chat_id is not None else configured_chat_id
+    allowed_chat_id = os.getenv("TELEGRAM_ALLOWED_CHAT_ID", "").strip()
     effective_topic = topic_id if topic_id is not None else default_topic
+
+    if allowed_chat_id and destination_chat_id != allowed_chat_id:
+        logger.warning("Blocked Telegram send to non-approved chat")
+        return None
 
     if not token or not destination_chat_id:
         logger.info("[Telegram:Cognix:DryRun] %s", text.replace("\n", " "))
