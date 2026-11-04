@@ -1,13 +1,13 @@
 fastapi==0.142.2
 uvicorn[standard]==0.54.0
-pydantic==2.14.1
+pydantic==2.14.2
 httpx==0.28.1
 psycopg[pool,binary]==3.3.6
 PyJWT==2.15.1
 google-api-python-client==2.201.0
 google-auth-oauthlib==1.5.0
-sentry-sdk[fastapi]==2.72.0
-python-multipart==0.0.32
+sentry-sdk[fastapi]==2.73.0
+python-multipart==0.0.33
 pypdf==6.21.4
 ebooklib==0.20
 Pillow==13.0.0
