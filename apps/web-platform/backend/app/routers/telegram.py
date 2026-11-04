@@ -40,7 +40,7 @@ async def handle_telegram_action(payload: TelegramActionPayload) -> dict[str, An
     if action.startswith("cognix_reveal:"):
         card_id = action.split(":", 1)[1]
         msg = f"💡 <b>Flashcard Answer ({card_id}):</b>\nKnowledge retrieval is reinforced via active recall and spaced repetition."
-        await send_telegram_message(msg, topic_id=payload.topic_id)
+        await send_telegram_message(msg, topic_id=payload.topic_id, chat_id=payload.chat_id)
         return {"status": "ok", "action": "flashcard_revealed", "id": card_id}
 
     # 2. Flashcard Grade (Spaced Repetition adjustment)
@@ -69,7 +69,10 @@ async def handle_telegram_action(payload: TelegramActionPayload) -> dict[str, An
 # ------------------------------------------------------------------------------
 # 2. AI MORNING DIGEST GENERATOR
 # ------------------------------------------------------------------------------
-async def send_cognix_morning_digest(topic_id: int | None = None) -> dict[str, Any] | None:
+async def send_cognix_morning_digest(
+    topic_id: int | None = None,
+    chat_id: int | str | None = None,
+) -> dict[str, Any] | None:
     """Generate and send an AI Morning Learning Briefing for Cognix Nexus."""
     msg = (
         "☀️ <b>[Cognix-Nexus] AI Morning Knowledge Digest</b>\n"
@@ -90,7 +93,7 @@ async def send_cognix_morning_digest(topic_id: int | None = None) -> dict[str, A
             {"text": "📥 Capture Idea", "callback_data": "cognix_quick_capture"},
         ]
     ]
-    return await send_telegram_message(msg, topic_id=topic_id, inline_keyboard=keyboard)
+    return await send_telegram_message(msg, topic_id=topic_id, chat_id=chat_id, inline_keyboard=keyboard)
 
 
 # ------------------------------------------------------------------------------
@@ -130,6 +133,7 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
         msg = update["message"]
         text = msg.get("text", "").strip()
         topic_id = msg.get("message_thread_id")
+        chat_id = msg.get("chat", {}).get("id")
 
         if not text:
             return {"ok": True}
@@ -147,7 +151,7 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
             buttons = [
                 [{"text": "🧠 Open Brain Vault", "web_app": {"url": FRONTEND_URL}}]
             ]
-            await send_telegram_message(help_text, topic_id=topic_id, inline_keyboard=buttons)
+            await send_telegram_message(help_text, topic_id=topic_id, chat_id=chat_id, inline_keyboard=buttons)
             return {"ok": True, "command": "help"}
 
         # Command: /status
@@ -163,19 +167,19 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
             buttons = [
                 [{"text": "🧠 Open Brain Vault", "web_app": {"url": FRONTEND_URL}}]
             ]
-            await send_telegram_message(status_text, topic_id=topic_id, inline_keyboard=buttons)
+            await send_telegram_message(status_text, topic_id=topic_id, chat_id=chat_id, inline_keyboard=buttons)
             return {"ok": True, "command": "status"}
 
         # Command: /morning_brief
         elif text.startswith("/morning_brief") or text.startswith("/digest"):
-            await send_cognix_morning_digest(topic_id=topic_id)
+            await send_cognix_morning_digest(topic_id=topic_id, chat_id=chat_id)
             return {"ok": True, "command": "morning_brief"}
 
         # Command: /ask <query>
         elif text.startswith("/ask"):
             query = text[len("/ask"):].strip()
             if not query:
-                await send_telegram_message("⚠️ Please supply a query: <code>/ask [question]</code>", topic_id=topic_id)
+                await send_telegram_message("⚠️ Please supply a query: <code>/ask [question]</code>", topic_id=topic_id, chat_id=chat_id)
                 return {"ok": True}
             
             reply = (
@@ -183,16 +187,16 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                 "💡 <b>Extracted Knowledge:</b> Active recall and spaced repetition form the optimal foundation for long-term retention. "
                 "Concept links have been cross-referenced in your Qdrant knowledge vault."
             )
-            await send_telegram_message(reply, topic_id=topic_id)
+            await send_telegram_message(reply, topic_id=topic_id, chat_id=chat_id)
             return {"ok": True, "command": "ask"}
 
         # Command: /capture <note>
         elif text.startswith("/capture"):
             content = text[len("/capture"):].strip()
             if not content:
-                await send_telegram_message("⚠️ Please provide content: <code>/capture [your idea or link]</code>", topic_id=topic_id)
+                await send_telegram_message("⚠️ Please provide content: <code>/capture [your idea or link]</code>", topic_id=topic_id, chat_id=chat_id)
                 return {"ok": True}
-            payload = TelegramActionPayload(action="cognix_quick_capture", raw_message=content, topic_id=topic_id)
+            payload = TelegramActionPayload(action="cognix_quick_capture", raw_message=content, topic_id=topic_id, chat_id=chat_id)
             return await handle_telegram_action(payload)
 
         # Command: /brain - Brain vault statistics
@@ -215,10 +219,10 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                     )
                 else:
                     reply = "\u26a0\ufe0f Database not connected."
-                await send_telegram_message(reply, topic_id=topic_id)
+                await send_telegram_message(reply, topic_id=topic_id, chat_id=chat_id)
             except Exception:
                 logger.exception("Telegram /brain failed")
-                await send_telegram_message("\u26a0\ufe0f Could not fetch brain stats.", topic_id=topic_id)
+                await send_telegram_message("\u26a0\ufe0f Could not fetch brain stats.", topic_id=topic_id, chat_id=chat_id)
             return {"ok": True, "command": "brain"}
 
         # Command: /sources - list recent sources
@@ -235,12 +239,12 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                         lines.append(f"  \u2022 <code>{title}</code> [{r.get('source_type', '?')}]")
                     if not rows:
                         lines.append("<i>No sources yet.</i>")
-                    await send_telegram_message("\n".join(lines), topic_id=topic_id)
+                    await send_telegram_message("\n".join(lines), topic_id=topic_id, chat_id=chat_id)
                 else:
-                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id, chat_id=chat_id)
             except Exception:
                 logger.exception("Telegram /sources failed")
-                await send_telegram_message("\u26a0\ufe0f Could not fetch sources.", topic_id=topic_id)
+                await send_telegram_message("\u26a0\ufe0f Could not fetch sources.", topic_id=topic_id, chat_id=chat_id)
             return {"ok": True, "command": "sources"}
 
         # Command: /reviews - pending reviews
@@ -254,12 +258,12 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                             cur.execute("SELECT COUNT(*) AS cnt FROM reviews WHERE status = 'pending'")
                             pending = cur.fetchone()["cnt"]
                     reply = f"\U0001f50d <b>[Cognix] Reviews</b>\n\nTotal: <code>{total}</code>\nPending: <code>{pending}</code>"
-                    await send_telegram_message(reply, topic_id=topic_id)
+                    await send_telegram_message(reply, topic_id=topic_id, chat_id=chat_id)
                 else:
-                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id, chat_id=chat_id)
             except Exception:
                 logger.exception("Telegram /reviews failed")
-                await send_telegram_message("\u26a0\ufe0f Could not fetch reviews.", topic_id=topic_id)
+                await send_telegram_message("\u26a0\ufe0f Could not fetch reviews.", topic_id=topic_id, chat_id=chat_id)
             return {"ok": True, "command": "reviews"}
 
         # Command: /tasks - processing task breakdown
@@ -275,12 +279,12 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                         lines.append(f"  \u2022 {r['status']}: <code>{r['cnt']}</code>")
                     if not rows:
                         lines.append("<i>No tasks found.</i>")
-                    await send_telegram_message("\n".join(lines), topic_id=topic_id)
+                    await send_telegram_message("\n".join(lines), topic_id=topic_id, chat_id=chat_id)
                 else:
-                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id, chat_id=chat_id)
             except Exception:
                 logger.exception("Telegram /tasks failed")
-                await send_telegram_message("\u26a0\ufe0f Could not fetch tasks.", topic_id=topic_id)
+                await send_telegram_message("\u26a0\ufe0f Could not fetch tasks.", topic_id=topic_id, chat_id=chat_id)
             return {"ok": True, "command": "tasks"}
 
         # Command: /exports - recent export jobs
@@ -298,12 +302,12 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                         lines.append(f"  {st_icon} {eid}... [{r.get('status', '?')}]")
                     if not rows:
                         lines.append("<i>No exports found.</i>")
-                    await send_telegram_message("\n".join(lines), topic_id=topic_id)
+                    await send_telegram_message("\n".join(lines), topic_id=topic_id, chat_id=chat_id)
                 else:
-                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id, chat_id=chat_id)
             except Exception:
                 logger.exception("Telegram /exports failed")
-                await send_telegram_message("\u26a0\ufe0f Could not fetch exports.", topic_id=topic_id)
+                await send_telegram_message("\u26a0\ufe0f Could not fetch exports.", topic_id=topic_id, chat_id=chat_id)
             return {"ok": True, "command": "exports"}
 
         # Command: /activity - recent events
@@ -320,12 +324,12 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                         lines.append(f"  \u2022 [{ts}] {r.get('event_type', '?')}")
                     if not rows:
                         lines.append("<i>No recent activity.</i>")
-                    await send_telegram_message("\n".join(lines), topic_id=topic_id)
+                    await send_telegram_message("\n".join(lines), topic_id=topic_id, chat_id=chat_id)
                 else:
-                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id)
+                    await send_telegram_message("\u26a0\ufe0f Database not connected.", topic_id=topic_id, chat_id=chat_id)
             except Exception:
                 logger.exception("Telegram /activity failed")
-                await send_telegram_message("\u26a0\ufe0f Could not fetch activity.", topic_id=topic_id)
+                await send_telegram_message("\u26a0\ufe0f Could not fetch activity.", topic_id=topic_id, chat_id=chat_id)
             return {"ok": True, "command": "activity"}
 
     return {"ok": True}
