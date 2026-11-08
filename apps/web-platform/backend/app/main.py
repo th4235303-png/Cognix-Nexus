@@ -20,6 +20,7 @@ except ImportError:
 from app.auth import auth_required, authenticate_request
 from app.routers import activity, advanced_layer, brain_advanced, book_intelligence, brain_agent, brain_documents, brain_media, brain_soul, brain_vault, core_integration, exports, integrations, intelligence, learning_science, level_up, life_integration, media_boundary, processing, release_evidence, reviews, sources, usage, telegram, youtube_tracker, deep_research
 from app.services.telegram_webhook_setup import configure_telegram_webhook
+from app.services.shared_rate_limit import allow as shared_rate_limit_allow, configured as shared_rate_limit_configured
 from app.store import store
 from app.ownership import reset_request_owner, set_request_owner
 
@@ -72,7 +73,12 @@ def validate_production_configuration() -> None:
         raise RuntimeError("DATABASE_URL must be set in production")
     if not auth_required():
         raise RuntimeError("Authentication must be enabled in production; set COGNIX_AUTH_REQUIRED=true")
+    if not shared_rate_limit_configured():
+        raise RuntimeError("UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN are required for production rate limiting")
     _cors_origins()
+    allowed_hosts = [host.strip() for host in os.getenv("COGNIX_ALLOWED_HOSTS", "").split(",") if host.strip()]
+    if not allowed_hosts or "*" in allowed_hosts:
+        raise RuntimeError("COGNIX_ALLOWED_HOSTS must be an explicit allowlist in production")
 
 
 if sentry_sdk and os.getenv("SENTRY_DSN", "").strip():
@@ -234,6 +240,9 @@ async def security_headers(request: Request, call_next):
     response.headers["x-frame-options"] = "DENY"
     response.headers["referrer-policy"] = "strict-origin-when-cross-origin"
     response.headers["permissions-policy"] = "camera=(), microphone=(), geolocation=()"
+    response.headers["content-security-policy"] = "default-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+    if COGNIX_ENV == "production":
+        response.headers["strict-transport-security"] = "max-age=31536000; includeSubDomains"
     return response
 
 
@@ -241,6 +250,24 @@ async def security_headers(request: Request, call_next):
 async def rate_limit(request: Request, call_next):
     if RATE_LIMIT > 0 and request.url.path not in {"/", "/health", "/ready"}:
         identity = request.headers.get("authorization", "")[:80] or (request.client.host if request.client else "unknown")
+        shared_decision = shared_rate_limit_allow(identity, limit=RATE_LIMIT)
+        if shared_decision is False:
+            response = JSONResponse(
+                status_code=429,
+                content={"detail": {"code": "RATE_LIMITED", "message": "Too many requests"}},
+                headers={"Retry-After": "60"},
+            )
+            response.headers["x-request-id"] = getattr(request.state, "request_id", str(uuid4()))
+            return response
+        if COGNIX_ENV == "production" and shared_decision is None:
+            response = JSONResponse(
+                status_code=503,
+                content={"detail": {"code": "RATE_LIMIT_UNAVAILABLE", "message": "Request protection is temporarily unavailable"}},
+            )
+            response.headers["x-request-id"] = getattr(request.state, "request_id", str(uuid4()))
+            return response
+        if shared_decision is not None:
+            return await call_next(request)
         now = time.monotonic()
         window = _rate_windows[identity]
         while window and now - window[0] >= 60:
