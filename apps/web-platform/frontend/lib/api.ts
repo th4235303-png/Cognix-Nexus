@@ -72,6 +72,25 @@ export function retryProcessingTask(taskId: string) { return request<ApiProcessi
 export function approveSource(sourceId: string, note?: string) { return request<{ source_id: string; status: string; note?: string | null }>(`/reviews/${sourceId}/approve`, { method: 'POST', body: JSON.stringify({ note: note || null }) }); }
 export function requestSourceRevision(sourceId: string, note?: string) { return request<{ source_id: string; status: string; note?: string | null }>(`/reviews/${sourceId}/revision`, { method: 'POST', body: JSON.stringify({ note: note || null }) }); }
 export function exportToGoogleDrive(sourceId: string, idempotencyKey: string) { return request<ApiExportJob>('/exports/google-drive', { method: 'POST', body: JSON.stringify({ source_id: sourceId, idempotency_key: idempotencyKey }) }); }
+export async function downloadLocalExport(sourceId: string) {
+  const authHeaders: Record<string, string> = {};
+  if (supabase) {
+    const { data } = await supabase.auth.getSession();
+    if (data.session?.access_token) authHeaders.Authorization = `Bearer ${data.session.access_token}`;
+  }
+  const response = await fetch(`${API_BASE_URL}${API_PREFIX}/exports/local/${encodeURIComponent(sourceId)}`, { headers: authHeaders, cache: 'no-store' });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null);
+    throw new ApiError(response.status, body?.detail ?? response.statusText);
+  }
+  const blob = await response.blob();
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `cognix-source-${sourceId}.json`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
 export function listExports() { return request<{ total: number; items: ApiExportJob[] }>('/exports'); }
 export function getExport(exportId: string) { return request<ApiExportJob>(`/exports/${exportId}`); }
 export function advanceExport(exportId: string) { return request<ApiExportJob>(`/exports/${exportId}/advance`, { method: 'POST' }); }
@@ -79,6 +98,11 @@ export function retryExport(exportId: string) { return request<ApiExportJob>(`/e
 export function getActivity() { return request<{ total: number; items: Record<string, unknown>[] }>('/activity'); }
 export function getUsage() { return request<ApiUsage>('/usage'); }
 export function getReady() { return request<{ status: string; persistence_mode: string; database_configured: boolean; database_reachable: boolean }>('/ready'); }
+export type LearningPathItem = { id?: string; subject_id: string; position: number; reason: string; evidence_refs: unknown[]; review_state?: string };
+export function getLearningPath() { return request<{ items: LearningPathItem[]; total: number; half_life_days: number }>('/learning/path'); }
+export function listLearningPathItems() { return request<{ items: LearningPathItem[]; total: number }>('/learning/path/items'); }
+export function persistLearningPath(items: LearningPathItem[]) { return request<{ inserted_ids: string[]; total: number }>('/learning/path', { method: 'POST', body: JSON.stringify({ items }) }); }
+export function reviewLearningPathItem(itemId: string, review_state: 'active' | 'completed' | 'skipped') { return request<LearningPathItem>(`/learning/path/${encodeURIComponent(itemId)}/review`, { method: 'PATCH', body: JSON.stringify({ review_state }) }); }
 
 const sourceStatuses = new Set<SourceStatus>(['new', 'processing', 'needs_review', 'approved', 'delivered', 'failed', 'outdated']);
 const trustLevels = new Set<TrustLevel>(['verified', 'high', 'medium', 'low', 'unverified']);

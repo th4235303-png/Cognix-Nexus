@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SecureStore from 'expo-secure-store';
+import * as Crypto from 'expo-crypto';
 
 // =============================================================================
 // Global Error Boundary — prevents white screen on unhandled render errors
@@ -55,52 +56,74 @@ const AppWithBoundary: React.FC = () => (
 
 // Security constants
 const VAULT_PIN_STORAGE_KEY = 'cognix_vault_pin_hash';
+const VAULT_PIN_SALT_KEY = 'cognix_vault_pin_salt';
 const VAULT_LOCKOUT_KEY = 'cognix_vault_lockout_until';
 const VAULT_PIN_MAX_ATTEMPTS = 5;
 const VAULT_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
+const OFFLINE_CAPTURE_QUEUE_KEY = 'cognix_offline_capture_queue_v1';
 
-/** PBKDF2-based PIN hash — salted with a fixed app secret + pin length to prevent rainbow tables. */
-const PBKDF2_SALT = 'cognix_vault_salt_v1_2026'; // static app-level salt; do NOT change after deploy
-const PBKDF2_ITERATIONS = 100_000;
-const PBKDF2_KEY_LENGTH = 32; // 256 bits
+/**
+ * Native Expo crypto works on Android and iOS; browser WebCrypto is not
+ * guaranteed to exist in an Expo runtime.  The PIN is additionally guarded
+ * by hardware-backed SecureStore and the persisted attempt lockout below.
+ */
+const PIN_HASH_VERSION = 'v2';
 
-async function hashPin(pin: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(pin),
-    { name: 'PBKDF2' },
-    false,
-    ['deriveBits']
+async function generateSecureRandomSalt(): Promise<string> {
+  const randomBytes = await Crypto.getRandomBytesAsync(16);
+  return Array.from(randomBytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function hashPin(pin: string, salt: string): Promise<string> {
+  const digest = await Crypto.digestStringAsync(
+    Crypto.CryptoDigestAlgorithm.SHA512,
+    `${PIN_HASH_VERSION}:${salt}:${pin}`,
   );
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: 'PBKDF2',
-      salt: encoder.encode(PBKDF2_SALT),
-      iterations: PBKDF2_ITERATIONS,
-      hash: 'SHA-256',
-    },
-    keyMaterial,
-    PBKDF2_KEY_LENGTH * 8
-  );
-  const hashArray = Array.from(new Uint8Array(derivedBits));
-  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  return `${PIN_HASH_VERSION}:${digest}`;
+}
+
+function secureHashEquals(left: string, right: string): boolean {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  }
+  return difference === 0;
 }
 
 async function isVaultPinSet(): Promise<boolean> {
   const storedHash = await SecureStore.getItemAsync(VAULT_PIN_STORAGE_KEY);
-  return storedHash !== null;
+  if (!storedHash) return false;
+
+  // The previous format depended on browser WebCrypto, which is not reliably
+  // available in native Expo. Clear only the unusable verifier so the owner
+  // can set a new PIN; no vault content is stored in this verifier.
+  const storedSalt = await SecureStore.getItemAsync(VAULT_PIN_SALT_KEY);
+  if (!storedSalt) {
+    await SecureStore.deleteItemAsync(VAULT_PIN_STORAGE_KEY);
+    return false;
+  }
+  return true;
 }
 
 async function validateVaultPin(pin: string): Promise<boolean> {
   const storedHash = await SecureStore.getItemAsync(VAULT_PIN_STORAGE_KEY);
   if (!storedHash) return false;
-  const inputHash = await hashPin(pin);
-  return inputHash === storedHash;
+
+  // A missing salt means this data predates the secure on-device vault format.
+  // It is deliberately not accepted because the old WebCrypto-only hash could
+  // not be evaluated reliably in native Expo clients.
+  const storedSalt = await SecureStore.getItemAsync(VAULT_PIN_SALT_KEY);
+  if (!storedSalt) return false;
+
+  const inputHash = await hashPin(pin, storedSalt);
+  return secureHashEquals(inputHash, storedHash);
 }
 
 async function setVaultPin(pin: string): Promise<void> {
-  const hash = await hashPin(pin);
+  const randomSalt = await generateSecureRandomSalt();
+  const hash = await hashPin(pin, randomSalt);
+  await SecureStore.setItemAsync(VAULT_PIN_SALT_KEY, randomSalt);
   await SecureStore.setItemAsync(VAULT_PIN_STORAGE_KEY, hash);
 }
 
@@ -129,6 +152,27 @@ interface CapturedNote {
   created_at: string;
 }
 
+interface QueuedCapture extends CapturedNote {
+  queued_at: string;
+}
+
+async function readOfflineCaptureQueue(): Promise<QueuedCapture[]> {
+  const raw = await SecureStore.getItemAsync(OFFLINE_CAPTURE_QUEUE_KEY);
+  if (!raw) return [];
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((item): item is QueuedCapture => Boolean(item && typeof item === 'object' && typeof (item as QueuedCapture).content === 'string')) : [];
+  } catch {
+    return [];
+  }
+}
+
+async function writeOfflineCaptureQueue(queue: QueuedCapture[]): Promise<void> {
+  // This is deliberately capped: SecureStore is for small queued metadata,
+  // not a general document store.  The newest captures are preserved.
+  await SecureStore.setItemAsync(OFFLINE_CAPTURE_QUEUE_KEY, JSON.stringify(queue.slice(-40)));
+}
+
 interface Flashcard {
   id: string;
   question: string;
@@ -143,6 +187,8 @@ function App() {
   const [loading, setLoading] = useState<boolean>(false);
   const [quickInput, setQuickInput] = useState<string>('');
   const [selectedTag, setSelectedTag] = useState<string>('#idea');
+  const [offlineQueue, setOfflineQueue] = useState<QueuedCapture[]>([]);
+  const [syncingQueue, setSyncingQueue] = useState(false);
 
   // Flashcards
   const [flashcards] = useState<Flashcard[]>([
@@ -198,6 +244,10 @@ function App() {
         }
       }
     }).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    readOfflineCaptureQueue().then(setOfflineQueue).catch(() => undefined);
   }, []);
 
   const loadBooks = async () => {
@@ -257,7 +307,8 @@ function App() {
     setNotes([newNote, ...notes]);
     setQuickInput('');
 
-    // Persist to backend
+    // Persist to backend. Network failures are stored on-device and can be
+    // retried manually; no capture is sent to a third-party service.
     try {
       const res = await fetch(`${API_BASE}/api/v1/brain/notes`, {
         method: 'POST',
@@ -265,14 +316,43 @@ function App() {
         body: JSON.stringify({ content: newNote.content, tag: selectedTag }),
       });
       if (!res.ok) {
-        console.warn('Note saved locally but failed to sync to backend:', res.status);
+        const queued = [...offlineQueue, { ...newNote, queued_at: new Date().toISOString() }];
+        await writeOfflineCaptureQueue(queued);
+        setOfflineQueue(queued);
         Alert.alert('Saved Locally', 'Note captured. Will sync when connection is restored.');
       } else {
         Alert.alert('Saved to Brain Vault', 'Note captured and queued for AI knowledge indexing.');
       }
     } catch {
-      console.warn('Network error - note saved locally only');
+      const queued = [...offlineQueue, { ...newNote, queued_at: new Date().toISOString() }];
+      await writeOfflineCaptureQueue(queued);
+      setOfflineQueue(queued);
       Alert.alert('Saved Locally', 'Note captured offline. Will sync when connection is restored.');
+    }
+  };
+
+  const syncOfflineCaptures = async () => {
+    if (!offlineQueue.length || syncingQueue) return;
+    setSyncingQueue(true);
+    const remaining: QueuedCapture[] = [];
+    try {
+      for (const capture of offlineQueue) {
+        try {
+          const response = await fetch(`${API_BASE}/api/v1/brain/notes`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': capture.id },
+            body: JSON.stringify({ content: capture.content, tag: capture.tag }),
+          });
+          if (!response.ok) remaining.push(capture);
+        } catch {
+          remaining.push(capture);
+        }
+      }
+      await writeOfflineCaptureQueue(remaining);
+      setOfflineQueue(remaining);
+      Alert.alert(remaining.length ? 'Sync Paused' : 'Sync Complete', remaining.length ? `${remaining.length} capture(s) are still safely queued.` : 'All offline captures are now in your Brain Vault.');
+    } finally {
+      setSyncingQueue(false);
     }
   };
 
@@ -400,6 +480,11 @@ function App() {
           <ScrollView contentContainerStyle={{ padding: 16 }}>
             <View style={styles.card}>
               <Text style={styles.cardTitle}>⚡ Capture a Thought or Research Note</Text>
+              {offlineQueue.length > 0 && (
+                <TouchableOpacity style={styles.queueBanner} onPress={syncOfflineCaptures} disabled={syncingQueue} accessibilityRole="button" accessibilityLabel="Sync offline captures">
+                  <Text style={styles.queueBannerText}>{syncingQueue ? 'Syncing local captures…' : `${offlineQueue.length} offline capture${offlineQueue.length === 1 ? '' : 's'} · Tap to sync`}</Text>
+                </TouchableOpacity>
+              )}
               <TextInput
                 style={styles.textInput}
                 placeholder="What's on your mind? Note, quote, link or insight..."
@@ -534,14 +619,20 @@ function App() {
             {!secretUnlocked ? (
               <View style={styles.pinBox}>
                 <Text style={styles.lockIcon}>🔐</Text>
-                <Text style={styles.secretHeading}>Encrypted Secret Vault</Text>
+                <Text style={styles.secretHeading}>
+                  {vaultPinSet ? 'Encrypted Secret Vault' : (settingNewPin ? 'Confirm Vault PIN' : 'Set Vault PIN')}
+                </Text>
                 <Text style={styles.secretSubheading}>
-                  Enter your 4-digit security PIN to unlock private brain items.
+                  {vaultPinSet
+                    ? 'Enter your security PIN to unlock private brain items.'
+                    : (settingNewPin
+                      ? 'Re-enter the PIN to secure this device vault.'
+                      : 'Create a PIN with at least 4 digits to secure this device vault.')}
                 </Text>
 
                 <TextInput
                   style={styles.pinInput}
-                  placeholder="PIN (Default: 1234)"
+                  placeholder={vaultPinSet ? 'PIN' : (settingNewPin ? 'Confirm PIN' : 'New PIN')}
                   placeholderTextColor="#64748b"
                   keyboardType="numeric"
                   secureTextEntry={!showPin}
@@ -550,8 +641,14 @@ function App() {
                   onChangeText={setPinInput}
                 />
 
-                <TouchableOpacity style={styles.unlockBtn} onPress={handleUnlockSecret}>
-                  <Text style={styles.unlockBtnText}>Unlock Vault 🔓</Text>
+                <TouchableOpacity
+                  style={styles.unlockBtn}
+                  onPress={vaultPinSet ? handleUnlockSecret : handleSetNewPin}
+                  disabled={vaultPinSet === null}
+                >
+                  <Text style={styles.unlockBtnText}>
+                    {vaultPinSet ? 'Unlock Vault 🔓' : (settingNewPin ? 'Confirm PIN 🔐' : 'Set PIN 🔐')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             ) : (
@@ -595,6 +692,8 @@ const styles = StyleSheet.create({
   headerSubtitle: { color: '#94a3b8', fontSize: 11, marginTop: 2 },
   badgeBtn: { backgroundColor: '#164e63', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 12 },
   badgeBtnText: { color: '#22d3ee', fontSize: 11, fontWeight: 'bold' },
+  queueBanner: { backgroundColor: '#3f2a0b', borderWidth: 1, borderColor: '#a16207', borderRadius: 8, padding: 9, marginBottom: 12 },
+  queueBannerText: { color: '#fde68a', fontSize: 12, fontWeight: '600' },
   tabsRow: {
     flexDirection: 'row',
     backgroundColor: '#0f172a',

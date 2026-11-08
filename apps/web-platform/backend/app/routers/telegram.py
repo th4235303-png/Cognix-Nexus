@@ -4,7 +4,7 @@ import hmac
 import logging
 import os
 from typing import Any
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel
 
 from ..services.telegram import send_telegram_message
@@ -16,12 +16,45 @@ logger = logging.getLogger("cognix.telegram")
 router = APIRouter(prefix="/telegram", tags=["telegram"])
 
 FRONTEND_URL = os.getenv("FRONTEND_BASE_URL", "https://cognix-nexus-frontend.onrender.com")
-TELEGRAM_ALLOWED_CHAT_ID = os.getenv("TELEGRAM_ALLOWED_CHAT_ID", "").strip()
+
+
+def _production_mode() -> bool:
+    return os.getenv("COGNIX_ENV", "development").strip().lower() in {"production", "prod"}
+
+
+def _configured_id_set(name: str) -> set[str]:
+    return {part.strip() for part in os.getenv(name, "").split(",") if part.strip()}
 
 
 def _is_allowed_telegram_chat(chat_id: int | str | None) -> bool:
-    """Limit bot interactions to the explicitly approved Telegram group when configured."""
-    return not TELEGRAM_ALLOWED_CHAT_ID or str(chat_id).strip() == TELEGRAM_ALLOWED_CHAT_ID
+    """Limit bot interactions to the configured group, failing closed in production."""
+    allowed_chat = os.getenv("TELEGRAM_ALLOWED_CHAT_ID", "").strip() or os.getenv("TELEGRAM_CHAT_ID", "").strip()
+    if _production_mode() and not allowed_chat:
+        return False
+    return not allowed_chat or str(chat_id).strip() == allowed_chat
+
+
+def _is_allowed_telegram_context(*, user_id: int | str | None, chat_id: int | str | None, topic_id: int | None) -> bool:
+    """Authorize an inbound Telegram actor against user, group, and topic scope."""
+    allowed_users = _configured_id_set("TELEGRAM_ALLOWED_USER_IDS")
+    expected_topic = os.getenv("TELEGRAM_ALLOWED_TOPIC_ID", "").strip() or os.getenv("TELEGRAM_TOPIC_ID", "").strip()
+
+    if _production_mode() and (not allowed_users or not expected_topic):
+        logger.error("Telegram authorization is not fully configured")
+        return False
+    if allowed_users and str(user_id).strip() not in allowed_users:
+        return False
+    if expected_topic and (topic_id is None or str(topic_id) != expected_topic):
+        return False
+    return _is_allowed_telegram_chat(chat_id)
+
+
+def _authorize_action_gateway(secret: str | None) -> None:
+    expected_secret = os.getenv("TELEGRAM_ACTION_SECRET", "").strip()
+    if not expected_secret:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail="Telegram action gateway is not configured")
+    if not secret or not hmac.compare_digest(secret, expected_secret):
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid Telegram action credentials")
 
 
 class TelegramActionPayload(BaseModel):
@@ -37,11 +70,21 @@ class TelegramActionPayload(BaseModel):
 # 1. ACTION HANDLER (Direct Callback / Gateway)
 # ------------------------------------------------------------------------------
 @router.post("/action")
-async def handle_telegram_action(payload: TelegramActionPayload) -> dict[str, Any]:
-    """Handle inbound Telegram action callback for Cognix Nexus."""
-    if not _is_allowed_telegram_chat(payload.chat_id):
-        logger.warning("Ignored Telegram action from non-approved chat")
+async def handle_telegram_action(
+    payload: TelegramActionPayload,
+    x_telegram_action_secret: str | None = Header(default=None),
+) -> dict[str, Any]:
+    """Handle a gateway action only after shared-secret and scope checks."""
+    _authorize_action_gateway(x_telegram_action_secret)
+    if not _is_allowed_telegram_context(user_id=payload.user_id, chat_id=payload.chat_id, topic_id=payload.topic_id):
+        logger.warning("Ignored Telegram action outside the authorized user/group/topic scope")
         return {"status": "ignored", "reason": "chat_not_allowed"}
+
+    return await _execute_telegram_action(payload)
+
+
+async def _execute_telegram_action(payload: TelegramActionPayload) -> dict[str, Any]:
+    """Execute an action after its caller has already been authorized."""
 
     action = payload.action
     logger.info("Cognix received Telegram action: %s", action)
@@ -136,7 +179,9 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
             user_id=cq.get("from", {}).get("id"),
             username=cq.get("from", {}).get("username"),
         )
-        return await handle_telegram_action(payload)
+        if not _is_allowed_telegram_context(user_id=payload.user_id, chat_id=payload.chat_id, topic_id=payload.topic_id):
+            return {"ok": True, "ignored": "unauthorized_scope"}
+        return await _execute_telegram_action(payload)
 
     # Message Text (Slash Commands)
     if "message" in update:
@@ -145,9 +190,10 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
         topic_id = msg.get("message_thread_id")
         chat_id = msg.get("chat", {}).get("id")
 
-        if not _is_allowed_telegram_chat(chat_id):
-            logger.warning("Ignored Telegram message from non-approved chat")
-            return {"ok": True, "ignored": "chat_not_allowed"}
+        user_id = msg.get("from", {}).get("id")
+        if not _is_allowed_telegram_context(user_id=user_id, chat_id=chat_id, topic_id=topic_id):
+            logger.warning("Ignored Telegram message outside the authorized user/group/topic scope")
+            return {"ok": True, "ignored": "unauthorized_scope"}
 
         if not text:
             return {"ok": True}
@@ -210,8 +256,8 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
             if not content:
                 await send_telegram_message("⚠️ Please provide content: <code>/capture [your idea or link]</code>", topic_id=topic_id, chat_id=chat_id)
                 return {"ok": True}
-            payload = TelegramActionPayload(action="cognix_quick_capture", raw_message=content, topic_id=topic_id, chat_id=chat_id)
-            return await handle_telegram_action(payload)
+            payload = TelegramActionPayload(action="cognix_quick_capture", raw_message=content, topic_id=topic_id, chat_id=chat_id, user_id=user_id)
+            return await _execute_telegram_action(payload)
 
         # Command: /brain - Brain vault statistics
         elif text.startswith("/brain"):

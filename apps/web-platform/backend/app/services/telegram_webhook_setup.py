@@ -59,6 +59,11 @@ async def configure_telegram_webhook() -> None:
                         {"command": "morning_brief", "description": "Today's learning digest"},
                         {"command": "ask", "description": "Query your books & notes: /ask <question>"},
                         {"command": "capture", "description": "Save thought to Brain Vault: /capture <text>"},
+                        {"command": "brain", "description": "View Brain Vault statistics"},
+                        {"command": "sources", "description": "List recent knowledge sources"},
+                        {"command": "review", "description": "Show items waiting for review"},
+                        {"command": "tasks", "description": "Show processing tasks"},
+                        {"command": "activity", "description": "Show recent Brain Vault activity"},
                     ],
                 }
                 if chat_id:
@@ -76,6 +81,28 @@ async def configure_telegram_webhook() -> None:
                     logger.warning("Telegram command menu setup failed: API returned ok=false")
             except Exception as exc:
                 logger.warning("Telegram command menu setup failed (%s)", type(exc).__name__)
+
+            # Mirror BotFather's Menu Button setting in code so it survives
+            # bot or deployment maintenance.  Telegram requires HTTPS Web App URLs.
+            try:
+                frontend_url = os.getenv("FRONTEND_BASE_URL", "https://cognix-nexus-frontend.onrender.com").strip()
+                if frontend_url.startswith("https://"):
+                    menu_response = await client.post(
+                        f"https://api.telegram.org/bot{token}/setChatMenuButton",
+                        json={
+                            "menu_button": {
+                                "type": "web_app",
+                                "text": "Open Flow",
+                                "web_app": {"url": frontend_url},
+                            }
+                        },
+                    )
+                    menu_response.raise_for_status()
+                    logger.info("Telegram menu button configured for Cognix Nexus")
+                else:
+                    logger.warning("Telegram menu button skipped: FRONTEND_BASE_URL must use HTTPS")
+            except Exception as exc:
+                logger.warning("Telegram menu button setup failed (%s)", type(exc).__name__)
 
     except Exception as exc:
         logger.error("Telegram webhook setup failed (%s)", type(exc).__name__)

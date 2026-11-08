@@ -7,7 +7,7 @@ import { cn } from '@/lib/utils';
 import { SectionCard, PageHeader } from '@/components/shared/cognix-primitives';
 import type { ClaimState, ExportStatus, ResearchRecord } from '@/lib/researchData';
 import { stageLabels } from '@/lib/researchData';
-import { approveSource, exportToGoogleDrive, requestSourceRevision, updateSourceTranslation, ApiError } from '@/lib/api';
+import { approveSource, downloadLocalExport, exportToGoogleDrive, requestSourceRevision, updateSourceTranslation, ApiError } from '@/lib/api';
 
 export function StageBadge({ stage }: { stage: keyof typeof stageLabels }) {
   const tone = ['approved','exported'].includes(stage) ? 'success' : ['failed'].includes(stage) ? 'danger' : ['needs_review','fact_check'].includes(stage) ? 'warning' : 'primary';
@@ -110,11 +110,12 @@ export function ExportButton({ status, sourceId, disabled = false }: { status: E
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   async function exportNow() { setBusy(true); setMessage(null); try { const job = await exportToGoogleDrive(sourceId, `cognix-${sourceId}-${Date.now()}`); setState(job.status as ExportStatus); setMessage('Export queued. Mock Drive mode is active.'); } catch { setMessage('Export failed or source is not approved.'); } finally { setBusy(false); } }
+  async function downloadNow() { setBusy(true); setMessage(null); try { await downloadLocalExport(sourceId); setMessage('Local JSON package downloaded. No cloud provider was used.'); } catch { setMessage('Local export failed or source is not approved.'); } finally { setBusy(false); } }
   const canExport = state === 'ready';
-  return <div><button disabled={!canExport || disabled || busy} onClick={exportNow} className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary disabled:cursor-not-allowed disabled:opacity-40">
+  return <div className="flex flex-wrap gap-2"><button disabled={!canExport || disabled || busy} onClick={exportNow} className="inline-flex items-center gap-2 rounded-md border border-primary/30 bg-primary/10 px-3 py-2 text-xs font-medium text-primary disabled:cursor-not-allowed disabled:opacity-40">
     {busy || state === 'queued' ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <HardDrive className="h-3.5 w-3.5" />}
     {busy ? 'Queueing…' : state === 'ready' ? 'Export to Google Drive' : state === 'queued' ? 'Queued for export' : state === 'exported' ? 'Exported' : 'Not ready'}
-  </button>{message && <p className="mt-2 text-[11px] text-muted-foreground">{message}</p>}</div>;
+  </button><button disabled={!canExport || disabled || busy} onClick={downloadNow} className="inline-flex items-center gap-2 rounded-md border border-border/50 px-3 py-2 text-xs font-medium disabled:cursor-not-allowed disabled:opacity-40"><FileCheck2 className="h-3.5 w-3.5" />Download JSON</button>{message && <p className="basis-full mt-2 text-[11px] text-muted-foreground">{message}</p>}</div>;
 }
 
 export function ResearchDetail({ record }: { record: ResearchRecord }) {

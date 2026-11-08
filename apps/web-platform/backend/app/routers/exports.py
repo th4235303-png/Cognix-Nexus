@@ -1,11 +1,14 @@
 from datetime import date
+import json
 from uuid import uuid4
 
 from fastapi import APIRouter, HTTPException, Request
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 from app.ownership import get_source_for_request, owner_for_request
 from app.services.google_drive import build_export_package
+from app.services.google_drive_package import build_file_contents
 from app.services.export_worker import advance_export_job
 from app.store import store
 
@@ -15,6 +18,31 @@ router = APIRouter()
 class DriveExportRequest(BaseModel):
     source_id: str
     idempotency_key: str
+
+
+@router.get("/local/{source_id}")
+def export_to_local_json(source_id: str, request: Request) -> Response:
+    """Download an owner-scoped, approved source package without any cloud provider."""
+    owner_for_request(request)
+    store.refresh()
+    source = get_source_for_request(request, source_id)
+    if source.get("status") != "approved":
+        raise HTTPException(status_code=409, detail="Only approved sources can be exported")
+    files = build_export_package(source_id, date.today().isoformat()).files
+    contents = build_file_contents(source)
+    package = {
+        "export_version": "1.0.0",
+        "source_app": "Cognix Nexus",
+        "exported_at": date.today().isoformat(),
+        "source_id": source_id,
+        "files": {name: {"content": contents[name][0], "content_type": contents[name][1]} for name in files},
+    }
+    store.add_activity("local_export_downloaded", source_id, "approved", "manual_export")
+    return Response(
+        content=json.dumps(package, ensure_ascii=False, indent=2),
+        media_type="application/json",
+        headers={"Content-Disposition": f'attachment; filename="cognix-source-{source_id}.json"'},
+    )
 
 
 @router.post("/google-drive", status_code=202)

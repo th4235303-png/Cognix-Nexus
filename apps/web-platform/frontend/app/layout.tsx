@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: 'Cognix Nexus — Research Intelligence Workspace',
   description:
     'Private research intelligence workspace for Cognix Nexus.',
+  icons: { icon: '/logo.svg' },
 };
 
 export default function RootLayout({

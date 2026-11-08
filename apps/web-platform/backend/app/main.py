@@ -112,12 +112,14 @@ async def _lifespan(application: FastAPI):
     """Modern lifespan handler replacing deprecated @app.on_event."""
     _startup()
     await configure_telegram_webhook()
-    # Startup Telegram notification
+    # A deploy/restart can occur many times a day.  Do not flood the project
+    # topic with identical "online" messages unless an operator explicitly
+    # enables that diagnostic notification.
     try:
         from app.routers.telegram import send_telegram_message
         import os as _os
         _topic = int(_os.getenv("TELEGRAM_TOPIC_ID", "0")) or None
-        if _topic:
+        if _topic and _env_flag("TELEGRAM_STARTUP_NOTIFICATION"):
             await send_telegram_message(
                 "🟢 <b>Cognix Nexus Backend</b> is now online and ready!",
                 topic_id=_topic,

@@ -294,6 +294,8 @@ class CognixApiTests(unittest.TestCase):
         store.brain_concepts.clear()
         store.brain_concept_owners.clear()
         store.brain_concept_links.clear()
+        from app.main import _rate_windows
+        _rate_windows.clear()
         self.client = TestClient(app)
 
     def test_health_and_root_metadata(self):
@@ -435,6 +437,24 @@ class CognixApiTests(unittest.TestCase):
         completed = self.client.post(f"/exports/{exported.json()['id']}/advance")
         self.assertEqual(completed.json()["status"], "exported")
         self.assertTrue(completed.json()["drive_reference"].startswith("mock-drive://"))
+
+    def test_owner_scoped_local_export_requires_approval(self):
+        source = self.client.post(
+            "/sources", json={"url": "https://example.com/local-export"}
+        ).json()["source"]
+
+        blocked = self.client.get(f"/exports/local/{source['id']}")
+        self.assertEqual(blocked.status_code, 409)
+
+        self.client.patch(f"/sources/{source['id']}/translation", json={"human_edited_myanmar": "Local export"})
+        self.client.post(f"/reviews/{source['id']}/approve", json={})
+        exported = self.client.get(f"/exports/local/{source['id']}")
+        self.assertEqual(exported.status_code, 200)
+        self.assertEqual(exported.headers["content-type"].split(";")[0], "application/json")
+        package = exported.json()
+        self.assertEqual(package["source_id"], source["id"])
+        self.assertIn("source.json", package["files"])
+        self.assertIn("attachment", exported.headers["content-disposition"])
 
     def test_critical_warning_blocks_approval(self):
         source = self.client.post(
