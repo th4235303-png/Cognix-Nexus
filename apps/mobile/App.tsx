@@ -478,7 +478,7 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/api/v1/brain/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}`, 'Idempotency-Key': newNote.id },
         body: JSON.stringify({ title: newNote.content.slice(0, 120) || 'Mobile capture', content: newNote.content, note_type: selectedTag, status: 'inbox' }),
       });
       if (!res.ok) {
