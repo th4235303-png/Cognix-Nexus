@@ -99,6 +99,110 @@ def decay(payload: DecayIn):
     return {**result, "id": review_id, "due_at": due_at.isoformat()}
 
 
+class FlashcardCreate(BaseModel):
+    subject: str = Field(min_length=1, max_length=300)
+    question: str = Field(min_length=1, max_length=12000)
+    answer: str = Field(min_length=1, max_length=12000)
+    source_id: str | None = Field(default=None, max_length=200)
+
+
+class FlashcardGrade(BaseModel):
+    quality: int = Field(ge=0, le=5)
+
+
+@router.post("/reviews", status_code=201)
+def create_flashcard_review(payload: FlashcardCreate, request: Request):
+    """Persist a user-owned flashcard with an initial due-now SM-2 schedule."""
+    db = _db()
+    owner_id = owner_for_request(request)
+    review_id = f"LREV-{uuid4().hex[:8].upper()}"
+    now = datetime.now(timezone.utc)
+    metadata = {
+        "question": payload.question,
+        "answer": payload.answer,
+        "source_id": payload.source_id,
+        "repetition": 0,
+        "interval_days": 1,
+        "ease_factor": 2.5,
+    }
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO learning_reviews(id,owner_id,subject,rating,stability,difficulty,due_at,metadata) "
+                "VALUES(%s,%s,%s,%s,%s,%s,%s,%s::jsonb) "
+                "ON CONFLICT (owner_id,(metadata->>'source_id'),(metadata->>'question')) "
+                "WHERE (metadata->>'source_id') IS NOT NULL AND (metadata->>'question') IS NOT NULL "
+                "DO NOTHING RETURNING *",
+                (review_id, owner_id, payload.subject, 0, 1.0, 5.0, now, _json(metadata)),
+            )
+            row = cur.fetchone()
+            if row is None and payload.source_id:
+                cur.execute(
+                    "SELECT * FROM learning_reviews WHERE owner_id=%s "
+                    "AND metadata->>'source_id'=%s AND metadata->>'question'=%s LIMIT 1",
+                    (owner_id, payload.source_id, payload.question),
+                )
+                row = cur.fetchone()
+        conn.commit()
+    if row is None:
+        raise HTTPException(409, "Flashcard could not be persisted")
+    return row
+
+
+@router.get("/reviews")
+def list_flashcard_reviews(request: Request, due_only: bool = True, limit: int = 50):
+    """List only the authenticated owner's persisted flashcards."""
+    db = _db()
+    owner_id = owner_for_request(request)
+    limit = max(1, min(limit, 100))
+    due_clause = "AND due_at <= now()" if due_only else ""
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id,owner_id,subject,rating,stability,difficulty,due_at,metadata "
+                "FROM learning_reviews WHERE owner_id=%s "
+                "AND metadata ? 'question' AND metadata ? 'answer' "
+                f"{due_clause} ORDER BY due_at ASC LIMIT %s",
+                (owner_id, limit),
+            )
+            items = cur.fetchall()
+    return {"items": items, "total": len(items)}
+
+
+@router.patch("/reviews/{review_id}")
+def grade_flashcard_review(review_id: str, payload: FlashcardGrade, request: Request):
+    """Persist the SM-2 review result and next due date for an owned card."""
+    db = _db()
+    owner_id = owner_for_request(request)
+    from app.services.spaced_repetition_quiz import SpacedRepetitionQuizService
+
+    with db.connect() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id,metadata FROM learning_reviews WHERE id=%s AND owner_id=%s FOR UPDATE",
+                (review_id, owner_id),
+            )
+            row = cur.fetchone()
+            if not row:
+                raise HTTPException(404, "Flashcard not found")
+            metadata = row["metadata"] if isinstance(row["metadata"], dict) else json.loads(row["metadata"] or "{}")
+            result = SpacedRepetitionQuizService.calculate_sm2(
+                repetition=int(metadata.get("repetition", 0)),
+                interval_days=int(metadata.get("interval_days", 1)),
+                ease_factor=float(metadata.get("ease_factor", 2.5)),
+                quality=payload.quality,
+            )
+            updated_metadata = {**metadata, **result, "last_quality": payload.quality}
+            cur.execute(
+                "UPDATE learning_reviews SET rating=%s,due_at=%s,metadata=%s::jsonb "
+                "WHERE id=%s AND owner_id=%s RETURNING *",
+                (payload.quality, result["next_review_at"], _json(updated_metadata), review_id, owner_id),
+            )
+            updated = cur.fetchone()
+        conn.commit()
+    return updated
+
+
 class InterleaveIn(BaseModel):
     subjects: list[str] = Field(min_length=2, max_length=20)
     rounds: int = Field(default=3, ge=1, le=20)
