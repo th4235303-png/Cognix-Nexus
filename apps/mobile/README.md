@@ -6,8 +6,8 @@ Expo / React Native client for Cognix Nexus.
 
 - Supabase email/password sign-in with persisted auth session in Exho SecureStore.
 - Cognix API calls use the authenticated Supabase access token as a Bearer token.
-- Quick captures are persisted by the backend or retained in a capped local SecureStore queue when the API rejects/fails.
-- The Learning tab currently shows sample flashcards only; no review schedule is saved.
+- Quick captures are persisted by the backend or retained in a capped, per-account local SecureStore queue when the API rejects/fails.
+- Generate flashcards from a saved Brain Vault note and persist owner-scoped SM-2 review intervals and due dates in PostgreSQL.
 - The Secret tab currently provides a local PIN gate only. It does not yet persist encrypted secret records.
 
 ## Configuration
