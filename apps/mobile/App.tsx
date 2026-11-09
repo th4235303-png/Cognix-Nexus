@@ -222,6 +222,9 @@ interface Flashcard {
   question: string;
   answer: string;
   source: string;
+  repetition: number;
+  interval_days: number;
+  ease_factor: number;
 }
 
 function App() {
@@ -239,27 +242,8 @@ function App() {
   const [offlineQueue, setOfflineQueue] = useState<QueuedCapture[]>([]);
   const [syncingQueue, setSyncingQueue] = useState(false);
 
-  // Flashcards
-  const [flashcards] = useState<Flashcard[]>([
-    {
-      id: 'fc-1',
-      question: 'What is Reciprocal Rank Fusion (RRF) in Cognix hybrid search?',
-      answer: 'RRF combines scores from BM25 lexical search and pgvector semantic embeddings without needing calibrated score normalization.',
-      source: 'Cognix Architecture'
-    },
-    {
-      id: 'fc-2',
-      question: 'How does Second Brain progressive summarization work?',
-      answer: 'Layer 1: Raw notes -> Layer 2: Bold passages -> Layer 3: Highlighted core ideas -> Layer 4: Executive mini-summary.',
-      source: 'Building a Second Brain'
-    },
-    {
-      id: 'fc-3',
-      question: 'What is the role of Brain Soul Layer?',
-      answer: 'A personal context file storing writing style, current projects, and narrative preferences to avoid re-prompting LLMs.',
-      source: 'Cognix Brain Soul'
-    }
-  ]);
+  // Owner-scoped flashcards loaded from the persisted SM-2 schedule.
+  const [flashcards, setFlashcards] = useState<Flashcard[]>([]);
   const [currentCardIndex, setCurrentCardIndex] = useState<number>(0);
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
 
@@ -332,6 +316,7 @@ function App() {
     if (session?.access_token) {
       loadBooks();
       loadNotes();
+      loadDueCards();
     } else {
       setBooks([]);
       setNotes([]);
@@ -352,6 +337,89 @@ function App() {
         // Do not display sample notes as if they belonged to the signed-in owner.
     }
     setNotes([]);
+  };
+
+  const loadDueCards = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/brain/level-up/reviews?due_only=true&limit=30`, {
+        headers: { Authorization: `Bearer ${session?.access_token || ''}` },
+      });
+      if (!response.ok) throw new Error('Could not load scheduled flashcards.');
+      const body = await response.json();
+      const items = Array.isArray(body.items) ? body.items : [];
+      const mapped: Flashcard[] = items.map((item: { id: string; subject: string; metadata: unknown }) => {
+        const metadata = typeof item.metadata === 'string' ? JSON.parse(item.metadata) : item.metadata;
+        const details = metadata && typeof metadata === 'object' ? metadata as Record<string, unknown> : {};
+        return {
+          id: item.id,
+          question: String(details.question || ''),
+          answer: String(details.answer || ''),
+          source: item.subject,
+          repetition: Number(details.repetition || 0),
+          interval_days: Number(details.interval_days || 1),
+          ease_factor: Number(details.ease_factor || 2.5),
+        };
+      }).filter((card: Flashcard) => card.question.length > 0 && card.answer.length > 0);
+      setFlashcards(mapped);
+      setCurrentCardIndex(0);
+      setShowAnswer(false);
+    } catch {
+      setFlashcards([]);
+    }
+  };
+
+  const handleGenerateFlashcards = async () => {
+    const sourceNote = notes[0];
+    if (!sourceNote || !session?.access_token) {
+      Alert.alert('A note is required', 'Capture or save a note first, then generate flashcards from it.');
+      return;
+    }
+    setLoading(true);
+    try {
+      const generatedResponse = await fetch(`${API_BASE}/api/v1/learning/quiz/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ title: sourceNote.content.slice(0, 120) || 'Brain Vault note', content: sourceNote.content, max_cards: 5 }),
+      });
+      if (!generatedResponse.ok) throw new Error(`Card generation failed (HTTP ${generatedResponse.status}).`);
+      const generatedBody = await generatedResponse.json();
+      const generatedCards = Array.isArray(generatedBody.cards) ? generatedBody.cards : [];
+      let savedCount = 0;
+      for (const card of generatedCards) {
+        const saveResponse = await fetch(`${API_BASE}/api/v1/brain/level-up/reviews`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+          body: JSON.stringify({ subject: sourceNote.content.slice(0, 120) || 'Brain Vault note', question: card.question, answer: card.answer, source_id: sourceNote.id }),
+        });
+        if (!saveResponse.ok) throw new Error(`Could not persist a flashcard (HTTP ${saveResponse.status}).`);
+        savedCount += 1;
+      }
+      await loadDueCards();
+      Alert.alert('Flashcards saved', `${savedCount} card(s) were saved to your personal review schedule.`);
+    } catch (error) {
+      Alert.alert('Flashcard generation failed', error instanceof Error ? error.message : 'Unable to generate cards.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const reviewFlashcard = async (quality: number) => {
+    const card = flashcards[currentCardIndex];
+    if (!card || !session?.access_token) return;
+    try {
+      const response = await fetch(`${API_BASE}/api/v1/brain/level-up/reviews/${encodeURIComponent(card.id)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ quality }),
+      });
+      if (!response.ok) throw new Error(`Review update failed (HTTP ${response.status}).`);
+      setFlashcards((previous) => previous.filter((item) => item.id !== card.id));
+      setCurrentCardIndex(0);
+      setShowAnswer(false);
+      Alert.alert('Review saved', 'Your SM-2 interval and next review date were persisted.');
+    } catch (error) {
+      Alert.alert('Review not saved', error instanceof Error ? error.message : 'Unable to update review schedule.');
+    }
   };
 
   const handleSignIn = async () => {
@@ -696,59 +764,50 @@ function App() {
           />
         )}
 
-        {/* TAB 3: DAILY LEARNING & FLASHCARDS */}
+        {/* TAB 3: OWNER-SCOPED PERSISTED SPACED REPETITION */}
         {activeTab === 'learn' && (
           <View style={styles.learnContainer}>
-            <Text style={styles.learnTitle}>🎯 Sample Flashcards (scheduler not connected)</Text>
-            <Text style={styles.learnSubtitle}>
-              Card {currentCardIndex + 1} of {flashcards.length} • {flashcards[currentCardIndex].source}
-            </Text>
-
-            <View style={styles.flashcardBox}>
-              <Text style={styles.cardQuestion}>
-                {flashcards[currentCardIndex].question}
-              </Text>
-
-              {showAnswer ? (
-                <View style={styles.answerBox}>
-                  <Text style={styles.answerLabel}>AI Answer:</Text>
-                  <Text style={styles.cardAnswer}>
-                    {flashcards[currentCardIndex].answer}
-                  </Text>
+            <Text style={styles.learnTitle}>🎯 Personal Spaced Repetition</Text>
+            {flashcards.length === 0 ? (
+              <View style={styles.flashcardBox}>
+                <Text style={styles.cardQuestion}>No flashcards are due right now.</Text>
+                <Text style={styles.cardAnswer}>Generate cards from one of your saved Brain Vault notes to create a personal, persisted review schedule.</Text>
+                {notes.length > 0 ? (
+                  <TouchableOpacity style={styles.revealBtn} onPress={handleGenerateFlashcards} disabled={loading}>
+                    <Text style={styles.revealBtnText}>{loading ? 'Generating and saving…' : 'Generate from latest note'}</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <Text style={styles.learnSubtitle}>Save a note first in Quick Capture.</Text>
+                )}
+              </View>
+            ) : (
+              <>
+                <Text style={styles.learnSubtitle}>
+                  Card {currentCardIndex + 1} of {flashcards.length} • {flashcards[currentCardIndex].source}
+                </Text>
+                <View style={styles.flashcardBox}>
+                  <Text style={styles.cardQuestion}>{flashcards[currentCardIndex].question}</Text>
+                  {showAnswer ? (
+                    <View style={styles.answerBox}>
+                      <Text style={styles.answerLabel}>Answer:</Text>
+                      <Text style={styles.cardAnswer}>{flashcards[currentCardIndex].answer}</Text>
+                    </View>
+                  ) : (
+                    <TouchableOpacity style={styles.revealBtn} onPress={() => setShowAnswer(true)}>
+                      <Text style={styles.revealBtnText}>🔍 Reveal Answer</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
-              ) : (
-                <TouchableOpacity
-                  style={styles.revealBtn}
-                  onPress={() => setShowAnswer(true)}
-                >
-                  <Text style={styles.revealBtnText}>🔍 Reveal Answer</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {/* Flashcard Next Actions */}
-            <View style={styles.flashcardActions}>
-              <TouchableOpacity
-                style={styles.reviewAgainBtn}
-                onPress={() => {
-                  setShowAnswer(false);
-                  setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
-                }}
-              >
-                <Text style={styles.actionBtnText}>Next Sample ⏭</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.gotItBtn}
-                onPress={() => {
-                  setShowAnswer(false);
-                  Alert.alert('Sample Card', 'This is demo content. No personal review schedule was changed or saved.');
-                  setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
-                }}
-              >
-                <Text style={styles.actionBtnText}>Got It</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.flashcardActions}>
+                  <TouchableOpacity style={styles.reviewAgainBtn} onPress={() => reviewFlashcard(2)} disabled={!showAnswer}>
+                    <Text style={styles.actionBtnText}>Again (1 day)</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.gotItBtn} onPress={() => reviewFlashcard(4)} disabled={!showAnswer}>
+                    <Text style={styles.actionBtnText}>Good (SM-2)</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         )}
 
