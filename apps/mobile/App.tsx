@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import 'react-native-url-polyfill/auto';
+import { createClient, type Session } from '@supabase/supabase-js';
 import {
   SafeAreaView,
   View,
@@ -127,14 +129,56 @@ async function setVaultPin(pin: string): Promise<void> {
   await SecureStore.setItemAsync(VAULT_PIN_STORAGE_KEY, hash);
 }
 
-const _rawApiBase = process.env.EXPO_PUBLIC_COGNIX_API_URL;
-if (!_rawApiBase) {
-  throw new Error(
-    '[Cognix] EXPO_PUBLIC_COGNIX_API_URL is not set. '
-    + 'Create .env with EXPO_PUBLIC_COGNIX_API_URL=https://your-api-url'
-  );
-}
-const API_BASE = _rawApiBase;
+const API_BASE = (process.env.EXPO_PUBLIC_COGNIX_API_URL || '').replace(/\/$/, '');
+const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || '';
+const AUTH_STORAGE_CHUNK_SIZE = 1500;
+const secureSessionStorage = {
+  getItem: async (key: string): Promise<string | null> => {
+    const countValue = await SecureStore.getItemAsync(`${key}:chunk-count`);
+    if (!countValue) return SecureStore.getItemAsync(key); // Read legacy single-item sessions.
+    const count = Number.parseInt(countValue, 10);
+    if (!Number.isFinite(count) || count < 1 || count > 20) return null;
+    const chunks = await Promise.all(
+      Array.from({ length: count }, (_, index) => SecureStore.getItemAsync(`${key}:chunk:${index}`)),
+    );
+    if (chunks.some((chunk) => chunk === null)) return null;
+    return chunks.join('');
+  },
+  setItem: async (key: string, value: string): Promise<void> => {
+    const previousCountValue = await SecureStore.getItemAsync(`${key}:chunk-count`);
+    const previousCount = Number.parseInt(previousCountValue || '0', 10);
+    const count = Math.ceil(value.length / AUTH_STORAGE_CHUNK_SIZE) || 1;
+    if (count > 20) throw new Error('Auth session payload exceeds secure storage capacity.');
+    for (let index = 0; index < count; index += 1) {
+      await SecureStore.setItemAsync(`${key}:chunk:${index}`, value.slice(index * AUTH_STORAGE_CHUNK_SIZE, (index + 1) * AUTH_STORAGE_CHUNK_SIZE));
+    }
+    await SecureStore.setItemAsync(`${key}:chunk-count`, String(count));
+    for (let index = count; index < previousCount; index += 1) {
+      await SecureStore.deleteItemAsync(`${key}:chunk:${index}`);
+    }
+    await SecureStore.deleteItemAsync(key);
+  },
+  removeItem: async (key: string): Promise<void> => {
+    const countValue = await SecureStore.getItemAsync(`${key}:chunk-count`);
+    const count = Number.parseInt(countValue || '0', 10);
+    await SecureStore.deleteItemAsync(`${key}:chunk-count`);
+    for (let index = 0; index < count && index < 20; index += 1) {
+      await SecureStore.deleteItemAsync(`${key}:chunk:${index}`);
+    }
+    await SecureStore.deleteItemAsync(key);
+  },
+};
+const supabaseMobile = SUPABASE_URL && SUPABASE_ANON_KEY
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: {
+        storage: secureSessionStorage,
+        autoRefreshToken: true,
+        persistSession: true,
+        detectSessionInUrl: false,
+      },
+    })
+  : null;
 
 interface BookItem {
   id: string;
@@ -181,6 +225,11 @@ interface Flashcard {
 }
 
 function App() {
+  const [session, setSession] = useState<Session | null>(null);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [authEmail, setAuthEmail] = useState<string>('');
+  const [authPassword, setAuthPassword] = useState<string>('');
+  const [authBusy, setAuthBusy] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'capture' | 'vault' | 'learn' | 'secret'>('capture');
   const [books, setBooks] = useState<BookItem[]>([]);
   const [notes, setNotes] = useState<CapturedNote[]>([]);
@@ -224,11 +273,23 @@ function App() {
   const [showPin, setShowPin] = useState<boolean>(false);
   const [settingNewPin, setSettingNewPin] = useState<boolean>(false);
   const [confirmPin, setConfirmPin] = useState<string>('');
-  const [secretNotes, setSecretNotes] = useState<string[]>([
-    '🔒 Personal Strategic OKRs 2026-2027',
-    '🔒 Master Recovery Seed & Private Encryption Keys',
-    '🔒 Confidential Architecture Blueprint'
-  ]);
+  const [secretNotes] = useState<string[]>([]);
+
+  // Restore the Supabase auth session from SecureStore and listen for token refresh/sign-out.
+  useEffect(() => {
+    if (!supabaseMobile) {
+      setAuthLoading(false);
+      return;
+    }
+    supabaseMobile.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+      setAuthLoading(false);
+    }).catch(() => setAuthLoading(false));
+    const { data: { subscription } } = supabaseMobile.auth.onAuthStateChange((_event, nextSession) => {
+      setSession(nextSession);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Check if vault PIN has been set on mount; restore persisted lockout
   useEffect(() => {
@@ -253,7 +314,7 @@ function App() {
   const loadBooks = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`${API_BASE}/api/v1/brain/books`);
+      const res = await fetch(`${API_BASE}/api/v1/brain/books`, { headers: { Authorization: `Bearer ${session?.access_token || ''}` } });
       if (res.ok) {
         const body = await res.json();
         setBooks(body.items || body || []);
@@ -268,14 +329,19 @@ function App() {
   };
 
   useEffect(() => {
-    loadBooks();
-    loadNotes();
-  }, []);
+    if (session?.access_token) {
+      loadBooks();
+      loadNotes();
+    } else {
+      setBooks([]);
+      setNotes([]);
+    }
+  }, [session?.access_token]);
 
   const loadNotes = async () => {
     try {
       const res = await fetch(`${API_BASE}/api/v1/brain/notes`, {
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
       });
       if (res.ok) {
         const body = await res.json();
@@ -286,6 +352,39 @@ function App() {
         // Do not display sample notes as if they belonged to the signed-in owner.
     }
     setNotes([]);
+  };
+
+  const handleSignIn = async () => {
+    if (!supabaseMobile || !API_BASE) {
+      Alert.alert('App configuration missing', 'Set EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY and EXPO_PUBLIC_COGNIX_API_URL in the mobile environment.');
+      return;
+    }
+    if (!authEmail.trim() || !authPassword) {
+      Alert.alert('Sign in required', 'Enter your account email and password.');
+      return;
+    }
+    setAuthBusy(true);
+    try {
+      const { data, error } = await supabaseMobile.auth.signInWithPassword({
+        email: authEmail.trim(),
+        password: authPassword,
+      });
+      if (error) throw error;
+      setSession(data.session);
+      setAuthPassword('');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Unable to sign in.';
+      Alert.alert('Sign in failed', message);
+    } finally {
+      setAuthBusy(false);
+    }
+  };
+
+  const handleSignOut = async () => {
+    if (!supabaseMobile) return;
+    const { error } = await supabaseMobile.auth.signOut();
+    if (error) Alert.alert('Sign out failed', error.message);
+    else setSession(null);
   };
 
   const handleSaveNote = async () => {
@@ -305,7 +404,7 @@ function App() {
     try {
       const res = await fetch(`${API_BASE}/api/v1/brain/notes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}` },
         body: JSON.stringify({ title: newNote.content.slice(0, 120) || 'Mobile capture', content: newNote.content, note_type: selectedTag, status: 'inbox' }),
       });
       if (!res.ok) {
@@ -333,7 +432,7 @@ function App() {
         try {
           const response = await fetch(`${API_BASE}/api/v1/brain/notes`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'Idempotency-Key': capture.id },
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session?.access_token || ''}`, 'Idempotency-Key': capture.id },
             body: JSON.stringify({ title: capture.content.slice(0, 120) || 'Mobile capture', content: capture.content, note_type: capture.tag, status: 'inbox' }),
           });
           if (!response.ok) remaining.push(capture);
@@ -412,6 +511,50 @@ function App() {
     }
   };
 
+  if (authLoading) {
+    return (
+      <SafeAreaView style={styles.authScreen}>
+        <ActivityIndicator color="#06b6d4" size="large" />
+        <Text style={styles.authSubtitle}>Restoring secure Cognix session…</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!session) {
+    return (
+      <SafeAreaView style={styles.authScreen}>
+        <StatusBar style="light" />
+        <Text style={styles.authTitle}>🧠 COGNIX BRAIN VAULT</Text>
+        <Text style={styles.authSubtitle}>Sign in with your Cognix Supabase account to access your private notes.</Text>
+        {!supabaseMobile || !API_BASE ? (
+          <Text style={styles.authError}>App configuration missing. Configure the Supabase URL, publishable/anon key, and Cognix API URL in the mobile environment.</Text>
+        ) : null}
+        <TextInput
+          style={styles.authInput}
+          placeholder="Email address"
+          placeholderTextColor="#64748b"
+          autoCapitalize="none"
+          keyboardType="email-address"
+          autoComplete="email"
+          value={authEmail}
+          onChangeText={setAuthEmail}
+        />
+        <TextInput
+          style={styles.authInput}
+          placeholder="Password"
+          placeholderTextColor="#64748b"
+          secureTextEntry
+          autoComplete="password"
+          value={authPassword}
+          onChangeText={setAuthPassword}
+        />
+        <TouchableOpacity style={styles.authButton} onPress={handleSignIn} disabled={authBusy || !supabaseMobile || !API_BASE}>
+          <Text style={styles.authButtonText}>{authBusy ? 'Signing in…' : 'Sign in securely'}</Text>
+        </TouchableOpacity>
+      </SafeAreaView>
+    );
+  }
+
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -424,6 +567,9 @@ function App() {
         </View>
         <TouchableOpacity style={styles.badgeBtn} onPress={loadBooks}>
           <Text style={styles.badgeBtnText}>⚡ {books.length} Books</Text>
+        </TouchableOpacity>
+        <TouchableOpacity style={styles.badgeBtn} onPress={handleSignOut} accessibilityRole="button" accessibilityLabel="Sign out">
+          <Text style={styles.badgeBtnText}>Sign out</Text>
         </TouchableOpacity>
       </View>
 
@@ -553,7 +699,7 @@ function App() {
         {/* TAB 3: DAILY LEARNING & FLASHCARDS */}
         {activeTab === 'learn' && (
           <View style={styles.learnContainer}>
-            <Text style={styles.learnTitle}>🎯 Daily Spaced Repetition (Level Up 20)</Text>
+            <Text style={styles.learnTitle}>🎯 Sample Flashcards (scheduler not connected)</Text>
             <Text style={styles.learnSubtitle}>
               Card {currentCardIndex + 1} of {flashcards.length} • {flashcards[currentCardIndex].source}
             </Text>
@@ -589,18 +735,18 @@ function App() {
                   setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
                 }}
               >
-                <Text style={styles.actionBtnText}>Review Later ⏳</Text>
+                <Text style={styles.actionBtnText}>Next Sample ⏭</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
                 style={styles.gotItBtn}
                 onPress={() => {
                   setShowAnswer(false);
-                  Alert.alert('Demo Card', 'This sample flashcard is not connected to a persistent review scheduler yet.');
+                  Alert.alert('Sample Card', 'This is demo content. No personal review schedule was changed or saved.');
                   setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
                 }}
               >
-                <Text style={styles.actionBtnText}>Mastered ✅</Text>
+                <Text style={styles.actionBtnText}>Got It</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -656,7 +802,9 @@ function App() {
                   </TouchableOpacity>
                 </View>
 
-                {secretNotes.map((item, idx) => (
+                {secretNotes.length === 0 ? (
+                  <Text style={styles.secretNoteText}>No encrypted secret records are stored in this app yet. This PIN currently protects a local unlock state only.</Text>
+                ) : secretNotes.map((item, idx) => (
                   <View key={idx} style={styles.secretNoteCard}>
                     <Text style={styles.secretNoteText}>{item}</Text>
                   </View>
@@ -672,6 +820,13 @@ function App() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#090d16' },
+  authScreen: { flex: 1, backgroundColor: '#090d16', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  authTitle: { color: '#06b6d4', fontSize: 21, fontWeight: 'bold', marginBottom: 10, textAlign: 'center' },
+  authSubtitle: { color: '#94a3b8', fontSize: 13, textAlign: 'center', marginBottom: 24, maxWidth: 320 },
+  authError: { color: '#fbbf24', fontSize: 12, textAlign: 'center', marginBottom: 16, maxWidth: 320 },
+  authInput: { backgroundColor: '#0f172a', borderRadius: 8, color: '#f8fafc', padding: 13, borderWidth: 1, borderColor: '#1e293b', width: '100%', maxWidth: 360, marginBottom: 12 },
+  authButton: { backgroundColor: '#06b6d4', paddingVertical: 13, paddingHorizontal: 24, borderRadius: 8, width: '100%', maxWidth: 360, alignItems: 'center', marginTop: 8 },
+  authButtonText: { color: '#090d16', fontWeight: 'bold', fontSize: 14 },
   header: {
     paddingHorizontal: 16,
     paddingVertical: 12,
