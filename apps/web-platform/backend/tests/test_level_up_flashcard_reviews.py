@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, patch
 
 from app.routers.level_up import (
     FlashcardCreate,
@@ -15,9 +15,9 @@ from app.routers.level_up import (
 
 class FlashcardReviewPersistenceTests(unittest.TestCase):
     def setUp(self) -> None:
-        self.database = Mock()
-        self.connection = Mock()
-        self.cursor = Mock()
+        self.database = MagicMock()
+        self.connection = MagicMock()
+        self.cursor = MagicMock()
         self.database.connect.return_value.__enter__.return_value = self.connection
         self.connection.cursor.return_value.__enter__.return_value = self.cursor
         self.connection.__enter__.return_value = self.connection
