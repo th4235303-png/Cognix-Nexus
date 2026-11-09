@@ -34,6 +34,7 @@ class NoteCreate(BaseModel):
     status: str = Field(default="draft", max_length=50)
     source_type: str | None = None
     source_id: str | None = None
+    idempotency_key: str | None = Field(default=None, max_length=200)
 
 
 class ConceptCreate(BaseModel):
@@ -196,6 +197,18 @@ def create_note(payload: NoteCreate, request: Request) -> dict:
             reference = None
         if reference is None:
             raise HTTPException(status_code=404, detail="Referenced record not found")
+    idempotency_key = payload.idempotency_key or request.headers.get("Idempotency-Key")
+    if idempotency_key and len(idempotency_key) > 200:
+        raise HTTPException(status_code=400, detail="Idempotency-Key must be at most 200 characters")
+    if idempotency_key and store.database is None:
+        existing = next(
+            (item for item in store.list_brain_notes_for_owner(owner_id)
+             if item.get("idempotency_key") == idempotency_key),
+            None,
+        )
+        if existing is not None:
+            return existing
+
     now = now_iso()
     note_id = f"NOTE-{uuid4().hex[:8].upper()}"
     note = {
@@ -208,10 +221,44 @@ def create_note(payload: NoteCreate, request: Request) -> dict:
         "updated_at": now,
         "source_type": payload.source_type,
         "source_id": payload.source_id,
+        "idempotency_key": idempotency_key,
     }
-    if store.database is None:
-        store.brain_notes[note_id] = note
-    store.save_brain_note(note, owner_id)
+    if idempotency_key and store.database is not None:
+        with store.database.connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "INSERT INTO notes(id,title,content,note_type,status,owner_id,created_at,updated_at,idempotency_key) "
+                    "VALUES(%s,%s,%s,%s,%s,%s,%s,%s,%s) "
+                    "ON CONFLICT (owner_id,idempotency_key) "
+                    "WHERE owner_id IS NOT NULL AND idempotency_key IS NOT NULL "
+                    "DO NOTHING RETURNING id",
+                    (note_id, payload.title, payload.content, payload.note_type, payload.status, owner_id, now, now, idempotency_key),
+                )
+                inserted = cur.fetchone()
+                if inserted is None:
+                    cur.execute(
+                        "SELECT id FROM notes WHERE owner_id=%s AND idempotency_key=%s LIMIT 1",
+                        (owner_id, idempotency_key),
+                    )
+                    existing = cur.fetchone()
+                    if existing is None:
+                        raise HTTPException(status_code=409, detail="Idempotent note creation conflict")
+                    existing_id = existing["id"]
+                else:
+                    existing_id = None
+            conn.commit()
+        if existing_id is not None:
+            existing_note = store.database.get_brain_note_for_owner(existing_id, owner_id)
+            if existing_note is None:
+                raise HTTPException(status_code=409, detail="Idempotent note could not be loaded")
+            return existing_note
+    else:
+        if store.database is None:
+            store.brain_notes[note_id] = note
+            if owner_id is not None:
+                store.brain_note_owners[note_id] = owner_id
+        else:
+            store.save_brain_note(note, owner_id)
     store.add_activity("brain_note_created", note_id, "new", payload.status)
     return note
 
