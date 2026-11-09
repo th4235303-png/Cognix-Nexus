@@ -261,11 +261,7 @@ function App() {
         throw new Error('Fallback to local books');
       }
     } catch {
-      setBooks([
-        { id: 'b-1', title: 'Thinking, Fast and Slow', author: 'Daniel Kahneman', chunk_count: 142, category: 'Psychology' },
-        { id: 'b-2', title: 'Designing Data-Intensive Applications', author: 'Martin Kleppmann', chunk_count: 320, category: 'System Design' },
-        { id: 'b-3', title: 'The Lean Startup', author: 'Eric Ries', chunk_count: 98, category: 'Business' }
-      ]);
+      setBooks([]); // Do not present demo books as the user's persisted library.
     } finally {
       setLoading(false);
     }
@@ -287,12 +283,9 @@ function App() {
         return;
       }
     } catch {
-      // fallback to default notes on network error
+        // Do not display sample notes as if they belonged to the signed-in owner.
     }
-    setNotes([
-      { id: 'n-1', content: 'Explore pgvector HNSW indexing vs IVFFlat for sub-millisecond retrieval.', tag: '#research', created_at: 'Just now' },
-      { id: 'n-2', content: 'Draft next short-form script on Bagan archaeological survey.', tag: '#idea', created_at: '2 hours ago' }
-    ]);
+    setNotes([]);
   };
 
   const handleSaveNote = async () => {
@@ -304,7 +297,7 @@ function App() {
       created_at: 'Just now'
     };
     // Optimistic UI update
-    setNotes([newNote, ...notes]);
+    setNotes((previous) => [newNote, ...previous]);
     setQuickInput('');
 
     // Persist to backend. Network failures are stored on-device and can be
@@ -313,15 +306,15 @@ function App() {
       const res = await fetch(`${API_BASE}/api/v1/brain/notes`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: newNote.content, tag: selectedTag }),
+        body: JSON.stringify({ title: newNote.content.slice(0, 120) || 'Mobile capture', content: newNote.content, note_type: selectedTag, status: 'inbox' }),
       });
       if (!res.ok) {
         const queued = [...offlineQueue, { ...newNote, queued_at: new Date().toISOString() }];
         await writeOfflineCaptureQueue(queued);
         setOfflineQueue(queued);
-        Alert.alert('Saved Locally', 'Note captured. Will sync when connection is restored.');
+        Alert.alert('Saved Locally', 'Server rejected the capture (HTTP ' + res.status + '). It is kept on this device; authenticated API access is needed before sync.');
       } else {
-        Alert.alert('Saved to Brain Vault', 'Note captured and queued for AI knowledge indexing.');
+        Alert.alert('Saved to Brain Vault', 'Note persisted in Brain Vault.');
       }
     } catch {
       const queued = [...offlineQueue, { ...newNote, queued_at: new Date().toISOString() }];
@@ -341,7 +334,7 @@ function App() {
           const response = await fetch(`${API_BASE}/api/v1/brain/notes`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'Idempotency-Key': capture.id },
-            body: JSON.stringify({ content: capture.content, tag: capture.tag }),
+            body: JSON.stringify({ title: capture.content.slice(0, 120) || 'Mobile capture', content: capture.content, note_type: capture.tag, status: 'inbox' }),
           });
           if (!response.ok) remaining.push(capture);
         } catch {
@@ -357,8 +350,8 @@ function App() {
   };
 
   const handleSetNewPin = async () => {
-    if (pinInput.length < 4) {
-      Alert.alert('Invalid PIN', 'PIN must be at least 4 digits.');
+    if (pinInput.length < 6) {
+      Alert.alert('Invalid PIN', 'PIN must be at least 6 digits.');
       return;
     }
     if (!settingNewPin) {
@@ -603,7 +596,7 @@ function App() {
                 style={styles.gotItBtn}
                 onPress={() => {
                   setShowAnswer(false);
-                  Alert.alert('Mastered!', 'Knowledge retention recorded in Brain Vault.');
+                  Alert.alert('Demo Card', 'This sample flashcard is not connected to a persistent review scheduler yet.');
                   setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
                 }}
               >
@@ -627,7 +620,7 @@ function App() {
                     ? 'Enter your security PIN to unlock private brain items.'
                     : (settingNewPin
                       ? 'Re-enter the PIN to secure this device vault.'
-                      : 'Create a PIN with at least 4 digits to secure this device vault.')}
+                      : 'Create a PIN with at least 6 digits to secure this device vault.')}
                 </Text>
 
                 <TextInput
@@ -636,7 +629,7 @@ function App() {
                   placeholderTextColor="#64748b"
                   keyboardType="numeric"
                   secureTextEntry={!showPin}
-                  maxLength={4}
+                  maxLength={6}
                   value={pinInput}
                   onChangeText={setPinInput}
                 />
