@@ -60,6 +60,8 @@ const AppWithBoundary: React.FC = () => (
 const VAULT_PIN_STORAGE_KEY = 'cognix_vault_pin_hash';
 const VAULT_PIN_SALT_KEY = 'cognix_vault_pin_salt';
 const VAULT_LOCKOUT_KEY = 'cognix_vault_lockout_until';
+const SECRET_RECORD_INDEX_KEY = 'cognix_secret_record_index_v1';
+const SECRET_RECORD_LIMIT = 40;
 const VAULT_PIN_MAX_ATTEMPTS = 5;
 const VAULT_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 const OFFLINE_CAPTURE_QUEUE_KEY = 'cognix_offline_capture_queue_v1';
@@ -93,40 +95,59 @@ function secureHashEquals(left: string, right: string): boolean {
   return difference === 0;
 }
 
-async function isVaultPinSet(): Promise<boolean> {
-  const storedHash = await SecureStore.getItemAsync(VAULT_PIN_STORAGE_KEY);
-  if (!storedHash) return false;
+function vaultStorageKey(baseKey: string, userId: string): string {
+  return `${baseKey}:${userId}`;
+}
 
-  // The previous format depended on browser WebCrypto, which is not reliably
-  // available in native Expo. Clear only the unusable verifier so the owner
-  // can set a new PIN; no vault content is stored in this verifier.
-  const storedSalt = await SecureStore.getItemAsync(VAULT_PIN_SALT_KEY);
+async function isVaultPinSet(userId: string): Promise<boolean> {
+  const pinHashKey = vaultStorageKey(VAULT_PIN_STORAGE_KEY, userId);
+  const pinSaltKey = vaultStorageKey(VAULT_PIN_SALT_KEY, userId);
+  let storedHash = await SecureStore.getItemAsync(pinHashKey);
+  if (!storedHash) {
+    const legacyHash = await SecureStore.getItemAsync(VAULT_PIN_STORAGE_KEY);
+    const legacySalt = await SecureStore.getItemAsync(VAULT_PIN_SALT_KEY);
+    if (legacyHash && legacySalt) {
+      await SecureStore.setItemAsync(pinHashKey, legacyHash);
+      await SecureStore.setItemAsync(pinSaltKey, legacySalt);
+      await SecureStore.deleteItemAsync(VAULT_PIN_STORAGE_KEY);
+      await SecureStore.deleteItemAsync(VAULT_PIN_SALT_KEY);
+      storedHash = legacyHash;
+    } else {
+      return false;
+    }
+  }
+
+  // Preserve migrated verifier compatibility; the PIN hash itself protects
+  // only the UI gate. Private record contents are encrypted by OS SecureStore.
+ const storedSalt = await SecureStore.getItemAsync(pinSaltKey);
   if (!storedSalt) {
-    await SecureStore.deleteItemAsync(VAULT_PIN_STORAGE_KEY);
+    await SecureStore.deleteItemAsync(pinHashKey);
     return false;
   }
   return true;
 }
 
-async function validateVaultPin(pin: string): Promise<boolean> {
-  const storedHash = await SecureStore.getItemAsync(VAULT_PIN_STORAGE_KEY);
+async function validateVaultPin(pin: string, userId: string): Promise<boolean> {
+  const pinHashKey = vaultStorageKey(VAULT_PIN_STORAGE_KEY, userId);
+  const pinSaltKey = vaultStorageKey(VAULT_PIN_SALT_KEY, userId);
+  const storedHash = await SecureStore.getItemAsync(pinHashKey);
   if (!storedHash) return false;
 
   // A missing salt means this data predates the secure on-device vault format.
   // It is deliberately not accepted because the old WebCrypto-only hash could
   // not be evaluated reliably in native Expo clients.
-  const storedSalt = await SecureStore.getItemAsync(VAULT_PIN_SALT_KEY);
+  const storedSalt = await SecureStore.getItemAsync(pinSaltKey);
   if (!storedSalt) return false;
 
   const inputHash = await hashPin(pin, storedSalt);
   return secureHashEquals(inputHash, storedHash);
 }
 
-async function setVaultPin(pin: string): Promise<void> {
+async function setVaultPin(pin: string, userId: string): Promise<void> {
   const randomSalt = await generateSecureRandomSalt();
   const hash = await hashPin(pin, randomSalt);
-  await SecureStore.setItemAsync(VAULT_PIN_SALT_KEY, randomSalt);
-  await SecureStore.setItemAsync(VAULT_PIN_STORAGE_KEY, hash);
+  await SecureStore.setItemAsync(vaultStorageKey(VAULT_PIN_SALT_KEY, userId), randomSalt);
+  await SecureStore.setItemAsync(vaultStorageKey(VAULT_PIN_STORAGE_KEY, userId), hash);
 }
 
 const API_BASE = (process.env.EXPO_PUBLIC_COGNIX_API_URL || '').replace(/\/$/, '');
@@ -187,6 +208,13 @@ interface BookItem {
   chunk_count: number;
   category?: string;
   summary?: string;
+}
+
+interface SecretRecord {
+  id: string;
+  title: string;
+  content: string;
+  created_at: string;
 }
 
 interface CapturedNote {
@@ -258,7 +286,9 @@ function App() {
   const [showPin, setShowPin] = useState<boolean>(false);
   const [settingNewPin, setSettingNewPin] = useState<boolean>(false);
   const [confirmPin, setConfirmPin] = useState<string>('');
-  const [secretNotes] = useState<string[]>([]);
+  const [secretRecords, setSecretRecords] = useState<SecretRecord[]>([]);
+  const [secretTitleInput, setSecretTitleInput] = useState<string>('');
+  const [secretContentInput, setSecretContentInput] = useState<string>('');
 
   // Restore the Supabase auth session from SecureStore and listen for token refresh/sign-out.
   useEffect(() => {
@@ -276,21 +306,72 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // Check if vault PIN has been set on mount; restore persisted lockout
+  // PIN verifier and failed-attempt lockout are isolated per signed-in account.
   useEffect(() => {
-    isVaultPinSet().then(setVaultPinSet);
-    SecureStore.getItemAsync(VAULT_LOCKOUT_KEY).then((val) => {
-      if (val) {
-        const until = parseInt(val, 10);
-        if (!isNaN(until) && Date.now() < until) {
-          setVaultLockoutUntil(until);
-          setVaultLocked(true);
-        } else {
-          SecureStore.deleteItemAsync(VAULT_LOCKOUT_KEY).catch(() => {});
-        }
+    const userId = session?.user.id;
+    setSecretUnlocked(false);
+    setSettingNewPin(false);
+    setPinInput('');
+    setConfirmPin('');
+    setSecretTitleInput('');
+    setSecretContentInput('');
+    setPinAttempts(0);
+    setVaultLockoutUntil(null);
+    setVaultLocked(false);
+    setVaultPinSet(null);
+    if (!userId) {
+      setVaultPinSet(false);
+      setSecretRecords([]);
+      return;
+    }
+    let active = true;
+    const lockoutKey = vaultStorageKey(VAULT_LOCKOUT_KEY, userId);
+    isVaultPinSet(userId).then((configured) => {
+      if (active) setVaultPinSet(configured);
+    }).catch(() => {
+      if (active) setVaultPinSet(false);
+    });
+    SecureStore.getItemAsync(lockoutKey).then((val) => {
+      if (!active || !val) return;
+      const until = parseInt(val, 10);
+      if (!isNaN(until) && Date.now() < until) {
+        setVaultLockoutUntil(until);
+        setVaultLocked(true);
+      } else {
+        SecureStore.deleteItemAsync(lockoutKey).catch(() => {});
       }
     }).catch(() => {});
-  }, []);
+    return () => { active = false; };
+  }, [session?.user.id]);
+
+  // Load encrypted device SecureStore records only for the active account.
+  useEffect(() => {
+    const userId = session?.user.id;
+    if (!userId || !secretUnlocked) {
+      setSecretRecords([]);
+      return;
+    }
+    let active = true;
+    const loadRecords = async () => {
+      const indexKey = vaultStorageKey(SECRET_RECORD_INDEX_KEY, userId);
+      const rawIndex = await SecureStore.getItemAsync(indexKey);
+      const parsed: unknown = rawIndex ? JSON.parse(rawIndex) : [];
+      const ids = Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === 'string').slice(0, SECRET_RECORD_LIMIT) : [];
+      const stored = await Promise.all(ids.map((id) => SecureStore.getItemAsync(`cognix_secret_record_v1:${userId}:${id}`)));
+      const records = stored.flatMap((raw) => {
+        if (!raw) return [];
+        try {
+          const record = JSON.parse(raw) as SecretRecord;
+          return typeof record.id === 'string' && typeof record.title === 'string' && typeof record.content === 'string' ? [record] : [];
+        } catch {
+          return [];
+        }
+      });
+      if (active) setSecretRecords(records);
+    };
+    loadRecords().catch(() => { if (active) setSecretRecords([]); });
+    return () => { active = false; };
+  }, [session?.user.id, secretUnlocked]);
 
   useEffect(() => {
     if (session?.user.id) {
@@ -523,9 +604,62 @@ function App() {
     }
   };
 
+  const handleSaveSecretRecord = async () => {
+    const userId = session?.user.id;
+    const title = secretTitleInput.trim();
+    const content = secretContentInput.trim();
+    if (!userId || !secretUnlocked) return;
+    if (!content) {
+      Alert.alert('Secret content required', 'Enter the secret text you want to store.');
+      return;
+    }
+    if (title.length > 80 || content.length > 400) {
+      Alert.alert('Record too large', 'For SecureStore item limits, use a title up to 80 characters and content up to 400 characters.');
+      return;
+    }
+    if (secretRecords.length >= SECRET_RECORD_LIMIT) {
+      Alert.alert('Vault limit reached', `This device vault supports up to ${SECRET_RECORD_LIMIT} small records per account.`);
+      return;
+    }
+    const id = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+    const record: SecretRecord = { id, title: title || 'Private item', content, created_at: new Date().toISOString() };
+    const recordKey = `cognix_secret_record_v1:${userId}:${id}`;
+    const indexKey = vaultStorageKey(SECRET_RECORD_INDEX_KEY, userId);
+    try {
+      await SecureStore.setItemAsync(recordKey, JSON.stringify(record));
+      const nextIds = [...secretRecords.map((item) => item.id), id];
+      await SecureStore.setItemAsync(indexKey, JSON.stringify(nextIds));
+      setSecretRecords((previous) => [...previous, record]);
+      setSecretTitleInput('');
+      setSecretContentInput('');
+      Alert.alert('Secret saved', 'The record is stored using the device SecureStore encryption and is scoped to this account.');
+    } catch (error) {
+      await SecureStore.deleteItemAsync(recordKey).catch(() => {});
+      Alert.alert('Secret not saved', error instanceof Error ? error.message : 'SecureStore could not save this record.');
+    }
+  };
+
+  const handleDeleteSecretRecord = (recordId: string) => {
+    const userId = session?.user.id;
+    if (!userId || !secretUnlocked) return;
+    Alert.alert('Delete secret record?', 'This removes the record from this device for this account.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        try {
+          await SecureStore.deleteItemAsync(`cognix_secret_record_v1:${userId}:${recordId}`);
+          const nextRecords = secretRecords.filter((item) => item.id !== recordId);
+          await SecureStore.setItemAsync(vaultStorageKey(SECRET_RECORD_INDEX_KEY, userId), JSON.stringify(nextRecords.map((item) => item.id)));
+          setSecretRecords(nextRecords);
+        } catch (error) {
+          Alert.alert('Delete failed', error instanceof Error ? error.message : 'Could not delete the record.');
+        }
+      } },
+    ]);
+  };
+
   const handleSetNewPin = async () => {
-    if (pinInput.length < 6) {
-      Alert.alert('Invalid PIN', 'PIN must be at least 6 digits.');
+    if (!/^\d{6,12}$/.test(pinInput)) {
+      Alert.alert('Invalid PIN', 'PIN must contain 6 to 12 digits.');
       return;
     }
     if (!settingNewPin) {
@@ -541,14 +675,18 @@ function App() {
       setSettingNewPin(false);
       return;
     }
-    await setVaultPin(pinInput);
+    if (!session?.user.id) return;
+    await setVaultPin(pinInput, session.user.id);
     setVaultPinSet(true);
     setSettingNewPin(false);
     setPinInput('');
-    Alert.alert('Vault Secured', 'Your vault PIN has been set. Keep it safe!');
+    Alert.alert('Local PIN gate set', 'Your records use platform SecureStore encryption; the PIN is an additional local access gate.');
   };
 
   const handleUnlockSecret = async () => {
+    const userId = session?.user.id;
+    if (!userId) return;
+    const lockoutKey = vaultStorageKey(VAULT_LOCKOUT_KEY, userId);
     // Check lockout
     if (vaultLockoutUntil && Date.now() < vaultLockoutUntil) {
       const remaining = Math.ceil((vaultLockoutUntil - Date.now()) / 60000);
@@ -561,14 +699,14 @@ function App() {
       return;
     }
 
-    const isValid = await validateVaultPin(pinInput);
+    const isValid = await validateVaultPin(pinInput, userId);
     if (isValid) {
       setSecretUnlocked(true);
       setPinInput('');
       setPinAttempts(0);
       setVaultLocked(false);
       setVaultLockoutUntil(null);
-      SecureStore.deleteItemAsync(VAULT_LOCKOUT_KEY).catch(() => {});
+      SecureStore.deleteItemAsync(lockoutKey).catch(() => {});
     } else {
       const newAttempts = pinAttempts + 1;
       setPinAttempts(newAttempts);
@@ -578,7 +716,7 @@ function App() {
         setVaultLockoutUntil(lockoutUntil);
         setVaultLocked(true);
         // Persist lockout so it survives app restarts
-        SecureStore.setItemAsync(VAULT_LOCKOUT_KEY, String(lockoutUntil)).catch(() => {});
+        SecureStore.setItemAsync(lockoutKey, String(lockoutUntil)).catch(() => {});
         Alert.alert('Vault Locked', `Too many failed attempts. Vault locked for 15 minutes.`);
       } else {
         Alert.alert('Incorrect PIN', `Invalid PIN. ${VAULT_PIN_MAX_ATTEMPTS - newAttempts} attempts remaining.`);
@@ -829,10 +967,10 @@ function App() {
                 </Text>
                 <Text style={styles.secretSubheading}>
                   {vaultPinSet
-                    ? 'This device-local PIN gate does not yet store encrypted secret records.'
+                    ? 'The PIN is a local access gate. Saved records use platform SecureStore encryption.'
                     : (settingNewPin
-                      ? 'Re-enter the PIN to secure this device vault.'
-                      : 'Create a PIN with at least 6 digits to secure this device vault.')}
+                      ? 'Re-enter the PIN to confirm this account-local access gate.'
+                      : 'Create a PIN with 6 to 12 digits for this account-local access gate.')}
                 </Text>
 
                 <TextInput
@@ -841,7 +979,7 @@ function App() {
                   placeholderTextColor="#64748b"
                   keyboardType="numeric"
                   secureTextEntry={!showPin}
-                  maxLength={6}
+                  maxLength={12}
                   value={pinInput}
                   onChangeText={setPinInput}
                 />
@@ -862,17 +1000,48 @@ function App() {
                   <Text style={styles.unlockedHeading}>🔓 Local PIN Gate</Text>
                   <TouchableOpacity
                     style={styles.lockNowBtn}
-                    onPress={() => setSecretUnlocked(false)}
+                    onPress={() => { setSecretUnlocked(false); setSecretTitleInput(''); setSecretContentInput(''); }}
                   >
                     <Text style={styles.lockNowText}>Lock 🔒</Text>
                   </TouchableOpacity>
                 </View>
 
-                {secretNotes.length === 0 ? (
-                  <Text style={styles.secretNoteText}>No encrypted secret records are stored in this app yet. This PIN currently protects a local unlock state only.</Text>
-                ) : secretNotes.map((item, idx) => (
-                  <View key={idx} style={styles.secretNoteCard}>
-                    <Text style={styles.secretNoteText}>{item}</Text>
+                <View style={styles.secretNoteCard}>
+                  <Text style={styles.secretFormTitle}>Add a private record</Text>
+                  <TextInput
+                    style={styles.secretFormInput}
+                    placeholder="Title (optional)"
+                    placeholderTextColor="#64748b"
+                    value={secretTitleInput}
+                    onChangeText={setSecretTitleInput}
+                    maxLength={80}
+                  />
+                  <TextInput
+                    style={[styles.secretFormInput, styles.secretContentInput]}
+                    placeholder="Secret content (up to 400 characters)"
+                    placeholderTextColor="#64748b"
+                    value={secretContentInput}
+                    onChangeText={setSecretContentInput}
+                    maxLength={400}
+                    multiline
+                  />
+                  <TouchableOpacity style={styles.secretSaveBtn} onPress={handleSaveSecretRecord}>
+                    <Text style={styles.secretSaveBtnText}>Save securely</Text>
+                  </TouchableOpacity>
+                  <Text style={styles.secretStorageCaption}>Stored locally in OS SecureStore, scoped to this account. This is not synced to the backend.</Text>
+                </View>
+                {secretRecords.length === 0 ? (
+                  <Text style={styles.secretNoteText}>No private records saved yet.</Text>
+                ) : secretRecords.map((record) => (
+                  <View key={record.id} style={styles.secretNoteCard}>
+                    <View style={styles.secretRecordHeader}>
+                      <Text style={styles.secretRecordTitle}>{record.title}</Text>
+                      <TouchableOpacity onPress={() => handleDeleteSecretRecord(record.id)}>
+                        <Text style={styles.secretDeleteText}>Delete</Text>
+                      </TouchableOpacity>
+                    </View>
+                    <Text style={styles.secretNoteText}>{record.content}</Text>
+                    <Text style={styles.secretStorageCaption}>{new Date(record.created_at).toLocaleDateString()}</Text>
                   </View>
                 ))}
               </ScrollView>
@@ -1048,7 +1217,16 @@ const styles = StyleSheet.create({
     borderLeftWidth: 4,
     borderLeftColor: '#06b6d4'
   },
-  secretNoteText: { color: '#f1f5f9', fontSize: 14 }
+  secretNoteText: { color: '#f1f5f9', fontSize: 14 },
+  secretFormTitle: { color: '#f8fafc', fontSize: 14, fontWeight: 'bold', marginBottom: 10 },
+  secretFormInput: { backgroundColor: '#090d16', color: '#f8fafc', borderColor: '#334155', borderWidth: 1, borderRadius: 8, padding: 10, marginBottom: 10 },
+  secretContentInput: { minHeight: 90, textAlignVertical: 'top' },
+  secretSaveBtn: { backgroundColor: '#06b6d4', borderRadius: 8, paddingVertical: 10, alignItems: 'center' },
+  secretSaveBtnText: { color: '#090d16', fontWeight: 'bold' },
+  secretStorageCaption: { color: '#64748b', fontSize: 10, marginTop: 8 },
+  secretRecordHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  secretRecordTitle: { color: '#06b6d4', fontSize: 14, fontWeight: 'bold', flex: 1 },
+  secretDeleteText: { color: '#f87171', fontSize: 12, fontWeight: 'bold', paddingLeft: 12 }
 });
 
 export default AppWithBoundary;
