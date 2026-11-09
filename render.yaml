@@ -123,8 +123,18 @@ services:
       - key: COGNIX_OCR_TESSERACT_CONFIG
         value: "--psm 3"
       - key: TELEGRAM_ENABLED
-        value: "false"
+        value: "true"
+      - key: TELEGRAM_CHAT_ID
+        value: "-1003992125718"
+      - key: TELEGRAM_TOPIC_ID
+        value: "7"
+      - key: TELEGRAM_ALLOWED_USER_IDS
+        value: "1686310706,6759217947"
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
       - key: TELEGRAM_WEBHOOK_SECRET
+        sync: false
+      - key: TELEGRAM_ACTION_SECRET
         sync: false
 
   - type: web
