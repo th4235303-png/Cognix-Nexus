@@ -673,7 +673,7 @@ function App() {
           onPress={() => setActiveTab('learn')}
         >
           <Text style={[styles.tabText, activeTab === 'learn' && styles.activeTabText]}>
-            🎯 Learn (20)
+            🎯 Learn ({flashcards.length} due)
           </Text>
         </TouchableOpacity>
 
@@ -825,11 +825,11 @@ function App() {
               <View style={styles.pinBox}>
                 <Text style={styles.lockIcon}>🔐</Text>
                 <Text style={styles.secretHeading}>
-                  {vaultPinSet ? 'Encrypted Secret Vault' : (settingNewPin ? 'Confirm Vault PIN' : 'Set Vault PIN')}
+                  {vaultPinSet ? 'Local PIN Lock' : (settingNewPin ? 'Confirm Vault PIN' : 'Set Vault PIN')}
                 </Text>
                 <Text style={styles.secretSubheading}>
                   {vaultPinSet
-                    ? 'Enter your security PIN to unlock private brain items.'
+                    ? 'This device-local PIN gate does not yet store encrypted secret records.'
                     : (settingNewPin
                       ? 'Re-enter the PIN to secure this device vault.'
                       : 'Create a PIN with at least 6 digits to secure this device vault.')}
@@ -859,7 +859,7 @@ function App() {
             ) : (
               <ScrollView contentContainerStyle={{ padding: 16 }}>
                 <View style={styles.secretHeaderRow}>
-                  <Text style={styles.unlockedHeading}>🔓 Decrypted Private Vault</Text>
+                  <Text style={styles.unlockedHeading}>🔓 Local PIN Gate</Text>
                   <TouchableOpacity
                     style={styles.lockNowBtn}
                     onPress={() => setSecretUnlocked(false)}
