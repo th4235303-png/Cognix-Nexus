@@ -200,8 +200,8 @@ interface QueuedCapture extends CapturedNote {
   queued_at: string;
 }
 
-async function readOfflineCaptureQueue(): Promise<QueuedCapture[]> {
-  const raw = await SecureStore.getItemAsync(OFFLINE_CAPTURE_QUEUE_KEY);
+async function readOfflineCaptureQueue(userId: string): Promise<QueuedCapture[]> {
+  const raw = await SecureStore.getItemAsync(`${OFFLINE_CAPTURE_QUEUE_KEY}:${userId}`);
   if (!raw) return [];
   try {
     const parsed: unknown = JSON.parse(raw);
@@ -211,10 +211,11 @@ async function readOfflineCaptureQueue(): Promise<QueuedCapture[]> {
   }
 }
 
-async function writeOfflineCaptureQueue(queue: QueuedCapture[]): Promise<void> {
+async function writeOfflineCaptureQueue(userId: string, queue: QueuedCapture[]): Promise<void> {
+  // Keep pending content partitioned by account to prevent cross-owner sync.
   // This is deliberately capped: SecureStore is for small queued metadata,
-  // not a general document store.  The newest captures are preserved.
-  await SecureStore.setItemAsync(OFFLINE_CAPTURE_QUEUE_KEY, JSON.stringify(queue.slice(-40)));
+  // not a general document store. The newest captures are preserved.
+  await SecureStore.setItemAsync(`${OFFLINE_CAPTURE_QUEUE_KEY}:${userId}`, JSON.stringify(queue.slice(-40)));
 }
 
 interface Flashcard {
@@ -292,8 +293,12 @@ function App() {
   }, []);
 
   useEffect(() => {
-    readOfflineCaptureQueue().then(setOfflineQueue).catch(() => undefined);
-  }, []);
+    if (session?.user.id) {
+      readOfflineCaptureQueue(session.user.id).then(setOfflineQueue).catch(() => setOfflineQueue([]));
+    } else {
+      setOfflineQueue([]);
+    }
+  }, [session?.user.id]);
 
   const loadBooks = async () => {
     setLoading(true);
@@ -456,7 +461,8 @@ function App() {
   };
 
   const handleSaveNote = async () => {
-    if (!quickInput.trim()) return;
+    const userId = session?.user.id;
+    if (!userId || !session?.access_token || !quickInput.trim()) return;
     const newNote: CapturedNote = {
       id: Date.now().toString(),
       content: quickInput.trim(),
@@ -477,7 +483,7 @@ function App() {
       });
       if (!res.ok) {
         const queued = [...offlineQueue, { ...newNote, queued_at: new Date().toISOString() }];
-        await writeOfflineCaptureQueue(queued);
+        await writeOfflineCaptureQueue(userId, queued);
         setOfflineQueue(queued);
         Alert.alert('Saved Locally', 'Server rejected the capture (HTTP ' + res.status + '). It is kept on this device; authenticated API access is needed before sync.');
       } else {
@@ -485,14 +491,15 @@ function App() {
       }
     } catch {
       const queued = [...offlineQueue, { ...newNote, queued_at: new Date().toISOString() }];
-      await writeOfflineCaptureQueue(queued);
+      await writeOfflineCaptureQueue(userId, queued);
       setOfflineQueue(queued);
       Alert.alert('Saved Locally', 'Note captured offline. Will sync when connection is restored.');
     }
   };
 
   const syncOfflineCaptures = async () => {
-    if (!offlineQueue.length || syncingQueue) return;
+    const userId = session?.user.id;
+    if (!userId || !session?.access_token || !offlineQueue.length || syncingQueue) return;
     setSyncingQueue(true);
     const remaining: QueuedCapture[] = [];
     try {
@@ -508,7 +515,7 @@ function App() {
           remaining.push(capture);
         }
       }
-      await writeOfflineCaptureQueue(remaining);
+      await writeOfflineCaptureQueue(userId, remaining);
       setOfflineQueue(remaining);
       Alert.alert(remaining.length ? 'Sync Paused' : 'Sync Complete', remaining.length ? `${remaining.length} capture(s) are still safely queued.` : 'All offline captures are now in your Brain Vault.');
     } finally {
