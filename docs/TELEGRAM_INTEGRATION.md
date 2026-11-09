@@ -22,7 +22,7 @@ Users can review flashcards and recall ratings with inline buttons (`I Knew This
 ## 2. Topic Configuration
 
 * **Suggested Topic Name:** `🧠 Cognix-Nexus`
-* **Suggested Topic ID:** `3` (or your assigned `message_thread_id`)
+* **Configured Topic ID:** `7` (Production `message_thread_id`)
 * **Color / Icon:** 🧠 Brain / Knowledge
 
 ---
