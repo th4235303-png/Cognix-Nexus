@@ -82,3 +82,12 @@ PR [#112](https://github.com/th4235303-png/Cognix-Nexus/pull/112) adds fail-clos
 
 No production rows were inserted, updated, or deleted; no migrations, restore, service deployment, secret/environment change, account creation, service-plan change, or Cloudflare setting change was performed during this snapshot.
 
+
+
+## Post-report integration update — 2026-11-10
+
+- PR [#112](https://github.com/th4235303-png/Cognix-Nexus/pull/112) (`fix/recovery-drill-guardrails`) is now **merged** to `main` as `5bd0ca0449a6a6f61be9c5c0baf0ad603174c8ce`.
+- Core CI frontend/backend/Worker/mobile, Production CI/CD frontend build/backend lint+migration preflight, and CodeQL JS/TS+Python all passed on tested PR head `92e535e2382c8894665a97327eb35e25927cb430`. The merge commit itself had no additional workflow runs/statuses visible in the connector lookup at the time of this update.
+- Recovery helper now requires restore CLI opt-in and `COGNIX_ALLOW_RESTORE=true`, an explicit isolation flag, parseable source/target PostgreSQL URL identities that differ, valid pg_restore archive listing, and expected SHA-256 validation. CI exercises an ephemeral isolated PostgreSQL database.
+- This integration does not certify production acceptance: no live backup/restore was performed, and the connected restore-drill Supabase project remains inactive/unverified. Production acceptance remains conditional. User requested all work be free; no paid Render plan/service was created or upgraded.
+- Production user data was not modified. No live secrets or Cloudflare settings were changed. This merge is source code only; deployment impact was not directly verified in Render because the workspace selector requires the user to select a workspace, and we did not select an account/workspace without confirmation.
