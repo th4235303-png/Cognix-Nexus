@@ -1,9 +1,25 @@
 # Canonical Release Status: Cognix Nexus
 
-> **Current Tracked Release SHA:** `316c49c171c70a29ddc1faa81347855d78588402`  
+> **Current Tracked Repository SHA:** `e31afbe05faff1b7cd068cbe972169c930a7e0d6`  
 > **Target Branch:** `main`  
 > **Audit Status:** Conditional Sign-Off (Local Complete, Production Gates Tracked)  
-> **Last Verification Date:** 2026-11-05 21:12:00 +06:30  
+> **Last Verification Date:** 2026-11-10  
+
+---
+
+## Latest production acceptance snapshot — 2026-11-10
+
+**Decision: CONDITIONAL / NOT YET PRODUCTION ACCEPTED.** This snapshot supersedes older timestamps and runtime observations below; historical notes are retained for traceability.
+
+- GitHub Core CI, Production CI/CD, and CodeQL passed on repository revision `e31afbe05faff1b7cd068cbe972169c930a7e0d6`. The production health gate passed API health/readiness, Worker health with PostgreSQL persistence, and frontend HTTPS/HTML. API/Worker exact-revision comparison was skipped because the revision was documentation-only.
+- Render API, Worker runtime, and frontend are live, track `main`, and their inspected deployments succeeded. All three are on the Free plan. Do not treat the polling Worker as an always-on queue consumer; paid always-on capacity needs budget approval.
+- Supabase `Cognix-Core` is ACTIVE_HEALTHY (PostgreSQL 17, 29 migrations, pgvector 0.8.2, persisted `vector(1536)` embeddings, private `cognix-artifacts` bucket). Key user tables have RLS and owner-scoped policies. Four RLS-enabled public tables have no policies and require product/owner review before changes.
+- The connected Supabase restore-drill project is INACTIVE; isolation and restore readiness are unverified. No E2E account exists. No authenticated browser/mobile smoke, production queue job, production corpus acceptance, real provider/storage round trip, Sentry probe, or live restore/rollback was run.
+- Cloudflare has no Worker script listed in the connected account; account-level two-factor enforcement is false. Confirm whether Cloudflare Worker routing is in production scope before configuring its secret.
+- Recovery drill safety hardening is proposed in [PR #112](https://github.com/th4235303-png/Cognix-Nexus/pull/112). Merge only after all CI checks pass.
+- No production data, secrets, deployments, paid plans, auth settings, or Cloudflare account settings were changed during this audit.
+
+Unconditional production sign-off remains blocked by the operator/device acceptance gates above and the Free Render always-on capacity limitation. See [audit/FINAL_REPORT.md](audit/FINAL_REPORT.md) and [issue #80](https://github.com/th4235303-png/Cognix-Nexus/issues/80) for the detailed evidence and outstanding work.
 
 ---
 
