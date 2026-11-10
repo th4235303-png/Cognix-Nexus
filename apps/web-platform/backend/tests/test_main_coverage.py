@@ -62,6 +62,9 @@ class MainCoverageTests(unittest.TestCase):
             "COGNIX_AUTH_REQUIRED": "true",
             "COGNIX_DEV_MODE": "false",
             "COGNIX_CORS_ORIGINS": "https://app.example",
+            "COGNIX_ALLOWED_HOSTS": "api.example",
+            "UPSTASH_REDIS_REST_URL": "https://redis.example",
+            "UPSTASH_REDIS_REST_TOKEN": "test-token-not-a-secret",
         }, clear=True):
             main.validate_production_configuration()
 

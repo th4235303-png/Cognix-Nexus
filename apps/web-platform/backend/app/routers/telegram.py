@@ -3,13 +3,15 @@ from __future__ import annotations
 import hmac
 import logging
 import os
+from html import escape as html_escape
 from typing import Any
+from uuid import uuid4
+
 from fastapi import APIRouter, Header, HTTPException, Request, status
 from pydantic import BaseModel
 
 from ..services.telegram import send_telegram_message
-from ..store import store
-from html import escape as html_escape
+from ..store import store, now_iso
 
 logger = logging.getLogger("cognix.telegram")
 
@@ -97,24 +99,51 @@ async def _execute_telegram_action(payload: TelegramActionPayload) -> dict[str, 
         return {"status": "ok", "action": "flashcard_revealed", "id": card_id}
 
     # 2. Flashcard Grade (Spaced Repetition adjustment)
-    elif action.startswith("cognix_grade_easy:"):
+    elif action.startswith("cognix_grade_easy:") or action.startswith("cognix_grade_hard:"):
+        # Avoid claiming a schedule update until a durable flashcard scheduler exists.
         card_id = action.split(":", 1)[1]
-        msg = f"✅ <b>Interval Extended:</b> Card <code>{card_id}</code> scheduled for review in +4 days."
-        await send_telegram_message(msg, topic_id=payload.topic_id, chat_id=payload.chat_id)
-        return {"status": "ok", "action": "grade_easy", "id": card_id}
+        await send_telegram_message(
+            "⚠️ Flashcard grading is not persisted yet; no review schedule was changed.",
+            topic_id=payload.topic_id,
+            chat_id=payload.chat_id,
+        )
+        return {"status": "not_implemented", "action": action.split(":", 1)[0], "id": card_id}
 
-    elif action.startswith("cognix_grade_hard:"):
-        card_id = action.split(":", 1)[1]
-        msg = f"🔁 <b>Interval Reset:</b> Card <code>{card_id}</code> will be shown again tomorrow."
-        await send_telegram_message(msg, topic_id=payload.topic_id, chat_id=payload.chat_id)
-        return {"status": "ok", "action": "grade_hard", "id": card_id}
-
-    # 3. Quick Note/Link Capture to Brain Vault
+    # 3. Quick Note/Link Capture to the configured owner's durable Brain Vault
     elif action == "cognix_quick_capture" and payload.raw_message:
         note_text = payload.raw_message.strip()
-        msg = f"🧠 <b>Captured into Brain Vault Inbox:</b>\n<i>\"{note_text[:120]}\"</i>\nQueued for AI distillation."
-        await send_telegram_message(msg, topic_id=payload.topic_id, chat_id=payload.chat_id)
-        return {"status": "ok", "action": "quick_captured", "content": note_text}
+        owner_id = os.getenv("COGNIX_TELEGRAM_OWNER_ID", "").strip()
+        if not owner_id or store.database is None:
+            await send_telegram_message(
+                "⚠️ Capture is unavailable: configure COGNIX_TELEGRAM_OWNER_ID and a durable PostgreSQL database.",
+                topic_id=payload.topic_id,
+                chat_id=payload.chat_id,
+            )
+            return {"status": "unavailable", "action": "quick_capture"}
+        if not note_text:
+            return {"status": "ignored", "action": "quick_capture", "reason": "empty_content"}
+        note_id = f"NOTE-{uuid4().hex[:8].upper()}"
+        now = now_iso()
+        note = {
+            "id": note_id,
+            "title": note_text[:120] or "Telegram capture",
+            "content": note_text,
+            "note_type": "telegram_capture",
+            "status": "inbox",
+            "created_at": now,
+            "updated_at": now,
+        }
+        store.save_brain_note(note, owner_id)
+        store.brain_notes[note_id] = note
+        store.brain_note_owners[note_id] = owner_id
+        store.add_activity("brain_note_created", note_id, "new", "inbox")
+        safe_preview = html_escape(note_text[:120])
+        await send_telegram_message(
+            f"🧠 <b>Saved to Brain Vault Inbox</b> (ID: <code>{note_id}</code>)\n<i>{safe_preview}</i>",
+            topic_id=payload.topic_id,
+            chat_id=payload.chat_id,
+        )
+        return {"status": "ok", "action": "quick_captured", "id": note_id}
 
     return {"status": "ignored", "action": action}
 
@@ -126,12 +155,12 @@ async def send_cognix_morning_digest(
     topic_id: int | None = None,
     chat_id: int | str | None = None,
 ) -> dict[str, Any] | None:
-    """Generate and send an AI Morning Learning Briefing for Cognix Nexus."""
+    """Send a static learning prompt; it does not query live vault or review data."""
     msg = (
         "☀️ <b>[Cognix-Nexus] AI Morning Knowledge Digest</b>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━\n"
-        "🧠 <b>Brain Vault:</b> Qdrant Vector Cluster Active (1536-D)\n"
-        "📚 <b>Spaced Repetition:</b> 5 flashcards due for active recall today\n"
+        "🧠 <b>Brain Vault:</b> Retrieval health is not checked by this digest\n"
+        "📚 <b>Spaced Repetition:</b> Live review count is not connected yet\n"
         "💡 <b>Today's Core Principle:</b>\n"
         "<i>\"Understanding is a compression algorithm. If you cannot explain it concisely, your representation is unoptimized.\"</i>\n"
         "━━━━━━━━━━━━━━━━━━━━━━━━━\n"
@@ -202,10 +231,10 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
         if text.startswith("/start") or text.startswith("/help"):
             help_text = (
                 "🧠 <b>Cognix-Nexus Second Brain Commands:</b>\n\n"
-                "• <code>/status</code> — Check Vector Vault & AI status\n"
+                "• <code>/status</code> — Check database reachability and Telegram configuration\n"
                 "• <code>/morning_brief</code> — Today's learning flashcards & digest\n"
-                "• <code>/ask [question]</code> — Query your books & notes with AI\n"
-                "• <code>/capture [thought]</code> — Instantly save thought to Brain Vault\n\n"
+                "• <code>/ask [question]</code> — Find matching Brain Vault notes (keyword search)\n"
+                "• <code>/capture [thought]</code> — Save a thought to the configured Brain Vault owner\n\n"
                 "👇 Click below to open Brain Vault inside Telegram:"
             )
             buttons = [
@@ -216,13 +245,23 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
 
         # Command: /status
         elif text.startswith("/status"):
+            db_status = "not configured"
+            if store.database is not None:
+                try:
+                    with store.database.connect() as conn:
+                        with conn.cursor() as cur:
+                            cur.execute("SELECT 1")
+                            cur.fetchone()
+                    db_status = "reachable"
+                except Exception:
+                    logger.exception("Telegram /status database health check failed")
+                    db_status = "unreachable"
+            telegram_status = "enabled by configuration" if os.getenv("TELEGRAM_ENABLED", "false").strip().lower() == "true" else "disabled by configuration"
             status_text = (
-                "🟢 <b>[Cognix-Nexus] Second Brain Live Status:</b>\n\n"
-                "• <b>API Service:</b> <code>Online (Port 8003)</code>\n"
-                "• <b>Database:</b> <code>Supabase Postgres Connected</code>\n"
-                "• <b>Vector Vault:</b> <code>Qdrant Cluster Active</code>\n"
-                "• <b>Task Queue:</b> <code>Upstash Redis & QStash Ready</code>\n"
-                "• <b>Google Drive:</b> <code>Connected & Synchronized</code>"
+                "🩺 <b>[Cognix-Nexus] Runtime Status</b>\n\n"
+                f"• <b>Database:</b> <code>{db_status}</code>\n"
+                f"• <b>Telegram delivery:</b> <code>{telegram_status}</code>\n"
+                "• <b>Vector search / queues / Drive:</b> <code>not checked by this command</code>"
             )
             buttons = [
                 [{"text": "🧠 Open Brain Vault", "url": FRONTEND_URL}]
@@ -242,13 +281,34 @@ async def telegram_webhook(request: Request) -> dict[str, Any]:
                 await send_telegram_message("⚠️ Please supply a query: <code>/ask [question]</code>", topic_id=topic_id, chat_id=chat_id)
                 return {"ok": True}
             
-            reply = (
-                f"🧠 <b>Second Brain Synthesis:</b>\n<i>\"{query}\"</i>\n\n"
-                "💡 <b>Extracted Knowledge:</b> Active recall and spaced repetition form the optimal foundation for long-term retention. "
-                "Concept links have been cross-referenced in your Qdrant knowledge vault."
-            )
+            owner_id = os.getenv("COGNIX_TELEGRAM_OWNER_ID", "").strip()
+            if not owner_id or store.database is None:
+                await send_telegram_message(
+                    "⚠️ Retrieval is unavailable: configure COGNIX_TELEGRAM_OWNER_ID and PostgreSQL.",
+                    topic_id=topic_id,
+                    chat_id=chat_id,
+                )
+                return {"ok": True, "command": "ask", "status": "unavailable"}
+            terms = [term for term in query.lower().split() if len(term) > 1]
+            notes = store.list_brain_notes_for_owner(owner_id)
+            ranked = []
+            for note in notes:
+                content = str(note.get("content", ""))
+                score = sum(content.lower().count(term) for term in terms)
+                if score:
+                    ranked.append((score, note))
+            ranked.sort(key=lambda item: item[0], reverse=True)
+            if ranked:
+                lines = ["🔎 <b>Matching Brain Vault notes</b>", ""]
+                for score, note in ranked[:3]:
+                    title = html_escape(str(note.get("title", "Untitled"))[:100])
+                    snippet = html_escape(str(note.get("content", ""))[:500])
+                    lines.append(f"• <b>{title}</b> (match: {score})\n{snippet}")
+                reply = "\n\n".join(lines)
+            else:
+                reply = "🔎 No matching notes were found in the Brain Vault. This command performs keyword matching, not AI synthesis."
             await send_telegram_message(reply, topic_id=topic_id, chat_id=chat_id)
-            return {"ok": True, "command": "ask"}
+            return {"ok": True, "command": "ask", "matches": len(ranked), "mode": "keyword"}
 
         # Command: /capture <note>
         elif text.startswith("/capture"):

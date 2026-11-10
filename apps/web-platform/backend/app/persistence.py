@@ -1102,14 +1102,14 @@ class Database:
         with self.connect() as conn:
             with conn.cursor() as cur:
                 cur.execute(
-                    """INSERT INTO notes (id, title, content, note_type, status, owner_id, created_at, updated_at)
-                       VALUES (%(id)s, %(title)s, %(content)s, %(note_type)s, %(status)s, %(owner_id)s, %(created_at)s, %(updated_at)s)
+                    """INSERT INTO notes (id, title, content, note_type, status, owner_id, created_at, updated_at, idempotency_key)
+                       VALUES (%(id)s, %(title)s, %(content)s, %(note_type)s, %(status)s, %(owner_id)s, %(created_at)s, %(updated_at)s, %(idempotency_key)s)
                        ON CONFLICT (id) DO UPDATE SET
                          title=EXCLUDED.title, content=EXCLUDED.content, note_type=EXCLUDED.note_type,
-                         status=EXCLUDED.status, updated_at=EXCLUDED.updated_at
+                         status=EXCLUDED.status, updated_at=EXCLUDED.updated_at, idempotency_key=EXCLUDED.idempotency_key
                        WHERE notes.owner_id IS NOT DISTINCT FROM EXCLUDED.owner_id
                        RETURNING id""",
-                    {**note, "owner_id": owner_id},
+                    {**note, "owner_id": owner_id, "idempotency_key": note.get("idempotency_key")},
                 )
                 if cur.fetchone() is None:
                     raise RuntimeError("Note ownership mismatch during persistence")

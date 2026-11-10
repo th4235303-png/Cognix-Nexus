@@ -228,7 +228,15 @@ class SecurityHardeningTests(unittest.TestCase):
         with patch.dict(os.environ, {"COGNIX_ENV": "development", "COGNIX_CORS_ORIGINS": "https://a.example, https://b.example/"}, clear=True):
             self.assertEqual(_cors_origins(), ["https://a.example", "https://b.example"])
 
+    def test_telegram_action_gateway_is_public_to_bearer_middleware_but_secret_gated(self):
+        from app.routers.telegram import _authorize_action_gateway
 
+        request = Request({"type": "http", "method": "POST", "path": "/telegram/action", "headers": [], "query_string": b"", "server": ("test", 80), "client": ("test", 1), "scheme": "http"})
+        with patch.dict("os.environ", {"COGNIX_AUTH_REQUIRED": "true", "COGNIX_DEV_MODE": "false", "TELEGRAM_ACTION_SECRET": ""}, clear=True):
+            self.assertEqual(authenticate_request(request)["sub"], "anonymous")
+            with self.assertRaises(Exception) as ctx:
+                _authorize_action_gateway(None)
+            self.assertEqual(getattr(ctx.exception, "status_code", None), 503)
 
     def test_telegram_webhook_is_public_only_with_secret(self):
         client = TestClient(app)
