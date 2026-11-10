@@ -29,4 +29,24 @@ describe("embeddings worker security", () => {
     expect(response.status).toBe(500);
     expect(await response.json()).toMatchObject({ error: { code: "AUTH_NOT_CONFIGURED" } });
   });
+  it("rejects batches larger than 32 inputs", async () => {
+    const response = await worker.fetch(new Request("https://worker.test/embed", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-secret", "Content-Type": "application/json" },
+      body: JSON.stringify({ texts: Array.from({ length: 33 }, () => "hello") }),
+    }), env);
+    expect(response.status).toBe(413);
+    expect(await response.json()).toMatchObject({ error: { code: "BATCH_TOO_LARGE" } });
+  });
+
+  it("rejects requests with no text input", async () => {
+    const response = await worker.fetch(new Request("https://worker.test/embed", {
+      method: "POST",
+      headers: { Authorization: "Bearer test-secret", "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    }), env);
+    expect(response.status).toBe(400);
+    expect(await response.json()).toMatchObject({ error: { code: "MISSING_INPUT" } });
+  });
+
 });
