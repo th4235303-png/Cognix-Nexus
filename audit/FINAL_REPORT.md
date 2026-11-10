@@ -50,3 +50,35 @@ The code merges do not replace live acceptance evidence. Keep the release status
 - No production secrets were added to source control or changed.
 - PR #107 was deliberately closed rather than merging an unrelated, incompatible major Expo upgrade. If a PostCSS-only update is still required, raise a new narrowly scoped dependency PR from current `main`.
 - Do not change the release verdict to unconditional Production Ready until the live acceptance gates above have recorded evidence.
+
+## Production acceptance snapshot — 2026-11-10
+
+**Snapshot base revision:** `e31afbe05faff1b7cd068cbe972169c930a7e0d6`  
+**Decision:** **CONDITIONAL / NOT YET PRODUCTION ACCEPTED**. This was a read-only infrastructure and configuration audit; it did not authorize production writes, deployment, or paid-plan changes.
+
+### Verified
+
+- GitHub Cognix Core CI, Production CI/CD, and CodeQL passed on the snapshot base revision. The production release gate reported API health/readiness, Worker health/PostgreSQL persistence, and frontend HTTPS/HTML success. API/Worker exact-revision comparisons were skipped because the main revision was documentation-only.
+- Render API, Worker runtime, and frontend services are live and track `main`; the inspected deployments succeeded. All three services are on the Free plan. The Worker is a polling web service, not an always-on background worker.
+- Supabase `Cognix-Core` is `ACTIVE_HEALTHY`, PostgreSQL 17, with 29 applied migrations, pgvector 0.8.2, and the `embeddings.embedding_vector` column declared `vector(1536)`. The `cognix-artifacts` storage bucket is private.
+- Key user-owned tables inspected have RLS enabled and owner-scoped policies.
+- Cloudflare account inspection found no Worker script deployed in the connected account. Account-level `enforce_twofactor` is false.
+
+### Open acceptance gates
+
+- No dedicated authenticated E2E account was available; authenticated browser/mobile smoke was not run.
+- `Cognix-Core-restore-drill` exists but is `INACTIVE`; migration/table access could not be authenticated. Its isolation and restore readiness are unverified. It was not resumed.
+- Supabase security review found four RLS-enabled public tables with no policies: `brain_soul_context`, `brain_soul_syntheses`, `brain_youtube_videos`, and `youtube_channels`. Confirm whether they are backend-only before changing policies.
+- Production queue inventory showed 5 `processing_tasks` (4 completed, 1 failed, none active) and 2 books (1 ready, 1 failed). Latest recorded updates were 2026-10-03; a new real production job was not submitted.
+- Production provider/storage round trips, Book Intelligence corpus acceptance, Sentry ingestion, recovery restore/rollback, physical iOS/Android tests, accessibility/performance, and GDPR export/delete remain unverified.
+- Free Render instances can sleep; the Worker cannot be treated as a continuously available queue consumer. An always-on paid service requires explicit budget approval.
+- Cloudflare MFA should be enabled by the account owner. Do not configure `EDGE_SHARED_SECRET` in Cloudflare until the production Worker routing decision is confirmed.
+
+### Recovery-drill hardening
+
+PR [#112](https://github.com/th4235303-png/Cognix-Nexus/pull/112) adds fail-closed restore checks: explicit isolation assertion, distinct source/target DSNs, explicit CLI and environment approvals, PostgreSQL archive parsing, and SHA-256 comparison. Its CI must pass before merge. No live recovery drill was run.
+
+### Safety record
+
+No production rows were inserted, updated, or deleted; no migrations, restore, service deployment, secret/environment change, account creation, service-plan change, or Cloudflare setting change was performed during this snapshot.
+
