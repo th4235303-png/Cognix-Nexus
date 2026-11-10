@@ -189,11 +189,26 @@ class BackupRestoreDrillSafetyTests(unittest.TestCase):
         from scripts.backup_restore_drill import run_restore
 
         os.environ["COGNIX_ALLOW_RESTORE"] = "true"
-        with self.assertRaisesRegex(SystemExit, "DSNs must differ"):
+        with self.assertRaisesRegex(SystemExit, "different databases"):
             run_restore(
                 "postgresql://production/db",
                 self.dump,
                 source_dsn="postgresql://production/db",
+                isolated="true",
+                allow_restore=True,
+            )
+        self.run.assert_not_called()
+
+    def test_restore_rejects_same_database_with_different_credentials(self):
+        import os
+        from scripts.backup_restore_drill import run_restore
+
+        os.environ["COGNIX_ALLOW_RESTORE"] = "true"
+        with self.assertRaisesRegex(SystemExit, "different databases"):
+            run_restore(
+                "postgresql://other-user:other-password@db.example.invalid:5432/prod",
+                self.dump,
+                source_dsn="postgresql://user:password@db.example.invalid:5432/prod",
                 isolated="true",
                 allow_restore=True,
             )
