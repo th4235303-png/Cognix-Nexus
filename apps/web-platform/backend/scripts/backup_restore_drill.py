@@ -12,6 +12,7 @@ import hashlib
 import os
 import subprocess
 from pathlib import Path
+from urllib.parse import urlsplit
 
 
 def sha256_file(path: Path) -> str:
@@ -49,6 +50,17 @@ def run_backup(source_dsn: str, output: Path) -> str:
     return verify_archive(output)
 
 
+def database_identity(dsn: str) -> tuple[str, int, str]:
+    """Return host/port/database for a PostgreSQL URL without exposing credentials."""
+    parsed = urlsplit(dsn.strip())
+    if parsed.scheme not in {"postgres", "postgresql"} or not parsed.hostname:
+        raise SystemExit("Restore blocked: source and target must be parseable PostgreSQL URL DSNs")
+    database = parsed.path.lstrip("/")
+    if not database:
+        raise SystemExit("Restore blocked: source and target DSNs must identify a database")
+    return parsed.hostname.lower(), parsed.port or 5432, database
+
+
 def run_restore(
     target_dsn: str,
     dump: Path,
@@ -64,8 +76,8 @@ def run_restore(
         raise SystemExit("Restore blocked: COGNIX_RECOVERY_TARGET_ISOLATED must be explicitly true")
     if not source_dsn.strip() or not target_dsn.strip():
         raise SystemExit("Restore blocked: source and target DSNs are both required")
-    if source_dsn.strip() == target_dsn.strip():
-        raise SystemExit("Restore blocked: source and recovery target DSNs must differ")
+    if database_identity(source_dsn) == database_identity(target_dsn):
+        raise SystemExit("Restore blocked: source and recovery target must identify different databases")
     checksum = verify_archive(dump, expected_sha256)
     subprocess.run(
         ["pg_restore", "--exit-on-error", "--no-owner", "--no-acl", "--dbname", target_dsn, str(dump)],
