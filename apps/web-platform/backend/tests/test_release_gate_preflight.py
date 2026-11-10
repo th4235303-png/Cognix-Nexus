@@ -144,5 +144,101 @@ class ReleaseGatePreflightTests(unittest.TestCase):
         self.assertIn("COGNIX_RECOVERY_TARGET_ISOLATED must be explicitly set to true", recovery["missing_required"])
 
 
+
+
+class BackupRestoreDrillSafetyTests(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        from pathlib import Path
+        from unittest.mock import patch
+
+        self.tempdir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tempdir.cleanup)
+        self.dump = Path(self.tempdir.name) / "backup.dump"
+        self.dump.write_bytes(b"synthetic-postgres-custom-archive")
+        self.patch = patch("scripts.backup_restore_drill.subprocess.run")
+        self.run = self.patch.start()
+        self.addCleanup(self.patch.stop)
+
+    def test_restore_requires_explicit_isolation(self):
+        from scripts.backup_restore_drill import run_restore
+
+        with self.assertRaisesRegex(SystemExit, "ISOLATED must be explicitly true"):
+            run_restore(
+                "postgresql://recovery/db",
+                self.dump,
+                source_dsn="postgresql://production/db",
+                isolated="false",
+                allow_restore=True,
+            )
+        self.run.assert_not_called()
+
+    def test_restore_rejects_source_target_match(self):
+        from scripts.backup_restore_drill import run_restore
+
+        with self.assertRaisesRegex(SystemExit, "DSNs must differ"):
+            run_restore(
+                "postgresql://production/db",
+                self.dump,
+                source_dsn="postgresql://production/db",
+                isolated="true",
+                allow_restore=True,
+            )
+        self.run.assert_not_called()
+
+    def test_restore_requires_both_explicit_approvals(self):
+        from scripts.backup_restore_drill import run_restore
+
+        with self.assertRaisesRegex(SystemExit, "explicit CLI and COGNIX_ALLOW_RESTORE"):
+            run_restore(
+                "postgresql://recovery/db",
+                self.dump,
+                source_dsn="postgresql://production/db",
+                isolated="true",
+                allow_restore=False,
+            )
+        self.run.assert_not_called()
+
+    def test_checksum_mismatch_blocks_restore(self):
+        import os
+        from scripts.backup_restore_drill import run_restore
+
+        os.environ["COGNIX_ALLOW_RESTORE"] = "true"
+        self.addCleanup(os.environ.pop, "COGNIX_ALLOW_RESTORE", None)
+        with self.assertRaisesRegex(SystemExit, "SHA-256 does not match"):
+            run_restore(
+                "postgresql://recovery/db",
+                self.dump,
+                source_dsn="postgresql://production/db",
+                isolated="true",
+                allow_restore=True,
+                expected_sha256="0" * 64,
+            )
+        self.run.assert_not_called()
+
+    def test_restore_validates_archive_before_running_restore(self):
+        import os
+        from scripts.backup_restore_drill import run_restore, sha256_file
+
+        os.environ["COGNIX_ALLOW_RESTORE"] = "true"
+        self.addCleanup(os.environ.pop, "COGNIX_ALLOW_RESTORE", None)
+        checksum = sha256_file(self.dump)
+        self.assertEqual(
+            run_restore(
+                "postgresql://recovery/db",
+                self.dump,
+                source_dsn="postgresql://production/db",
+                isolated="true",
+                allow_restore=True,
+                expected_sha256=checksum,
+            ),
+            checksum,
+        )
+        self.assertEqual(self.run.call_count, 2)
+        self.assertEqual(self.run.call_args_list[0].args[0][:2], ["pg_restore", "--list"])
+        self.assertEqual(self.run.call_args_list[1].args[0][0], "pg_restore")
+
+
+
 if __name__ == "__main__":
     unittest.main()
