@@ -152,6 +152,7 @@ jobs:
     env:
       DATABASE_URL: ${{ secrets.COGNIX_PROD_DATABASE_URL }}
       COGNIX_RECOVERY_TARGET_DATABASE_URL: ${{ secrets.COGNIX_RECOVERY_TARGET_DATABASE_URL }}
+      COGNIX_RECOVERY_TARGET_ISOLATED: ${{ vars.COGNIX_RECOVERY_TARGET_ISOLATED }}
       COGNIX_ALLOW_RESTORE: "true"
     steps:
       - uses: actions/checkout@v4
@@ -166,11 +167,22 @@ jobs:
           sudo apt-get install -y postgresql-client-17
           echo "/usr/lib/postgresql/17/bin" >> "$GITHUB_PATH"
       - name: Backup production database
-        run: python scripts/backup_restore_drill.py --dump /tmp/cognix-production.dump
-      - name: Verify backup checksum
-        run: test -s /tmp/cognix-production.dump && python scripts/backup_restore_drill.py --verify /tmp/cognix-production.dump
-      - name: Restore into isolated recovery database
-        run: python scripts/backup_restore_drill.py --restore /tmp/cognix-production.dump --target-dsn "$COGNIX_RECOVERY_TARGET_DATABASE_URL" --allow-restore
+        id: backup
+        run: |
+          checksum="$(python scripts/backup_restore_drill.py --dump /tmp/cognix-production.dump)"
+          echo "sha256=$checksum" >> "$GITHUB_OUTPUT"
+      - name: Verify backup checksum and archive
+        run: |
+          test -s /tmp/cognix-production.dump
+          python scripts/backup_restore_drill.py --verify /tmp/cognix-production.dump --expected-sha256 "${{ steps.backup.outputs.sha256 }}"
+      - name: Restore into explicitly isolated recovery database
+        run: |
+          python scripts/backup_restore_drill.py \
+            --restore /tmp/cognix-production.dump \
+            --target-dsn "$COGNIX_RECOVERY_TARGET_DATABASE_URL" \
+            --expected-sha256 "${{ steps.backup.outputs.sha256 }}" \
+            --isolated "$COGNIX_RECOVERY_TARGET_ISOLATED" \
+            --allow-restore
 
   book-contract:
     if: ${{ inputs.run_book_contract }}
