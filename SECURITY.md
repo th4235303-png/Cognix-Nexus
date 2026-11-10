@@ -51,3 +51,9 @@ Do not publish secrets, exploit details or user data in public issues. Do not te
 
 ## Release support
 Only the current main production release and the immediately preceding known-good release are supported unless a release note says otherwise.
+
+## Account-level security configuration checklist
+
+- [ ] Cloudflare account setting `enforce_twofactor` is **true**; every account administrator has MFA enabled. Verify in the Cloudflare dashboard/API with an appropriately scoped read-only token. Do not assume repository controls enforce this account setting.
+- [ ] Supabase Auth leaked-password protection is enabled in the project's Auth security settings. Verify the current setting through the Supabase dashboard or a read-only Admin API check. Backend deployment owners should treat disabled protection as a production security gate; this application does not mutate provider settings.
+- [ ] Cloudflare Workers embeddings inference secret is provisioned using `wrangler secret put EDGE_SHARED_SECRET`; never commit the secret or place it in `vars`.
