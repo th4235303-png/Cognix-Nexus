@@ -159,6 +159,15 @@ class BackupRestoreDrillSafetyTests(unittest.TestCase):
         self.patch = patch("scripts.backup_restore_drill.subprocess.run")
         self.run = self.patch.start()
         self.addCleanup(self.patch.stop)
+        self.original_restore_flag = os.environ.get("COGNIX_ALLOW_RESTORE")
+        os.environ["COGNIX_ALLOW_RESTORE"] = "false"
+        self.addCleanup(self._restore_environment)
+
+    def _restore_environment(self):
+        if self.original_restore_flag is None:
+            os.environ.pop("COGNIX_ALLOW_RESTORE", None)
+        else:
+            os.environ["COGNIX_ALLOW_RESTORE"] = self.original_restore_flag
 
     def test_restore_requires_explicit_isolation(self):
         from scripts.backup_restore_drill import run_restore
