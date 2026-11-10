@@ -4,6 +4,8 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-10-05",
   "ai": { "binding": "AI" },
+  // REQUIRED: set EDGE_SHARED_SECRET using `wrangler secret put EDGE_SHARED_SECRET`.
+  // Never put the secret in vars or commit it to this file.
   "vars": {
     "ALLOWED_ORIGIN": "https://cognix-nexus.vercel.app"
   }
