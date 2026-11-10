@@ -170,8 +170,10 @@ class BackupRestoreDrillSafetyTests(unittest.TestCase):
             os.environ["COGNIX_ALLOW_RESTORE"] = self.original_restore_flag
 
     def test_restore_requires_explicit_isolation(self):
+        import os
         from scripts.backup_restore_drill import run_restore
 
+        os.environ["COGNIX_ALLOW_RESTORE"] = "true"
         with self.assertRaisesRegex(SystemExit, "ISOLATED must be explicitly true"):
             run_restore(
                 "postgresql://recovery/db",
@@ -183,8 +185,10 @@ class BackupRestoreDrillSafetyTests(unittest.TestCase):
         self.run.assert_not_called()
 
     def test_restore_rejects_source_target_match(self):
+        import os
         from scripts.backup_restore_drill import run_restore
 
+        os.environ["COGNIX_ALLOW_RESTORE"] = "true"
         with self.assertRaisesRegex(SystemExit, "DSNs must differ"):
             run_restore(
                 "postgresql://production/db",
