@@ -51,6 +51,21 @@ jobs:
             exit 1
           fi
 
+  embeddings-worker:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/web-platform/cloudflare/embeddings-worker
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-audit --no-fund
+      - run: npm test
+      - name: Validate Cloudflare Worker bundle
+        run: npx wrangler deploy --dry-run
+
   backend:
     runs-on: ubuntu-latest
     defaults:
