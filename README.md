@@ -1,76 +1,85 @@
-# Cognix Nexus
+# 🧠 Cognix Nexus
+> **Personal Knowledge OS, Research Intelligence & Second Brain Platform**
 
-Cognix Nexus is evolving into **Cognix Brain Vault**, a personal knowledge OS built on a research intelligence foundation.
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js)](https://nextjs.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Python_3.12-009688?style=flat-square&logo=fastapi)](https://fastapi.tiangolo.com/)
+[![React Native](https://img.shields.io/badge/React_Native-Expo-000020?style=flat-square&logo=expo)](https://expo.dev/)
+[![Supabase](https://img.shields.io/badge/Supabase-pgvector_&_Database-3ECF8E?style=flat-square&logo=supabase)](https://supabase.com/)
+[![Gemini AI](https://img.shields.io/badge/Gemini_2.0-Flash_Synthesis-4285F4?style=flat-square&logo=google)](https://deepmind.google/technologies/gemini/)
+[![Groq](https://img.shields.io/badge/Groq-Fast_Inference-F55036?style=flat-square)](https://groq.com/)
+[![Cloudinary](https://img.shields.io/badge/Cloudinary-Media_Storage-3448C5?style=flat-square&logo=cloudinary)](https://cloudinary.com/)
+[![Render](https://img.shields.io/badge/Render-Backend_Live-46E3B7?style=flat-square&logo=render)](https://cognix-core-ypak.onrender.com)
+[![Vercel](https://img.shields.io/badge/Vercel-Frontend_Live-black?style=flat-square&logo=vercel)](https://cognix-nexus.vercel.app)
+[![Telegram](https://img.shields.io/badge/Telegram_Bot-Topic_#7-26A5E4?style=flat-square&logo=telegram)](https://t.me/)
 
-## What it is
+---
 
-Research sources → processing → evidence/claims → human review → approved knowledge → Brain Vault → notes/concepts/graph → retrieval/RAG → learning/synthesis.
+## 🌟 Overview
 
-Cognix Core is the research/evidence foundation. Brain Vault is the durable personal knowledge layer. Vizora Lens is the future media-intelligence boundary.
+**Cognix Nexus** (evolving into **Cognix Brain Vault**) is a personal knowledge operating system built on a research intelligence foundation.
 
-## Stack
+It captures research sources, distills raw claims into verified knowledge, constructs concept graph relationships, and serves proactive recall, spaced repetition, and deep synthesis through a hybrid RAG engine.
 
-- Frontend: Next.js + React + TypeScript + Tailwind CSS.
-- Backend: FastAPI + Python worker.
-- Persistence/Auth: PostgreSQL/Supabase + Supabase Auth.
-- Retrieval: pgvector plus lexical/semantic ranking and RRF.
-- Storage: Cloudinary media, Supabase Storage for small private artifacts, Backblaze B2 for large originals, Google Drive for user-owned exports/backups.
-- Current hosting: Render frontend + Render API/worker.
-- Netlify: legacy/documented frontend target; no active Netlify service is confirmed by the current connected account audit.
-- Vercel: no Vercel configuration or active Vercel deployment was found in the repository/account integrations available to this audit.
-- Cloudflare: account is connected, but no active zone, Workers script, or Pages project is currently visible; R2 is not enabled.
+---
 
-## Current snapshot
+## 🚀 Key Features
 
-**Release status: BLOCKED pending final production acceptance.** The P0 code/CI/deployment blockers are resolved on main; the latest verified Production CI run passed the frontend build, backend lint/compile/tests/migration pre-flight, and live API `/health` + `/ready` checks. Render frontend, API and worker are live, and the production application migration registry is verified through migration 044.
+* **🕸️ Concept Graph & Knowledge Network**: Visual, node-based interactive graph linking concepts, citations, and evidence.
+* **🔬 Evidence-First Ingestion**: Research sources ➔ processing ➔ evidence/claims ➔ human review ➔ approved knowledge in Brain Vault.
+* **📚 Spaced Repetition (SM-2)**: Built-in active recall and flashcard quizzing algorithm for optimal memory retention.
+* **🧠 Hybrid RAG Engine**: Gemini 2.0 Flash & Groq paired with Supabase vector search (`pgvector`) for precise context retrieval.
+* **📱 Omnichannel Capture**: Web, Mobile (Expo), Google Drive sync, and Telegram Bot (Topic `#7`) for quick memo ingestion.
+* **🎙️ Media Intelligence (Vizora Lens)**: Audio memo transcription, video frame synthesis, and cross-lingual concept tagging.
 
-Remaining release gates are a real production backup → isolated restore → rollback drill, live environment-name parity (without exposing values), authenticated production browser smoke, real provider and Google Drive export/retry/idempotency acceptance, controlled Book Intelligence corpus acceptance, accessibility/performance, Sentry/mobile/GDPR evidence, and final exact-revision production smoke. Supabase Auth leaked-password protection is explicitly deferred under the current free-tier decision and is not an actionable release blocker. Phase 13–21 activation and release tagging remain blocked until the required acceptance gates pass.
+---
 
-See `CURRENT_STATE.md` for evidence-backed status and next actions, `ROADMAP.md` for strategic scope, and `PROJECT_OVERVIEW.md` for architecture/product boundaries.
+## 🏗️ System Architecture
 
-## Quick Start & Development Ports
+```
+       Research Sources (Web / PDF / Audio / Books / Telegram)
+                                │
+                                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                 Cognix Core Processing Pipeline               │
+│   • Claim Extractor • Entity Linker • Embeddings Generator   │
+└───────────────────────────────┬───────────────────────────────┘
+                                │
+                                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                 Durable Personal Brain Vault                  │
+│   • Supabase pgvector • Graph Relations • Concept Nodes       │
+│   • SM-2 Memory Matrix • Cloudinary Image / Media Assets      │
+└───────────────────────────────┬───────────────────────────────┘
+                                │
+                                ▼
+┌───────────────────────────────────────────────────────────────┐
+│                 Knowledge Synthesis Interfaces                │
+│   • Next.js 15 Web Command UI (Vercel)                       │
+│   • Expo Mobile Knowledge Assistant (iOS / Android)           │
+│   • Telegram Brain Capture Bot (@CognixNexusBot in Topic #7)  │
+└───────────────────────────────────────────────────────────────┘
+```
 
-| Component | Target Port / Shell | Startup Command |
-|---|---|---|
-| **Web Studio** | `http://localhost:3002` | `cd apps/web-platform/frontend && npm install && npm run dev -- -p 3002` |
-| **Backend API** | `http://localhost:8003` | `cd apps/web-platform/backend && uvicorn app.main:app --port 8003 --reload` |
-| **Mobile App** | Expo Port `8083` | `cd apps/mobile && npm install && npx expo start --port 8083` |
+---
 
-## Repository layout
+## ⚡ Quickstart
 
-- `apps/web-platform/frontend/` — Next.js web application (Port 3002).
-- `apps/web-platform/backend/` — FastAPI API, worker, migrations, and vector embeddings (Port 8003).
-- `apps/mobile/` — React Native / Expo Mobile Second Brain client (Port 8083).
+```bash
+# 1. Backend Setup
+cd apps/web-platform/backend
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+uvicorn app.main:app --reload --port 8000
 
-See [docs/REPOSITORY_STRUCTURE.md](docs/REPOSITORY_STRUCTURE.md) for placement rules.
+# 2. Frontend Setup
+cd ../frontend
+pnpm install
+pnpm dev
+```
 
-## Documentation map
+---
 
-- `PROJECT_OVERVIEW.md` — product and architecture overview
-- `CURRENT_STATE.md` — current status, evidence, gates and next actions
-- `ROADMAP.md` — canonical strategic roadmap
-- `UI_DESIGN_SYSTEM.md` — UI rules and design system
-- `TOOL.md` — engineering/documentation workflow
-- `SECURITY.md` — security policy
-- `docs/ARCHITECTURE.md` — detailed architecture and ADR history
-- `docs/DATA_MODEL.md` — schema, ownership, RLS and migration discipline
-- `docs/PIPELINE.md` — processing pipeline and lifecycle boundaries
-- `docs/PROMPTS.md` — AI prompt governance and evaluation rules
-- `docs/DEVELOPMENT.md` — development setup/checks
-- `docs/TESTING.md` — testing and acceptance
-- `docs/DEPLOYMENT.md` — deployment/release operations
-- `docs/OPERATIONS.md` — runtime operations/recovery
-- `docs/DATABASE.md` — schema, RLS and migration discipline
-- `docs/API.md` — API contract reference
-- `docs/AI_RAG.md` — processing, AI and retrieval
-- `docs/STORAGE.md` — storage provider roles
-- `docs/TROUBLESHOOTING.md` — operational troubleshooting
-- `docs/CHANGELOG.md` — release history
-- `docs/USER_GUIDE.md` — end-user workflow and roadmap boundaries
-- `docs/AGENT.md` — AI agent behavior and activation guard
-- `docs/EVALUATION_DATASETS.md` — deterministic evaluation corpus plan
-- `docs/features/` — feature-specific behavior
-- `docs/runbooks/` — operational procedures
-- `archive/legacy/` — historical source documents retained for traceability
+## 📜 License
 
-All implementation and documentation changes land on `main`.
+Private Knowledge OS License. All Rights Reserved.
