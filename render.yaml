@@ -17,9 +17,9 @@ services:
       - key: COGNIX_LOG_LEVEL
         value: "INFO"
       - key: COGNIX_CORS_ORIGINS
-        value: "https://cognix-nexus-frontend.onrender.com"
+        value: "https://cognix-nexus.vercel.app,https://cognix-nexus-th4235303-png.vercel.app"
       - key: COGNIX_ALLOWED_HOSTS
-        value: "cognix-core-ypak.onrender.com,cognix-nexus-frontend.onrender.com"
+        value: "cognix-core-ypak.onrender.com,cognix-nexus.vercel.app"
       - key: COGNIX_RATE_LIMIT_PER_MINUTE
         value: "120"
       - key: COGNIX_RATE_LIMIT_MAX_IDENTITIES
