@@ -1,0 +1,12 @@
+name = "cognix-nexus-edge"
+main = "src/index.js"
+compatibility_date = "2024-10-22"
+workers_dev = true
+
+[vars]
+UPSTREAM_API = "https://cognix-core-ypak.onrender.com"
+ALLOWED_ORIGIN = "https://cognix-nexus-frontend.onrender.com"
+ENVIRONMENT = "production"
+
+[observability]
+enabled = true
