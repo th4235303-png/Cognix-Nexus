@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "cognix-nexus-embeddings",
   "main": "src/index.ts",
-  "compatibility_date": "2026-10-05",
+  "compatibility_date": "2024-10-05",
   "ai": { "binding": "AI" },
   // REQUIRED: set EDGE_SHARED_SECRET using `wrangler secret put EDGE_SHARED_SECRET`.
   // Never put the secret in vars or commit it to this file.
