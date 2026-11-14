@@ -36,7 +36,7 @@ Do not change the database dimension or force a 1024-dimensional vector into a `
 ## Environment configuration
 
 - Set provider keys only on the backend Render services that need them and in GitHub Actions repository secrets required by the release-gate workflow.
-- Never put provider keys in frontend/Netlify `NEXT_PUBLIC_*` variables.
+- Never put provider keys in frontend/Vercel `NEXT_PUBLIC_*` variables.
 - Do not configure `COHERE_MODEL`, `GEMINI_MODEL`, `GROQ_MODEL`, `MISTRAL_MODEL`, other provider `*_MODEL` variables, provider `*_API_URL` overrides, or legacy `COGNIX_AI_*` / `COGNIX_LLM_*` / `COGNIX_EMBEDDING_*` overrides for the current router.
 - Keep database, authentication/JWKS, CORS/host allowlists, storage, Google Drive, Sentry, E2E, recovery, and release-gate variables. They serve other parts of the system and are not obsolete just because they are not LLM model settings.
 - Optional LLM provider keys can be absent. The release-gate preflight currently requires `COHERE_API_KEY` for the AI provider/embedding gate; other listed provider keys are optional unless a particular drill explicitly tests them.
